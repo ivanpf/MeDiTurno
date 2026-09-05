@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>POC Auth - Spring Boot</title>
+</head>
+<body>
+  <h3>Inicio de sesión - Firebase Auth (Spring Boot)</h3>
+
+  <button onclick="iniciarSesionGoogle()">Entrar con Google</button>
+  <br /><br />
+  <input id="email" placeholder="correo" />
+  <input id="password" placeholder="contraseña" type="password" />
+  <button onclick="iniciarSesionCorreo()">Entrar con correo</button>
+
+  <h4>Token:</h4>
+  <textarea id="token" rows="8" cols="80" readonly></textarea>
+  <br />
+  <button onclick="llamarMe()">GET /me</button>
+  <button onclick="llamarSoloAdmin()">GET /solo-admin</button>
+  <button onclick="refrescarToken()">Refrescar token (forzado)</button>
+  <pre id="resultado"></pre>
+
+  <hr />
+  <h4>Recuperar contraseña (Firebase, no pasa por el backend)</h4>
+  <input id="correoRecuperar" placeholder="correo" />
+  <button onclick="recuperarContrasena()">Enviar correo de recuperación</button>
+  <pre id="resultadoRecuperar"></pre>
+
+  <hr />
+  <h4>Crear usuario (POST /usuarios)</h4>
+  <input id="nuevoEmail" placeholder="correo del nuevo usuario" />
+  <input id="nuevoPassword" placeholder="contraseña" type="password" />
+  <input id="nuevoRol" placeholder="rol (opcional, ej. admin)" />
+  <button onclick="crearUsuario()">Crear usuario</button>
+  <pre id="resultadoCrear"></pre>
+
+  <hr />
+  <h4>Asignar rol (POST /usuarios/:uid/rol — requiere token de admin arriba)</h4>
+  <input id="uidObjetivo" placeholder="uid del usuario (no el correo)" />
+  <input id="rolObjetivo" placeholder="rol (ej. admin)" />
+  <button onclick="asignarRol()">Asignar rol</button>
+  <pre id="resultadoRol"></pre>
+
+  <hr />
+  <h4>Consultar usuario (GET /usuarios/:uid — requiere token de admin arriba)</h4>
+  <input id="uidConsulta" placeholder="uid del usuario (no el correo)" />
+  <button onclick="consultarUsuario()">Consultar usuario</button>
+  <pre id="resultadoConsulta"></pre>
+
+  <hr />
+  <h4>Buscar usuario por correo (GET /usuarios/por-correo?correo=... — requiere token de admin arriba)</h4>
+  <input id="correoBusqueda" placeholder="correo del usuario" />
+  <button onclick="buscarPorCorreo()">Buscar</button>
+  <pre id="resultadoBusqueda"></pre>
+
+  <hr />
+  <h4>Deshabilitar / habilitar / eliminar / revocar tokens (requiere token de admin arriba)</h4>
+  <input id="uidGestion" placeholder="uid del usuario" />
+  <button onclick="deshabilitarUsuario()">Deshabilitar</button>
+  <button onclick="habilitarUsuario()">Habilitar</button>
+  <button onclick="eliminarUsuario()">Eliminar</button>
+  <button onclick="revocarTokens()">Revocar tokens</button>
+  <pre id="resultadoGestion"></pre>
+
+  <hr />
+  <h4 style="color:red">Eliminar TODOS los usuarios (DELETE /usuarios — requiere token de admin arriba)</h4>
+  <p><small>Accion irreversible. Pide confirmacion antes de llamar al backend.</small></p>
+  <button onclick="eliminarTodos()" style="color:red">Eliminar todos los usuarios</button>
+  <pre id="resultadoEliminarTodos"></pre>
+
+  <hr />
+  <h4>Carga masiva por CSV (POST /usuarios/carga-masiva — requiere token de admin arriba)</h4>
+  <p><small>Formato del archivo: email,password,rol (una fila por usuario, "rol" puede ir vacío)</small></p>
+  <input id="archivoCsv" type="file" accept=".csv" />
+  <button onclick="cargaMasiva()">Cargar CSV</button>
+  <pre id="resultadoCarga"></pre>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signInWithEmailAndPassword,
+      sendPasswordResetEmail,
+    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBNKS5DhavsyVMuu42cV9hIVQbGmBUsu1E",
+      authDomain: "poc-auth-6a3d2.firebaseapp.com",
+      projectId: "poc-auth-6a3d2",
+      storageBucket: "poc-auth-6a3d2.firebasestorage.app",
+      messagingSenderId: "21879148339",
+      appId: "1:21879148339:web:4d81bd3cd4fe56904cf846",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.iniciarSesionGoogle = async () => {
+      const proveedor = new GoogleAuthProvider();
+      const credencial = await signInWithPopup(auth, proveedor);
+      document.getElementById("token").value = await credencial.user.getIdToken();
+    };
+
+    window.iniciarSesionCorreo = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const credencial = await signInWithEmailAndPassword(auth, email, password);
+      document.getElementById("token").value = await credencial.user.getIdToken();
+    };
+
+    window.llamarMe = async () => {
+      const token = document.getElementById("token").value;
+      const res = await fetch("/me", { headers: { Authorization: `Bearer ${token}` } });
+      document.getElementById("resultado").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+
+    window.llamarSoloAdmin = async () => {
+      const token = document.getElementById("token").value;
+      const res = await fetch("/solo-admin", { headers: { Authorization: `Bearer ${token}` } });
+      document.getElementById("resultado").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+
+    // Fuerza un ID token nuevo (incluye claims actualizados, ej. tras cambiar el rol).
+    // Sin el "true" el SDK devolveria el token cacheado, que puede tener el rol viejo.
+    window.refrescarToken = async () => {
+      if (!auth.currentUser) {
+        document.getElementById("resultado").textContent = "No hay sesion activa en el navegador.";
+        return;
+      }
+      const nuevoToken = await auth.currentUser.getIdToken(true);
+      document.getElementById("token").value = nuevoToken;
+      document.getElementById("resultado").textContent = "Token refrescado.";
+    };
+
+    window.recuperarContrasena = async () => {
+      const correo = document.getElementById("correoRecuperar").value;
+      try {
+        await sendPasswordResetEmail(auth, correo);
+        document.getElementById("resultadoRecuperar").textContent = "Correo de recuperacion enviado (si el correo existe).";
+      } catch (e) {
+        document.getElementById("resultadoRecuperar").textContent = "Error: " + e.message;
+      }
+    };
+
+    window.crearUsuario = async () => {
+      const email = document.getElementById("nuevoEmail").value;
+      const password = document.getElementById("nuevoPassword").value;
+      const rol = document.getElementById("nuevoRol").value || undefined;
+      const res = await fetch("/usuarios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, rol }),
+      });
+      document.getElementById("resultadoCrear").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+
+    window.asignarRol = async () => {
+      const token = document.getElementById("token").value;
+      const uid = document.getElementById("uidObjetivo").value;
+      const rol = document.getElementById("rolObjetivo").value;
+      const res = await fetch(`/usuarios/${uid}/rol`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ rol }),
+      });
+      document.getElementById("resultadoRol").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+
+    window.consultarUsuario = async () => {
+      const token = document.getElementById("token").value;
+      const uid = document.getElementById("uidConsulta").value;
+      const res = await fetch(`/usuarios/${uid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      document.getElementById("resultadoConsulta").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+
+    window.buscarPorCorreo = async () => {
+      const token = document.getElementById("token").value;
+      const correo = document.getElementById("correoBusqueda").value;
+      const res = await fetch(`/usuarios/por-correo?correo=${encodeURIComponent(correo)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      document.getElementById("resultadoBusqueda").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+
+    const llamarGestion = async (ruta, metodo) => {
+      const token = document.getElementById("token").value;
+      const uid = document.getElementById("uidGestion").value;
+      const res = await fetch(`/usuarios/${uid}${ruta}`, {
+        method: metodo,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      document.getElementById("resultadoGestion").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+
+    window.deshabilitarUsuario = () => llamarGestion("/deshabilitar", "POST");
+    window.habilitarUsuario = () => llamarGestion("/habilitar", "POST");
+    window.eliminarUsuario = () => llamarGestion("", "DELETE");
+    window.revocarTokens = () => llamarGestion("/revocar-tokens", "POST");
+
+    window.eliminarTodos = async () => {
+      if (!confirm("Esto borra TODOS los usuarios de Firebase Auth. Estas seguro?")) return;
+
+      const token = document.getElementById("token").value;
+      const res = await fetch("/usuarios?confirmar=si", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      document.getElementById("resultadoEliminarTodos").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+
+    window.cargaMasiva = async () => {
+      const token = document.getElementById("token").value;
+      const archivo = document.getElementById("archivoCsv").files[0];
+      if (!archivo) {
+        document.getElementById("resultadoCarga").textContent = "Elegi un archivo CSV primero.";
+        return;
+      }
+      const formData = new FormData();
+      formData.append("archivo", archivo);
+      const res = await fetch("/usuarios/carga-masiva", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      document.getElementById("resultadoCarga").textContent = `HTTP ${res.status}\n` + JSON.stringify(await res.json(), null, 2);
+    };
+  </script>
+</body>
+</html>

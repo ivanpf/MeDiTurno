@@ -1,0 +1,5 @@
+# Configuracion de editor/IDE, no compartir entre integrantes
+.vscode/
+
+# Archivos de log generados en runtime
+*.log

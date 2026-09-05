@@ -1,0 +1,5 @@
+# Carpeta de build de Maven (se regenera con "mvn compile"), no versionar
+target/
+
+# .class sueltos fuera de target/ (ej. compilados a mano con javac)
+*.class
