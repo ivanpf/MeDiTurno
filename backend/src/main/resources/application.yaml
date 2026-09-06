@@ -1,0 +1,12 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:mediturno_db}
+    username: ${DB_USER:mediturno}
+    password: ${DB_PASSWORD:mediturno123}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
