@@ -25,3 +25,8 @@ Thumbs.db
 
 # ---------- Copias locales ----------
 backend.zip
+
+# ---------- Claude Code / asistentes de IA ----------
+.claude/
+CLAUDE.md
+AGENTS.md
