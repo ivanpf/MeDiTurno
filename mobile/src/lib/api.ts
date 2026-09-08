@@ -140,3 +140,67 @@ export async function login(
     clearTimeout(timer);
   }
 }
+
+/** Un turno medico, tal como lo devuelve el backend. */
+export type Turno = {
+  id: number;
+  paciente: string;
+  especialidad: string;
+  profesional: string;
+  /** Fecha en formato ISO, por ejemplo "2026-09-08T08:00:00". */
+  fechaHora: string;
+  estado: string;
+};
+
+/**
+ * Una pagina de turnos.
+ *
+ * `ultima` es el dato clave del scroll infinito: mientras sea false hay mas
+ * paginas para pedir, y cuando llega a true la pantalla deja de pedir.
+ */
+export type PaginaTurnos = {
+  contenido: Turno[];
+  pagina: number;
+  totalPaginas: number;
+  totalElementos: number;
+  ultima: boolean;
+};
+
+export type TurnosResult =
+  | { ok: true; pagina: PaginaTurnos }
+  | { ok: false; error: string };
+
+/**
+ * Pide una pagina de turnos a GET /api/turnos.
+ *
+ * El scroll infinito no puede traer los turnos de una sola vez: se pide de a
+ * `size` y se van sumando a los que ya se mostraban.
+ */
+export async function getTurnos(
+  page = 0,
+  size = 20,
+  timeoutMs = 8000,
+): Promise<TurnosResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/turnos?page=${page}&size=${size}`, {
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: `El backend respondio HTTP ${response.status}` };
+    }
+
+    return { ok: true, pagina: (await response.json()) as PaginaTurnos };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { ok: false, error: `Sin respuesta en ${timeoutMs / 1000} segundos` };
+    }
+
+    return { ok: false, error: 'No se pudo conectar con el servidor' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
