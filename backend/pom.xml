@@ -44,6 +44,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+		<!-- Solo el algoritmo BCrypt para hashear contrasenas.
+		     No es spring-boot-starter-security: no trae la autoconfiguracion
+		     que bloquea todos los endpoints. -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-crypto</artifactId>
+		</dependency>
 		<dependency>
     			<groupId>org.postgresql</groupId>
     			<artifactId>postgresql</artifactId>
