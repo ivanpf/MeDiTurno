@@ -1,0 +1,30 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+main {
+  text-align: center;
+  padding: 2rem;
+}
+
+pre {
+  background: #1e293b;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  display: inline-block;
+  text-align: left;
+}
+
+.error {
+  color: #f87171;
+}
