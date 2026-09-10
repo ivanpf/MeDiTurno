@@ -55,7 +55,9 @@ public class AutenticacionControlador {
     }
 
     // Crea un usuario nuevo usando el Admin SDK, con un rol opcional.
-    // Solo para pruebas: en un caso real esta ruta deberia requerir un admin autenticado.
+    // Solo para pruebas: esta ruta esta con permitAll() en ConfiguracionSeguridad (POST /usuarios).
+    // En un caso real habria que sacar esa linea de permitAll() para que caiga bajo la regla
+    // "/usuarios/**" -> hasRole("ADMIN") y asi solo un admin autenticado pueda crear usuarios.
     @PostMapping("/usuarios")
     public ResponseEntity<Map<String, Object>> crearUsuario(@RequestBody Map<String, String> body) throws Exception {
         String email = body.get("email");
