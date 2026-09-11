@@ -1,121 +1,92 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [estado, setEstado] = useState('en espera')
+  const [respuesta, setRespuesta] = useState('')
+  const [nombreCliente, setNombreCliente] = useState('')
+  const [fecha, setFecha] = useState('')
+  const [hora, setHora] = useState('')
+  const [cantidadPersonas, setCantidadPersonas] = useState(1)
+
+  const listarReservas = async () => {
+    setEstado('cargando')
+    try {
+      const res = await fetch('/api/reservas')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const datos = await res.json()
+      setRespuesta(JSON.stringify(datos))
+      setEstado('exito')
+    } catch (err) {
+      setRespuesta(err.message)
+      setEstado('error')
+    }
+  }
+
+  const crearReserva = async () => {
+    setEstado('cargando')
+    try {
+      const res = await fetch('/api/reservas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombreCliente,
+          fecha,
+          hora,
+          cantidadPersonas: Number(cantidadPersonas),
+        }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const datos = await res.json()
+      setRespuesta(JSON.stringify(datos))
+      setEstado('exito')
+    } catch (err) {
+      setRespuesta(err.message)
+      setEstado('error')
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+      <h1>MeDiTurno</h1>
+      <h2>Comunicación Backend - Frontend</h2>
+      <button type="button" onClick={listarReservas}>
+        Listar reservas
+      </button>
+      <div>
+        <input
+          type="text"
+          placeholder="Nombre cliente"
+          value={nombreCliente}
+          onChange={(e) => setNombreCliente(e.target.value)}
+        />
+        <input
+          type="date"
+          value={fecha}
+          onChange={(e) => setFecha(e.target.value)}
+        />
+        <input
+          type="time"
+          value={hora}
+          onChange={(e) => setHora(e.target.value)}
+        />
+        <input
+          type="number"
+          min="1"
+          value={cantidadPersonas}
+          onChange={(e) => setCantidadPersonas(e.target.value)}
+        />
+        <button type="button" onClick={crearReserva}>
+          Crear reserva
         </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      </div>
+      {estado !== 'en espera' && (
+        <p>
+          Estado: <strong>{estado}</strong>
+          <br />
+          Respuesta: {respuesta}
+        </p>
+      )}
+    </div>
   )
 }
 
