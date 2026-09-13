@@ -1,0 +1,6 @@
+name: MeDiTurno - Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+  - key: reservaId
+    value: ''

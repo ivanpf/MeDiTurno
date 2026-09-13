@@ -1,0 +1,21 @@
+$kind: http-request
+order: 1000
+method: GET
+url: '{{baseUrl}}/reservas'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code es 200", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("El body es un array", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData).to.be.an("array");
+      });
+
+      var jsonData = pm.response.json();
+      if (jsonData.length > 0) {
+        pm.environment.set("reservaId", pm.response.json()[0].id.toString());
+      }

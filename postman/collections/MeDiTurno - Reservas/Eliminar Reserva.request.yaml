@@ -1,0 +1,13 @@
+$kind: http-request
+order: 5000
+method: DELETE
+url: '{{baseUrl}}/reservas/{{reservaId}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code es 204", function () {
+        pm.response.to.have.status(204);
+      });
+
+      pm.environment.set("reservaId", "");
