@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Dashboard from './components/Dashboard'
 
 function App() {
   const [estado, setEstado] = useState('en espera')
@@ -86,6 +87,10 @@ function App() {
           Respuesta: {respuesta}
         </p>
       )}
+
+      <hr style={{ margin: '3rem 0' }} />
+
+      <Dashboard />
     </div>
   )
 }

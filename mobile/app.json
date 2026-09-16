@@ -15,7 +15,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.mobilereservas"
     },
     "android": {
       "adaptiveIcon": {
@@ -30,7 +31,20 @@
     "plugins": [
       "expo-asset",
       "expo-font",
-      "expo-status-bar"
-    ]
+      "expo-status-bar",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#007bff"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "50046a95-963e-475a-ac63-5209e2658977"
+      }
+    },
+    "owner": "gabrielskywalker26"
   }
 }
