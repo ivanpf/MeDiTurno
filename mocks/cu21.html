@@ -1,0 +1,95 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-21</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="medico" data-cu="CU-21" data-title="Consulta de pacientes por turno" data-active="Mis pacientes">
+    <h1>Mis pacientes</h1>
+    <div class="row" style="align-items:flex-start">
+        <div style="flex:0 0 280px">
+            <h2>Octubre 2026</h2>
+            <div class="cal">
+                <div class="h">L</div>
+                <div class="h">M</div>
+                <div class="h">M</div>
+                <div class="h">J</div>
+                <div class="h">V</div>
+                <div class="h">S</div>
+                <div class="h">D</div>
+                <div class="off">28</div>
+                <div class="off">29</div>
+                <div class="off">30</div>
+                <div>1</div>
+                <div>2</div>
+                <div>3</div>
+                <div>4</div>
+                <div class="has sel" onclick="toggle('l',true);toggle('empty',false)">5</div>
+                <div>6</div>
+                <div>7</div>
+                <div class="has" onclick="vacio('Jue 08/10 · Cardiología · 14:00-17:00 · Cons. 1')">8</div>
+                <div>9</div>
+                <div>10</div>
+                <div>11</div>
+                <div class="has" onclick="toggle('l',true);toggle('empty',false)">12</div>
+                <div>13</div>
+                <div>14</div>
+                <div class="has" onclick="vacio('Jue 15/10 · Cardiología · 14:00-17:00 · Cons. 1')">15</div>
+                <div>16</div>
+                <div>17</div>
+                <div>18</div>
+            </div>
+            <p class="muted">Los días resaltados tienen turnos de atención. Seleccioná un día para ver los pacientes del turno.</p>
+        </div>
+        <div style="flex:1;min-width:300px">
+            <div id="l">
+                <h2>Lun 05/10 · Cardiología · 09:00-12:00 · Cons. 3</h2>
+                <div class="row">
+                    <div><label>Ordenar por</label><select>
+                            <option>Número</option>
+                            <option>Nombre</option>
+                            <option>Horario</option>
+                        </select></div>
+                </div>
+                <table>
+                    <tr>
+                        <th>Nº</th>
+                        <th>Paciente</th>
+                        <th>Horario</th>
+                        <th>Estado orden</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td>1</td>
+                        <td>Ana López</td>
+                        <td>09:00</td>
+                        <td><span class="tag">Orden emitida</span></td>
+                        <td><a href="cu22.html">Abrir</a></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Luis Díaz</td>
+                        <td>09:20</td>
+                        <td><span class="tag">Reserva vigente</span></td>
+                        <td><a href="cu22.html">Abrir</a></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>M. Silva</td>
+                        <td>09:40</td>
+                        <td><span class="tag">Orden emitida</span></td>
+                        <td><a href="cu22.html">Abrir</a></td>
+                    </tr>
+                </table>
+            </div>
+            <div id="empty" class="msg warn hide">No hay pacientes asociados al turno: <span id="e_info"></span>.</div>
+        </div>
+    </div>
+    <script>
+        // Día sin pacientes: el mensaje indica fecha, hora y datos básicos del turno
+        function vacio(info) {
+            e_info.textContent = info;
+            toggle('l', false);
+            toggle('empty', true);
+        }
+    </script>

@@ -1,0 +1,31 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-34</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="admin" data-cu="CU-34" data-title="Alta individual de usuarios internos" data-active="Alta de usuarios internos">
+    <h1>Alta de usuario interno</h1>
+    <div id="e1" class="msg err hide">Faltan campos obligatorios (incluida al menos una especialidad si el rol es Médico).</div>
+    <div id="e2" class="msg err hide">La cédula o el correo ya están asociados a otra cuenta.</div>
+    <div id="e3" class="msg err hide">La especialidad "Neurología" no existe o está inactiva.</div>
+    <div id="ok" class="msg ok hide">Usuario creado. La cuenta queda activa.</div>
+    <div class="row">
+        <div><label>Cédula *</label><input></div>
+        <div><label>Correo electrónico *</label><input type="email"></div>
+    </div>
+    <div class="row">
+        <div><label>Nombre *</label><input></div>
+        <div><label>Apellido *</label><input></div>
+    </div>
+    <label>Rol *</label>
+    <select id="rol" onchange="toggle('esp',this.value==='Médico')">
+        <option>Funcionario</option>
+        <option>Médico</option>
+        <option>Administrador</option>
+    </select>
+    <div id="esp" class="box hide"><label>Especialidades * (al menos una)</label>
+        <label style="display:inline"><input type="checkbox"> Cardiología</label> <label style="display:inline"><input type="checkbox"> Traumatología</label> <label style="display:inline"><input type="checkbox"> Clínica</label>
+    </div>
+    <div class="actions"><button class="pri" onclick="toggle('ok',true)">Crear usuario</button><button>Cancelar</button></div>
+    <div class="scenarios">Simular: <button onclick="toggle('e1',true)">Incompleto</button> <button onclick="toggle('e2',true)">Duplicado</button> <button onclick="toggle('e3',true)">Especialidad inválida</button></div>

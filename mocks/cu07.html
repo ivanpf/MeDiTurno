@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-7</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="public" data-cu="CU-7" data-title="Registro de cuenta de paciente">
+    <div class="center" style="max-width:460px">
+        <h1>Crear cuenta</h1>
+        <div id="e1" class="msg err hide">No pertenecés al padrón de la institución. No se pudo crear la cuenta.</div>
+        <div id="e2" class="msg err hide">Ya existe una cuenta vinculada a esa cédula. No se pudo crear la cuenta.</div>
+        <div id="ok" class="msg ok hide">Cuenta creada correctamente. <a href="cu01.html">Iniciar sesión</a></div>
+        <label>Cédula de identidad</label><input placeholder="1.234.567-8">
+        <label>Teléfono</label><input>
+        <label>Domicilio</label><input>
+        <h2>Método de registro</h2>
+        <label><input type="radio" name="m" value="mail" checked onchange="met()"> Correo y contraseña</label>
+        <div id="mailf"><label>Correo electrónico</label><input type="email">
+            <label>Contraseña</label><input type="password">
+            <label>Confirmar contraseña</label><input type="password">
+        </div>
+        <label><input type="radio" name="m" value="google" onchange="met()"> Cuenta de Google</label>
+        <div class="actions"><button id="bm" class="pri" onclick="toggle('ok',true)">Crear cuenta</button><button id="bg">Registrarme con Google</button></div>
+        <div class="scenarios">Simular: <button onclick="toggle('e1',true)">No está en padrón</button> <button onclick="toggle('e2',true)">Cuenta existente</button></div>
+    </div>
+    <script>
+        function met() {
+            const g = document.querySelector('input[name=m]:checked').value === 'google';
+            document.querySelectorAll('#mailf input').forEach(i => i.disabled = g);
+            document.getElementById('mailf').style.opacity = g ? .45 : 1;
+            document.getElementById('bm').disabled = g;
+            document.getElementById('bg').disabled = !g;
+        }
+        document.addEventListener('DOMContentLoaded', met);
+    </script>

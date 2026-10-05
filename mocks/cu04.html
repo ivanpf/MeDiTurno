@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-4</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="public" data-cu="CU-4" data-title="Recuperación de acceso">
+    <div class="center">
+        <div id="a" data-state>
+            <h1>Recuperar acceso</h1>
+            <label>Correo electrónico asociado a la cuenta</label><input type="email">
+            <div class="actions"><button class="pri" onclick="show('b')">Enviar enlace</button><a class="btn" href="cu01.html">Volver al login</a></div>
+        </div>
+
+        <div id="b" data-state class="hide">
+            <h1>Revisá tu correo</h1>
+            <div class="msg ok">Si existe una cuenta asociada a esa dirección, vas a recibir instrucciones para recuperar el acceso. El enlace vale 10 minutos.</div>
+            <a class="btn" href="cu01.html">Volver al login</a>
+        </div>
+
+        <div id="c" data-state class="hide">
+            <h1>Nueva contraseña</h1>
+            <label>Nueva contraseña</label><input type="password">
+            <label>Confirmar contraseña</label><input type="password">
+            <p class="muted">Mín. 8 caracteres, con mayúscula y número.</p>
+            <div id="e" class="msg err hide">Las contraseñas no coinciden.</div>
+            <div class="actions"><button class="pri" onclick="show('f')">Guardar contraseña</button></div>
+        </div>
+
+        <div id="d" data-state class="hide">
+            <h1>Enlace vencido</h1>
+            <div class="msg err">El enlace de recuperación ha vencido.</div>
+            <button class="pri" onclick="show('a')">Solicitar uno nuevo</button>
+        </div>
+
+        <div id="f" data-state class="hide">
+            <h1>Contraseña actualizada</h1>
+            <div class="msg ok">Tu contraseña fue modificada correctamente.</div>
+            <a class="btn pri" href="cu01.html">Ir a iniciar sesión</a>
+        </div>
+    </div>

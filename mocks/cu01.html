@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-1</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="public" data-cu="CU-1" data-title="Inicio de sesión">
+    <div class="center">
+        <h1>Iniciar sesión</h1>
+        <div id="e" class="msg err hide">No fue posible iniciar sesión con los datos proporcionados</div>
+        <label>Correo electrónico</label><input type="email" placeholder="correo@ejemplo.com">
+        <label>Contraseña</label><input type="password">
+        <div class="actions"><button class="pri" onclick="toggle('e',true)">Ingresar</button></div>
+        <p><a href="cu04.html">¿Olvidaste tu contraseña? Recuperar acceso</a></p>
+        <p>¿Sos paciente y no tenés cuenta? <a href="cu07.html">Crear cuenta</a></p>
+    </div>

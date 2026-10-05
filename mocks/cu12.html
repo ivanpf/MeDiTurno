@@ -1,0 +1,46 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-12</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="funcionario" data-cu="CU-12" data-title="Alta de un turno semanal" data-active="Alta de turno">
+    <h1>Alta de turno semanal</h1>
+    <div id="e" class="msg err hide"></div>
+    <div id="ok" class="msg ok hide">Turno registrado. Estará disponible para reservas desde la fecha de vigencia indicada.</div>
+    <div class="row">
+        <div><label>Médico</label><select>
+                <option>Dra. Gómez</option>
+                <option>Dr. Rossi (inactivo)</option>
+            </select></div>
+        <div><label>Especialidad</label><select>
+                <option>Cardiología</option>
+            </select></div>
+        <div><label>Consultorio</label><select>
+                <option>Cons. 3</option>
+                <option>Cons. 5 (inactivo)</option>
+            </select></div>
+    </div>
+    <label>Días de la semana</label>
+    <div><label style="display:inline"><input type="checkbox"> Lun</label> <label style="display:inline"><input type="checkbox"> Mar</label> <label style="display:inline"><input type="checkbox"> Mié</label> <label style="display:inline"><input type="checkbox"> Jue</label> <label style="display:inline"><input type="checkbox"> Vie</label> <label style="display:inline"><input type="checkbox"> Sáb</label></div>
+    <div class="row">
+        <div><label>Hora inicio</label><input type="time" value="09:00"></div>
+        <div><label>Hora fin</label><input type="time" value="12:00"></div>
+        <div><label>Máx. de pacientes</label><input type="number" value="10"></div>
+        <div><label>Vigente desde</label><input type="date"></div>
+    </div>
+    <div class="actions"><button class="pri" onclick="toggle('ok',true);toggle('e',false)">Registrar turno</button><button>Cancelar</button></div>
+    <div class="scenarios">Simular error:
+        <button onclick="err('Datos inválidos: capacidad o fecha de vigencia incorrecta.')">Datos inválidos</button>
+        <button onclick="err('El médico seleccionado está inactivo.')">Médico inactivo</button>
+        <button onclick="err('El consultorio seleccionado está inactivo.')">Consultorio inactivo</button>
+        <button onclick="err('Superposición con: Dra. Gómez · Lun 09:00-11:00 · Cons. 3 (turno #14).')">Superposición</button>
+    </div>
+    <script>
+        function err(t) {
+            const e = document.getElementById('e');
+            e.textContent = t;
+            e.classList.remove('hide');
+            toggle('ok', false)
+        }
+    </script>

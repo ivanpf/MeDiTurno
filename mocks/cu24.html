@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-24</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="medico" data-cu="CU-24" data-title="Emisión de un pase a otra especialidad" data-active="Emitir pase">
+    <h1>Emitir pase a otra especialidad</h1>
+    <div class="box">Consulta de origen: Ana López · 05/10/2026 · Cardiología · Dra. Gómez</div>
+    <div id="e0" class="msg err hide">No tenés autorización para operar sobre esta consulta.</div>
+    <div id="e1" class="msg err hide">La especialidad seleccionada no está habilitada. Elegí una disponible.</div>
+    <div id="e2" class="msg err hide">Fecha de vigencia inválida (máximo 60 días desde hoy).</div>
+    <div id="ok" class="msg ok hide">Pase emitido. Válido hasta el 04/12/2026. (No genera una reserva por sí mismo.)</div>
+    <label>Especialidad de destino</label>
+    <select>
+        <option>Seleccionar…</option>
+        <option>Traumatología</option>
+        <option>Neurología</option>
+    </select>
+    <label>Válido hasta (máx. 60 días)</label><input type="date">
+    <div class="actions"><button class="pri" onclick="toggle('conf',true)">Emitir pase</button><a class="btn" href="cu22.html">Cancelar</a></div>
+    <div id="conf" class="modal-bg hide">
+        <div class="modal">
+            <h2>Confirmar pase</h2>
+            <p>Ana López → Traumatología, hasta 04/12/2026.</p>
+            <div class="actions"><button class="pri" onclick="toggle('conf',false);toggle('ok',true)">Confirmar</button><button onclick="toggle('conf',false)">Volver</button></div>
+        </div>
+    </div>
+    <div class="scenarios">Simular: <button onclick="toggle('e0',true)">Consulta no autorizada</button> <button onclick="toggle('e1',true)">Especialidad no disponible</button> <button onclick="toggle('e2',true)">Vigencia inválida</button></div>

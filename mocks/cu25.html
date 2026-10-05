@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-25</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="medico" data-cu="CU-25" data-title="Habilitación de una reconsulta" data-active="Habilitar reconsulta">
+    <h1>Habilitar reconsulta</h1>
+    <div class="box">Consulta de origen: 05/10/2026<br>Paciente: <b>Ana López</b> · Médico: <b>Dra. Gómez</b> · Especialidad: <b>Cardiología</b> <span class="muted">(fijos, no editables)</span></div>
+    <div id="e0" class="msg err hide">No tenés autorización para operar sobre esta consulta.</div>
+    <div id="e1" class="msg err hide">Fecha de vigencia inválida (máximo 60 días).</div>
+    <div id="ok" class="msg ok hide">Reconsulta habilitada hasta el 04/12/2026. El paciente podrá reservar con vos y la misma especialidad.</div>
+    <label>Habilitada hasta (máx. 60 días)</label><input type="date">
+    <div class="actions"><button class="pri" onclick="toggle('conf',true)">Habilitar reconsulta</button><a class="btn" href="cu22.html">Cancelar</a></div>
+    <div id="conf" class="modal-bg hide">
+        <div class="modal">
+            <h2>Confirmar habilitación</h2>
+            <p>Ana López · Dra. Gómez · Cardiología · hasta 04/12/2026.</p>
+            <div class="actions"><button class="pri" onclick="toggle('conf',false);toggle('ok',true)">Confirmar</button><button onclick="toggle('conf',false)">Volver</button></div>
+        </div>
+    </div>
+    <div class="scenarios">Simular: <button onclick="toggle('e0',true)">Consulta no autorizada</button> <button onclick="toggle('e1',true)">Vigencia inválida</button></div>

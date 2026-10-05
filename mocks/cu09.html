@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-9</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="paciente" data-cu="CU-9" data-title="Cancelación de una reserva" data-active="Mis reservas">
+    <h1>Mis reservas</h1>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Especialidad</th>
+            <th>Médico</th>
+            <th>Estado</th>
+            <th></th>
+        </tr>
+        <tr>
+            <td>RES-000123</td>
+            <td>Lun 12/10 09:00<br><span class="muted">Hora estimada ~10:20 (Nº 5)</span></td>
+            <td>Cardiología</td>
+            <td>Dra. Gómez</td>
+            <td><span class="tag">Vigente</span></td>
+            <td><button onclick="ver('Lun 12/10 09:00','~10:20','5','3','Cardiología','Dra. Gómez','Vigente')">Ver / Cancelar</button></td>
+        </tr>
+        <tr>
+            <td>RES-000098</td>
+            <td>Mar 06/10 09:00<br><span class="muted">Hora estimada ~09:30 (Nº 3)</span></td>
+            <td>Traumatología</td>
+            <td>Dr. Rossi</td>
+            <td><span class="tag">Vigente</span></td>
+            <td><button onclick="ver('Mar 06/10 09:00','~09:30','3','1','Traumatología','Dr. Rossi','Vigente')">Ver / Cancelar</button></td>
+        </tr>
+        <tr>
+            <td>RES-000070</td>
+            <td>Mié 02/09 10:00<br><span class="muted">Hora estimada ~10:15 (Nº 2)</span></td>
+            <td>Clínica</td>
+            <td>Dr. Pérez</td>
+            <td><span class="tag">Cancelada</span></td>
+            <td><button onclick="ver('Mié 02/09 10:00','~10:15','2','2','Clínica','Dr. Pérez','Cancelada')">Ver</button></td>
+        </tr>
+    </table>
+
+    <div id="d" class="box hide">
+        <h2>Detalle de la reserva</h2>
+        <p>Fecha: <span id="d_fecha"></span> · Hora estimada de atención: <b id="d_hora"></b> (Nº <span id="d_num"></span>) · Consultorio <span id="d_cons"></span><br>Especialidad: <span id="d_esp"></span> · Médico: <span id="d_med"></span><br>Estado: <span class="tag" id="d_est"></span></p>
+        <p class="muted">La hora es estimada: depende del número asignado y de la duración real de las consultas.</p>
+        <div id="late" class="msg err hide">No se puede cancelar: faltan menos de 48 horas para la consulta.</div>
+        <div id="nv" class="msg err hide">No se puede cancelar: la reserva no está vigente.</div>
+        <button id="bc" class="danger" onclick="toggle('m',true)">Cancelar reserva</button> <button onclick="toggle('d',false)">Cerrar</button>
+    </div>
+    <script>
+        function ver(fecha, hora, num, cons, esp, med, est) {
+            d_fecha.textContent = fecha;
+            d_hora.textContent = hora;
+            d_num.textContent = num;
+            d_cons.textContent = cons;
+            d_esp.textContent = esp;
+            d_med.textContent = med;
+            d_est.textContent = est;
+            const cancelada = est === 'Cancelada';
+            const pocoTiempo = !cancelada && fecha.startsWith('Mar 06/10'); // faltan menos de 48 hs
+            bc.disabled = cancelada || pocoTiempo; // solo se puede cancelar una reserva vigente con 48 hs o más
+            toggle('nv', cancelada);
+            toggle('late', pocoTiempo);
+            toggle('d', true);
+        }
+    </script>
+
+    <div id="m" class="modal-bg hide">
+        <div class="modal">
+            <h2>¿Cancelar la reserva?</h2>
+            <p>El cupo quedará libre para otros pacientes.</p>
+            <div class="actions"><button class="danger" onclick="toggle('m',false);toggle('ok',true)">Sí, cancelar</button><button onclick="toggle('m',false)">Volver</button></div>
+        </div>
+    </div>
+    <div id="ok" class="msg ok hide">Reserva cancelada.</div>

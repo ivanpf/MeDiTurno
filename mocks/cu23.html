@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-23</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="medico" data-cu="CU-23" data-title="Registro de una consulta realizada" data-active="Registrar consulta">
+    <h1>Registrar consulta realizada</h1>
+    <div class="box">Ana López · CI 1.234.567-8 · Lun 05/10 09:00 · Cardiología · Orden Nº 000123</div>
+    <div id="e1" class="msg err hide">La atención no cuenta con una orden válida para continuar.</div>
+    <div id="e2" class="msg err hide">La consulta ya fue registrada.</div>
+    <div id="e3" class="msg err hide">Faltan datos obligatorios: motivo de consulta, diagnóstico.</div>
+    <div id="ok" class="msg ok hide">Consulta registrada correctamente. Se notificó al paciente que hay nueva información en su historia clínica.</div>
+    <div id="f">
+        <label>Motivo de consulta *</label><textarea></textarea>
+        <label>Antecedentes / examen</label><textarea></textarea>
+        <label>Diagnóstico *</label><textarea></textarea>
+        <label>Indicaciones / tratamiento</label><textarea></textarea>
+        <label>Observaciones</label><textarea></textarea>
+        <div class="actions"><button class="pri" onclick="toggle('ok',true)">Confirmar registro</button><a class="btn" href="cu22.html">Cancelar</a></div>
+    </div>
+    <div class="scenarios">Simular: <button onclick="toggle('e1',true)">Sin orden válida</button> <button onclick="toggle('e2',true)">Ya registrada</button> <button onclick="toggle('e3',true)">Datos incompletos</button></div>

@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-37</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="admin" data-cu="CU-37" data-title="Alta individual de consultorios" data-active="Alta de consultorios">
+    <h1>Alta de consultorio</h1>
+    <div id="e1" class="msg err hide">Faltan campos obligatorios.</div>
+    <div id="e2" class="msg err hide">El código ya está en uso. Ingresá uno distinto.</div>
+    <div id="ok" class="msg ok hide">Consultorio registrado. Ya puede asignarse a turnos semanales.</div>
+    <div class="row">
+        <div><label>Código *</label><input></div>
+        <div><label>Nombre *</label><input></div>
+    </div>
+    <label>Ubicación *</label><input placeholder="Piso 2, ala norte">
+    <label>Descripción</label><textarea></textarea>
+    <label>Estado *</label><select>
+        <option>Activo</option>
+        <option>Inactivo</option>
+    </select>
+    <div class="actions"><button class="pri" onclick="toggle('ok',true)">Guardar</button><button>Cancelar</button></div>
+    <div class="scenarios">Simular: <button onclick="toggle('e1',true)">Incompleto</button> <button onclick="toggle('e2',true)">Código duplicado</button></div>

@@ -1,0 +1,93 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-13</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="funcionario" data-cu="CU-13" data-title="Suspensión de un turno semanal" data-active="Suspender turno">
+    <h1>Turnos semanales</h1>
+    <div data-state id="s1">
+        <table>
+            <tr>
+                <th>Médico</th>
+                <th>Especialidad</th>
+                <th>Día</th>
+                <th>Horario</th>
+                <th>Cons.</th>
+                <th>Estado</th>
+                <th></th>
+            </tr>
+            <tr>
+                <td>Dra. Gómez</td>
+                <td>Cardiología</td>
+                <td>Lun</td>
+                <td>09-12</td>
+                <td>3</td>
+                <td><span class="tag">Activo</span></td>
+                <td><button onclick="show('s2')">Suspender</button></td>
+            </tr>
+            <tr>
+                <td>Dr. Rossi</td>
+                <td>Traumat.</td>
+                <td>Jue</td>
+                <td>14-17</td>
+                <td>1</td>
+                <td><span class="tag">Suspendido</span></td>
+                <td><button disabled>Suspender</button></td>
+            </tr>
+        </table>
+    </div>
+
+    <div data-state id="s2" class="hide">
+        <h1>Suspender turno</h1>
+        <div class="box">Dra. Gómez · Cardiología · Lunes 09:00-12:00 · Cons. 3</div>
+        <h2>Reservas futuras que podrían verse afectadas (3)</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Paciente</th>
+                <th>Fecha</th>
+            </tr>
+            <tr>
+                <td>RES-123</td>
+                <td>Ana López</td>
+                <td>12/10</td>
+            </tr>
+            <tr>
+                <td>RES-130</td>
+                <td>Luis Díaz</td>
+                <td>12/10</td>
+            </tr>
+            <tr>
+                <td>RES-141</td>
+                <td>M. Silva</td>
+                <td>19/10</td>
+            </tr>
+        </table>
+        <label>Tipo de suspensión</label>
+        <label style="display:inline"><input type="radio" name="t" checked onclick="setHasta(true)"> Temporal</label>
+        <label style="display:inline"><input type="radio" name="t" onclick="setHasta(false)"> Permanente</label>
+        <div class="row">
+            <div><label>Efectiva desde</label><input type="date"></div>
+            <div id="per"><label>Hasta</label><input id="hasta" type="date"></div>
+        </div>
+        <div class="msg err hide" id="e">Fecha de inicio o período inválido. Corregí los datos.</div>
+        <div class="actions"><button class="pri" onclick="show('s3')">Continuar</button><button onclick="show('s1')">Cancelar</button></div>
+        <div class="scenarios">Simular: <button onclick="toggle('e',true)">Período inválido</button></div>
+    </div>
+
+    <div data-state id="s3" class="hide">
+        <h1>Confirmar suspensión</h1>
+        <div class="box">Se suspende el turno <b>temporalmente</b> del 12/10 al 02/11.<br>Se anularán <b>3 reservas</b> y se notificará a los pacientes.</div>
+        <div class="actions"><button class="danger" onclick="show('s4')">Confirmar suspensión</button><button onclick="show('s1')">Cancelar</button></div>
+    </div>
+    <div data-state id="s4" class="hide">
+        <div class="msg ok">Turno suspendido correctamente. 3 reservas anuladas y pacientes notificados.</div><button onclick="show('s1')">Volver al listado</button>
+    </div>
+    <script>
+        // Suspensión permanente: "Hasta" queda deshabilitado (gris)
+        function setHasta(temporal) {
+            document.getElementById('hasta').disabled = !temporal;
+            document.getElementById('per').style.opacity = temporal ? 1 : .45;
+        }
+    </script>

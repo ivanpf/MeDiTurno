@@ -1,0 +1,127 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-8</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="paciente" data-cu="CU-8" data-title="Reserva de una orden de consulta" data-active="Reservar consulta">
+    <h1>Reservar consulta</h1>
+    <div id="e1" class="msg err hide">Esta especialidad requiere un pase previo vigente y no lo tenés. No podés reservar.</div>
+    <div id="e2" class="msg err hide">El turno ya no está disponible (se agotaron los cupos). No se creó la reserva.</div>
+
+    <h2>1. Especialidad y médico</h2>
+    <div class="row">
+        <div><label>Especialidad</label><select>
+                <option>Cardiología</option>
+                <option>Traumatología</option>
+            </select></div>
+        <div><label>Médico</label><select>
+                <option>Dra. Gómez</option>
+                <option>Dr. Rossi</option>
+            </select></div>
+        <div><button class="pri" onclick="toggle('s2',true)">Ver turnos</button></div>
+    </div>
+
+    <div id="s2" class="hide">
+        <h2>2. Turnos disponibles (próximas 8 semanas)</h2>
+        <div class="week">Semana del 12/10</div>
+        <div class="cards">
+            <div class="card" data-day="Lun 12/10" data-ini="09:00" data-fin="12:00" data-max="9" data-libres="4" data-cons="3" onclick="pick(this)"><b>Lun 12/10</b>09:00-12:00<br>Consultorio 3<br>4 cupos libres<br><span class="muted dur"></span></div>
+            <div class="card" data-day="Jue 15/10" data-ini="14:00" data-fin="17:00" data-max="12" data-libres="7" data-cons="1" onclick="pick(this)"><b>Jue 15/10</b>14:00-17:00<br>Consultorio 1<br>7 cupos libres<br><span class="muted dur"></span></div>
+        </div>
+        <div class="week">Semana del 19/10</div>
+        <div class="cards">
+            <div class="card" data-day="Lun 19/10" data-ini="09:00" data-fin="12:00" data-max="9" data-libres="1" data-cons="3" onclick="pick(this)"><b>Lun 19/10</b>09:00-12:00<br>Consultorio 3<br>1 cupo libre<br><span class="muted dur"></span></div>
+            <div class="card full" data-day="Jue 22/10" data-ini="14:00" data-fin="17:00" data-max="12" data-libres="0" data-cons="1"><b>Jue 22/10</b>14:00-17:00<br>Consultorio 1<br>Sin cupos</div>
+        </div>
+        <div class="week">Semana del 26/10</div>
+        <div class="cards">
+            <div class="card" data-day="Lun 26/10" data-ini="09:00" data-fin="12:00" data-max="9" data-libres="6" data-cons="3" onclick="pick(this)"><b>Lun 26/10</b>09:00-12:00<br>Consultorio 3<br>6 cupos libres<br><span class="muted dur"></span></div>
+            <div class="card" data-day="Jue 29/10" data-ini="14:00" data-fin="17:00" data-max="12" data-libres="8" data-cons="1" onclick="pick(this)"><b>Jue 29/10</b>14:00-17:00<br>Consultorio 1<br>8 cupos libres<br><span class="muted dur"></span></div>
+        </div>
+        <div id="s3" class="hide">
+            <h2>3. Elegí tu número</h2>
+            <p class="muted">Los números tachados ya están reservados. Cada número tiene su hora estimada.</p>
+            <div id="slots" class="slots"></div>
+        </div>
+        <div class="actions"><button id="rb" class="pri" disabled onclick="openConf()">Reservar</button></div>
+    </div>
+    <script>
+        // Duración por consulta = (fin - inicio) / máx. de pacientes. Hora estimada del número N = inicio + (N-1) * duración
+        const toMin = h => {
+            const [a, b] = h.split(':');
+            return +a * 60 + +b
+        };
+        const toHM = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(Math.round(m % 60)).padStart(2, '0');
+
+        function dur(c) {
+            const d = c.dataset;
+            return (toMin(d.fin) - toMin(d.ini)) / d.max
+        }
+
+        function hora(c, n) {
+            return toHM(toMin(c.dataset.ini) + (n - 1) * dur(c))
+        }
+        // números ocupados (falso pero determinístico por turno, repartidos en todo el turno)
+        function ocupados(c) {
+            const d = c.dataset,
+                seed = d.day.length * 13 + +d.max,
+                nums = [];
+            for (let n = 1; n <= +d.max; n++) nums.push(n);
+            nums.sort((x, y) => ((x * 37 + seed) % 101) - ((y * 37 + seed) % 101));
+            return nums.slice(0, d.max - d.libres);
+        }
+        document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('.card[data-ini]:not(.full)').forEach(c => c.querySelector('.dur').textContent = '~' + Math.round(dur(c)) + ' min por consulta'));
+        let sel, num;
+
+        function pick(c) {
+            document.querySelectorAll('.card').forEach(x => x.classList.remove('sel'));
+            c.classList.add('sel');
+            sel = c;
+            num = null;
+            document.getElementById('rb').disabled = true;
+            const taken = ocupados(c),
+                box = document.getElementById('slots');
+            box.innerHTML = '';
+            for (let n = 1; n <= +c.dataset.max; n++) {
+                const el = document.createElement('div');
+                el.className = 'slot' + (taken.includes(n) ? ' taken' : '');
+                el.innerHTML = `<b>Nº ${n}</b>${hora(c, n)}`;
+                if (!taken.includes(n)) el.onclick = () => {
+                    box.querySelectorAll('.slot').forEach(x => x.classList.remove('sel'));
+                    el.classList.add('sel');
+                    num = n;
+                    document.getElementById('rb').disabled = false
+                };
+                box.appendChild(el);
+            }
+            toggle('s3', true);
+        }
+
+        function openConf() {
+            const d = sel.dataset,
+                h = hora(sel, num);
+            document.getElementById('cdet').innerHTML = `${d.day} · ${d.ini}-${d.fin} · Cons. ${d.cons}<br>Tu número: <b>${num}</b> · Hora estimada de atención: <b>~${h}</b>`;
+            document.getElementById('okdet').innerHTML = `<b>Número en el turno:</b> ${num} · <b>Hora estimada:</b> ~${h}<br>${d.day} · Cons. ${d.cons}`;
+            toggle('conf', true);
+        }
+    </script>
+
+    <div id="conf" class="modal-bg hide">
+        <div class="modal">
+            <h2>Confirmar reserva</h2>
+            <p>Cardiología · Dra. Gómez<br><span id="cdet"></span></p>
+            <p class="muted">La hora es estimada y puede variar según la duración real de las consultas.</p>
+            <div class="actions"><button class="pri" onclick="toggle('conf',false);toggle('ok',true)">Confirmar</button><button onclick="toggle('conf',false)">Cancelar</button></div>
+        </div>
+    </div>
+
+    <div id="ok" class="box hide">
+        <div class="msg ok">Reserva realizada.</div>
+        <b>Identificador:</b> RES-000123<br>
+        <span id="okdet"></span><br>Cardiología · Dra. Gómez<br><a href="cu09.html">Ir a mis reservas</a>
+    </div>
+
+    <div class="scenarios">Simular: <button onclick="toggle('e1',true)">Sin pase previo (tras elegir médico)</button>
+        <button onclick="toggle('e2',true)">Cupo agotado (al confirmar)</button>
+    </div>

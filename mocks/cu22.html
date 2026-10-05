@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-22</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="medico" data-cu="CU-22" data-title="Consulta de la historia clínica durante la atención" data-active="Historia clínica">
+    <h1>Atención: Ana López</h1>
+    <div class="box">CI 1.234.567-8 · Turno Lun 05/10 09:00 · Cardiología · Nº 1 · <span class="tag">Orden emitida</span>
+        <div class="actions"><a class="btn" href="cu23.html">Registrar consulta</a><a class="btn" href="cu24.html">Emitir pase</a><a class="btn" href="cu25.html">Habilitar reconsulta</a></div>
+    </div>
+    <h2>Historia clínica</h2>
+    <div id="deny" class="msg err hide">No tenés autorización para consultar la información clínica de este paciente.</div>
+    <div id="none" class="msg warn hide">El paciente no posee antecedentes de consultas disponibles. Podés continuar con la atención actual.</div>
+    <div id="hist" class="row" style="align-items:flex-start">
+        <div style="flex:0 0 260px">
+            <table>
+                <tr>
+                    <th>Fecha</th>
+                </tr>
+                <tr>
+                    <td><a href="#" onclick="ver(0);return false">02/09/2026 · Clínica · Dr. Pérez</a></td>
+                </tr>
+                <tr>
+                    <td><a href="#" onclick="ver(1);return false">14/05/2026 · Cardiología · Dra. Gómez</a></td>
+                </tr>
+            </table>
+        </div>
+        <div id="det" class="box hide" style="flex:1">
+            <h2 id="d_tit"></h2>
+            <p id="d_sub"></p>
+            <p><b>Motivo de consulta:</b><br><span id="d_motivo"></span></p>
+            <p><b>Antecedentes / examen:</b><br><span id="d_ant"></span></p>
+            <p><b>Diagnóstico:</b><br><span id="d_diag"></span></p>
+            <p><b>Indicaciones:</b><br><span id="d_ind"></span></p>
+            <p><b>Tratamiento:</b><br><span id="d_trat"></span></p>
+            <p><b>Observaciones:</b><br><span id="d_obs"></span></p>
+        </div>
+    </div>
+    <div class="scenarios">Simular: <button onclick="toggle('deny',true);toggle('hist',false)">Sin vínculo con turno</button> <button onclick="toggle('none',true);toggle('hist',false)">Sin consultas previas</button></div>
+    <script>
+        const ATENCIONES = [{
+                tit: 'Atención del 02/09/2026',
+                sub: 'Clínica · Dr. Pérez',
+                motivo: 'Dolor de garganta y fiebre de 38,5 °C desde hace tres días, con malestar general y dolor al tragar.',
+                ant: 'Sin alergias conocidas. Hipertensión controlada con enalapril 10 mg. Examen físico: faringe congestiva con exudado en amígdalas, ganglios submaxilares palpables y dolorosos. Frecuencia cardíaca 88 lpm, presión arterial 125/80.',
+                diag: 'Faringoamigdalitis aguda bacteriana.',
+                ind: 'Reposo relativo por 48 horas. Abundante hidratación. Gárgaras con agua tibia y sal. Evitar alimentos muy fríos o muy calientes.',
+                trat: 'Amoxicilina 500 mg cada 8 horas durante 7 días. Paracetamol 1 g cada 8 horas si hay fiebre o dolor.',
+                obs: 'Consultar nuevamente si la fiebre persiste más de 72 horas o aparece dificultad para respirar. Control en 10 días.'
+            },
+            {
+                tit: 'Atención del 14/05/2026',
+                sub: 'Cardiología · Dra. Gómez',
+                motivo: 'Control cardiológico anual y palpitaciones ocasionales al subir escaleras.',
+                ant: 'Padre con antecedente de infarto a los 58 años. No fuma. Electrocardiograma: ritmo sinusal, sin alteraciones del segmento ST. Presión arterial 130/85, peso 82 kg.',
+                diag: 'Palpitaciones sin repercusión hemodinámica. Hipertensión arterial grado 1.',
+                ind: 'Realizar ergometría y ecocardiograma Doppler. Dieta baja en sal. Caminatas de 30 minutos, cinco veces por semana. Registrar la presión arterial en casa dos veces por día durante dos semanas.',
+                trat: 'Se mantiene enalapril 10 mg por día. Sin cambios en la medicación.',
+                obs: 'Traer los estudios y el registro de presión a la próxima consulta, en tres meses.'
+            }
+        ];
+
+        function ver(i) {
+            const a = ATENCIONES[i];
+            d_tit.textContent = a.tit;
+            d_sub.textContent = a.sub;
+            d_motivo.textContent = a.motivo;
+            d_ant.textContent = a.ant;
+            d_diag.textContent = a.diag;
+            d_ind.textContent = a.ind;
+            d_trat.textContent = a.trat;
+            d_obs.textContent = a.obs;
+            toggle('det', true);
+        }
+    </script>

@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-2</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="paciente" data-cu="CU-2" data-title="Cierre de sesión" data-active="Inicio">
+    <h1>Inicio</h1>
+    <div class="box">Contenido de la pantalla actual…</div>
+    <button onclick="toggle('m',true)">Cerrar sesión</button>
+    <div id="m" class="modal-bg hide">
+        <div class="modal">
+            <h2>¿Cerrar sesión?</h2>
+            <p>Vas a finalizar tu sesión activa.</p>
+            <div class="actions"><button class="pri" onclick="location='cu01.html'">Confirmar</button><button onclick="toggle('m',false)">Cancelar</button></div>
+        </div>
+    </div>

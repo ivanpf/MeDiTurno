@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-28</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="admin" data-cu="CU-28" data-title="Alta individual de especialidades médicas" data-active="Alta de especialidades">
+    <h1>Alta de especialidad médica</h1>
+    <div id="e1" class="msg err hide">Faltan campos obligatorios: código, nombre.</div>
+    <div id="e2" class="msg err hide">El código ya está en uso por otra especialidad.</div>
+    <div id="ok" class="msg ok hide">Especialidad registrada correctamente.</div>
+    <div class="row">
+        <div><label>Código *</label><input></div>
+        <div><label>Nombre *</label><input></div>
+    </div>
+    <label>Descripción</label><textarea></textarea>
+    <label>¿Requiere pase previo? *</label>
+    <label style="display:inline"><input type="radio" name="p" checked> Sí</label> <label style="display:inline"><input type="radio" name="p"> No</label>
+    <label>Estado *</label><select>
+        <option>Activa</option>
+        <option>Inactiva</option>
+    </select>
+    <div class="actions"><button class="pri" onclick="toggle('ok',true)">Guardar</button><button>Cancelar</button></div>
+    <div class="scenarios">Simular: <button onclick="toggle('e1',true)">Campos incompletos</button> <button onclick="toggle('e2',true)">Código/nombre duplicado</button></div>

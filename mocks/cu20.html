@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-20</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="funcionario" data-cu="CU-20" data-title="Búsqueda y listado de turnos semanales" data-active="Turnos semanales">
+    <h1>Turnos semanales</h1>
+    <div class="box">
+        <div class="row">
+            <div><label>Médico</label><select>
+                    <option>Todos</option>
+                </select></div>
+            <div><label>Especialidad</label><select>
+                    <option>Todas</option>
+                </select></div>
+            <div><label>Día</label><select>
+                    <option>Todos</option>
+                    <option>Lunes</option>
+                </select></div>
+            <div><label>Consultorio</label><select>
+                    <option>Todos</option>
+                </select></div>
+            <div><label>Estado</label><select>
+                    <option>Todos</option>
+                    <option>Activo</option>
+                    <option>Suspendido</option>
+                </select></div>
+            <div><label>Ordenar por</label><select>
+                    <option>Médico</option>
+                    <option>Día</option>
+                    <option>Especialidad</option>
+                </select></div>
+            <div style="flex:0"><button class="pri" onclick="toggle('t',true);toggle('none',false)">Buscar</button></div>
+        </div>
+    </div>
+    <div id="none" class="msg warn hide">No se encontraron resultados. Modificá los criterios y volvé a buscar.</div>
+    <div id="t">
+        <table>
+            <tr>
+                <th>Médico</th>
+                <th>Especialidad</th>
+                <th>Día</th>
+                <th>Horario</th>
+                <th>Cons.</th>
+                <th>Máx. nº</th>
+                <th>Estado</th>
+                <th></th>
+            </tr>
+            <tr>
+                <td>Dra. Gómez</td>
+                <td>Cardiología</td>
+                <td>Lun</td>
+                <td>09-12</td>
+                <td>3</td>
+                <td>10</td>
+                <td><span class="tag">Activo</span></td>
+                <td><button onclick="toggle('d',true)">Ver</button></td>
+            </tr>
+            <tr>
+                <td>Dr. Rossi</td>
+                <td>Traumat.</td>
+                <td>Jue</td>
+                <td>14-17</td>
+                <td>1</td>
+                <td>8</td>
+                <td><span class="tag">Suspendido</span></td>
+                <td><button onclick="toggle('d',true)">Ver</button></td>
+            </tr>
+        </table>
+    </div>
+    <div id="d" class="box hide">
+        <h2>Detalle del turno</h2>Dra. Gómez · Cardiología · Lunes 09:00-12:00 · Cons. 3 · 10 números · vigente desde 01/09 · Activo<br><br>
+        <button>Suspender</button> <button onclick="toggle('d',false)">Cerrar</button>
+    </div>
+    <div class="scenarios">Simular: <button onclick="toggle('t',false);toggle('none',true)">Sin resultados</button></div>

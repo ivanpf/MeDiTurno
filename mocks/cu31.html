@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-31</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="admin" data-cu="CU-31" data-title="Alta individual de pacientes" data-active="Alta de pacientes">
+    <h1>Alta de paciente (padrón)</h1>
+    <div id="e1" class="msg err hide">Faltan campos obligatorios.</div>
+    <div id="e2" class="msg err hide">Formato inválido en la cédula.</div>
+    <div id="e3" class="msg err hide">La cédula o el correo ya están registrados en el padrón.</div>
+    <div id="ok" class="msg ok hide">Paciente incorporado al padrón. Ya puede registrarse como usuario.</div>
+    <div class="row">
+        <div><label>Cédula de identidad *</label><input placeholder="1.234.567-8"></div>
+        <div><label>Fecha de nacimiento *</label><input type="date"></div>
+    </div>
+    <div class="row">
+        <div><label>Nombre *</label><input></div>
+        <div><label>Apellido *</label><input></div>
+    </div>
+    <label>Correo electrónico *</label><input type="email">
+    <div class="row">
+        <div><label>Teléfono (opcional)</label><input></div>
+        <div><label>Domicilio (opcional)</label><input></div>
+    </div>
+    <div class="actions"><button class="pri" onclick="toggle('ok',true)">Guardar</button><button>Cancelar</button></div>
+    <div class="scenarios">Simular: <button onclick="toggle('e1',true)">Incompleto</button> <button onclick="toggle('e2',true)">Formato inválido</button> <button onclick="toggle('e3',true)">Ya registrado</button></div>

@@ -1,0 +1,108 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CU-15</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+
+<body data-role="funcionario" data-cu="CU-15 / CU-16" data-title="Consulta de reserva y emisión de orden" data-active="Consulta de reserva">
+    <h1>Consulta de reserva</h1>
+    <div class="row">
+        <div><label>Identificador de la reserva</label><input value="RES-000123"></div>
+        <div style="flex:0"><button class="pri" onclick="r('ok')">Buscar</button></div>
+    </div>
+    <div class="scenarios">Simular resultado: <button onclick="r('ok')">Vigente</button> <button onclick="r('canc')">Cancelada</button> <button onclick="r('inv')">ID inválido</button> <button onclick="r('no')">Inexistente</button> <button onclick="r('ok');toggle('late',true)">Fuera de horario para emitir</button></div>
+
+    <div id="inv" data-state class="hide msg err">El identificador ingresado no es válido (vacío o formato incorrecto).</div>
+    <div id="no" data-state class="hide msg err">El identificador no existe. No hay datos para mostrar.</div>
+
+    <div id="ok" data-state>
+        <h2>Datos de la reserva</h2>
+        <table>
+            <tr>
+                <th>Paciente</th>
+                <td id="r_pac">Ana López (CI 1.234.567-8)</td>
+            </tr>
+            <tr>
+                <th>Médico</th>
+                <td id="r_med">Dra. Gómez</td>
+            </tr>
+            <tr>
+                <th>Especialidad</th>
+                <td id="r_esp">Cardiología</td>
+            </tr>
+            <tr>
+                <th>Fecha / horario</th>
+                <td id="r_fecha">Lun 12/10 · 09:00-12:00</td>
+            </tr>
+            <tr>
+                <th>Consultorio</th>
+                <td id="r_cons">3</td>
+            </tr>
+            <tr>
+                <th>Número</th>
+                <td id="r_num">5</td>
+            </tr>
+            <tr>
+                <th>Estado</th>
+                <td><span class="tag" id="r_est">Vigente</span></td>
+            </tr>
+        </table>
+        <div id="late" class="msg err hide">La orden no puede emitirse en este momento (solo hasta 15 minutos antes de la hora estimada de atención).</div>
+        <div id="acc"><button class="pri" onclick="emitir()">Emitir orden</button></div>
+
+        <div id="orden" class="hide">
+            <div class="msg ok">Orden emitida. Fecha/hora: Lun 12/10 08:52 · Emitida por: Juan Pérez (funcionario).</div>
+            <div class="box">
+                <h2>ORDEN DE CONSULTA — <span id="o_id"></span></h2>
+                Paciente: <span id="o_pac"></span><br>
+                <span id="o_esp"></span> · <span id="o_med"></span><br>
+                <span id="o_fecha"></span> · Cons. <span id="o_cons"></span> · Nº <span id="o_num"></span>
+            </div>
+            <div class="actions"><button onclick="window.print()">Imprimir</button><button>Generar PDF</button><button>Enviar PDF por correo</button></div>
+        </div>
+    </div>
+
+    <div id="canc" data-state class="hide">
+        <div class="msg warn">Reserva cancelada. No se puede emitir una orden.</div>
+        <table>
+            <tr>
+                <th>Paciente</th>
+                <td>Ana López</td>
+            </tr>
+            <tr>
+                <th>Fecha</th>
+                <td>Lun 12/10</td>
+            </tr>
+            <tr>
+                <th>Estado</th>
+                <td><span class="tag">Cancelada</span></td>
+            </tr>
+        </table>
+        <button disabled>Emitir orden</button>
+    </div>
+
+    <script>
+        // Muestra el resultado de la búsqueda; si es una reserva vigente, deja lista la emisión
+        function r(id) {
+            show(id);
+            if (id === 'ok') {
+                r_est.textContent = 'Vigente';
+                toggle('late', false);
+                toggle('orden', false);
+                toggle('acc', true);
+            }
+        }
+        // La orden se arma con los datos de la reserva consultada (los mismos de la tabla de arriba)
+        function emitir() {
+            o_id.textContent = 'Nº 000123';
+            o_pac.textContent = r_pac.textContent;
+            o_esp.textContent = r_esp.textContent;
+            o_med.textContent = r_med.textContent;
+            o_fecha.textContent = r_fecha.textContent;
+            o_cons.textContent = r_cons.textContent;
+            o_num.textContent = r_num.textContent;
+            r_est.textContent = 'Orden emitida';
+            toggle('acc', false);
+            toggle('orden', true);
+        }
+    </script>
