@@ -5,7 +5,7 @@ if (!SHOW_SIMULAR) document.write('<style>.scenarios{display:none!important}</st
 
 const MENUS = {
   paciente: { label: 'Paciente', items: [['Inicio', 'cu08.html'], ['Reservar consulta', 'cu08.html'], ['Mis reservas', 'cu09.html'], ['Historia clínica', 'cu11.html'], ['Anuncios', '#']] },
-  funcionario: { label: 'Funcionario', items: [['Turnos semanales', 'cu20.html'], ['Alta de turno', 'cu12.html'], ['Suspender turno', 'cu13.html'], ['Turnos suspendidos', 'cu14.html'], ['Consulta de reserva', 'cu15.html'], ['Anuncios', '#']] },
+  funcionario: { label: 'Funcionario', items: [['Turnos semanales', 'cu20.html'], ['Alta de turno', 'cu12.html'], ['Turnos suspendidos', 'cu14.html'], ['Consulta de reserva', 'cu15.html'], ['Anuncios', '#']] },
   medico: { label: 'Médico', items: [['Mis pacientes', 'cu21.html'], ['Historia clínica', 'cu22.html'], ['Registrar consulta', 'cu23.html'], ['Emitir pase', 'cu24.html'], ['Habilitar reconsulta', 'cu25.html']] },
   admin: { label: 'Administrador', items: [['Alta de especialidades', 'cu28.html'], ['Alta de pacientes', 'cu31.html'], ['Alta de usuarios internos', 'cu34.html'], ['Alta de consultorios', 'cu37.html'], ['Estadísticas', '#'], ['Cargas masivas', '#']] },
 };

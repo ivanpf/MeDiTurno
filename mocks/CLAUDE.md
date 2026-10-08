@@ -7,7 +7,7 @@ Mocks HTML de los casos de uso marcados con `*` en el documento de casos de uso.
 
 - **Mantenelo básico.** Nada de diseño "lindo": sin colores de marca, sin sombras, sin animaciones, sin íconos, sin tipografías externas.
 - **Sin frameworks ni librerías.** Solo HTML, un CSS compartido y JavaScript plano. Nada de npm, build ni CDN.
-- **Todo en español** (textos, mensajes y nombres de las pantallas), igual que el resto de los mocks.
+- **Todo en español, tratando al usuario de "usted"** ("tiene", "elija", "ingrese"; no "tienes", "elige", "ingresa" ni "tenés", "elegí", "ingresá"), igual que el resto de los mocks.
 - **No agregar textos explicativos del caso de uso** en las pantallas (cajas azules, notas, aclaraciones sobre el flujo). Las pantallas muestran solo lo que vería el usuario.
 - **Los datos son de ejemplo y deben verse reales** (nombres, fechas, textos clínicos creíbles), no "Lorem ipsum" ni "…".
 - Si cambiás algo de una pantalla, **copiá el estilo de las que ya existen** en vez de inventar uno nuevo.

@@ -6,7 +6,7 @@
 
 <body data-role="paciente" data-cu="CU-8" data-title="Reserva de una orden de consulta" data-active="Reservar consulta">
     <h1>Reservar consulta</h1>
-    <div id="e1" class="msg err hide">Esta especialidad requiere un pase previo vigente y no lo tenés. No podés reservar.</div>
+    <div id="e1" class="msg err hide">Esta especialidad requiere un pase previo vigente y no lo tiene. No puede reservar.</div>
     <div id="e2" class="msg err hide">El turno ya no está disponible (se agotaron los cupos). No se creó la reserva.</div>
 
     <h2>1. Especialidad y médico</h2>
@@ -40,7 +40,7 @@
             <div class="card" data-day="Jue 29/10" data-ini="14:00" data-fin="17:00" data-max="12" data-libres="8" data-cons="1" onclick="pick(this)"><b>Jue 29/10</b>14:00-17:00<br>Consultorio 1<br>8 cupos libres<br><span class="muted dur"></span></div>
         </div>
         <div id="s3" class="hide">
-            <h2>3. Elegí tu número</h2>
+            <h2>3. Elija su número</h2>
             <p class="muted">Los números tachados ya están reservados. Cada número tiene su hora estimada.</p>
             <div id="slots" class="slots"></div>
         </div>
@@ -101,7 +101,7 @@
         function openConf() {
             const d = sel.dataset,
                 h = hora(sel, num);
-            document.getElementById('cdet').innerHTML = `${d.day} · ${d.ini}-${d.fin} · Cons. ${d.cons}<br>Tu número: <b>${num}</b> · Hora estimada de atención: <b>~${h}</b>`;
+            document.getElementById('cdet').innerHTML = `${d.day} · ${d.ini}-${d.fin} · Cons. ${d.cons}<br>Su número: <b>${num}</b> · Hora estimada de atención: <b>~${h}</b>`;
             document.getElementById('okdet').innerHTML = `<b>Número en el turno:</b> ${num} · <b>Hora estimada:</b> ~${h}<br>${d.day} · Cons. ${d.cons}`;
             toggle('conf', true);
         }
