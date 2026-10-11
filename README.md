@@ -172,6 +172,14 @@ Donde el Documento de diseño une casos de uso en una sola pantalla (CU-13 con C
 
 Los valores de `.env.example` sirven **únicamente para desarrollo local**. `.env` está ignorado por Git: no subir credenciales reales ni usar estas en producción.
 
+## Base de datos
+
+PostgreSQL arranca vacío. **Las tablas las crea el propio backend al iniciar**, con migraciones de Flyway (scripts SQL en `backend/src/main/resources/db/migration/`). No hay que ejecutar nada a mano.
+
+- El backend necesita que PostgreSQL esté disponible para arrancar.
+- Para empezar con la base desde cero (se pierden los datos locales): `podman compose down -v` y volver a levantar.
+- Cómo cambiar la base y las reglas de las migraciones: ver la sección *Base de datos y migraciones* de [`CLAUDE.md`](CLAUDE.md).
+
 ## Problemas frecuentes
 
 **`Cannot connect to Podman`**
@@ -195,6 +203,14 @@ podman restart backend
 **Puerto ocupado**
 
 Cambiar el puerto del lado izquierdo en `compose.yml` (por ejemplo `"3001:80"`) y levantar de nuevo el servicio. Si es Vite (`npm run dev`), muestra automáticamente otro puerto.
+
+**El backend no arranca y el error dice `Schema-validation: missing column ...` o `missing table ...`**
+
+Una entidad no coincide con su tabla. Falta la migración correspondiente o está mal escrita. Ver *Base de datos y migraciones* en `CLAUDE.md`.
+
+**El backend no arranca y el error dice `Migration checksum mismatch`**
+
+Alguien editó una migración que ya se había ejecutado en tu base local. Si solo pasó en tu máquina, reiniciá la base con `podman compose down -v`. Las migraciones ya integradas en `main` no se editan: el cambio va en un script nuevo.
 
 **El backend responde `501`**
 

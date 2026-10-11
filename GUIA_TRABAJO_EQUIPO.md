@@ -468,6 +468,7 @@ Se comparte:
 - `pom.xml`.
 - Documentación.
 - `.env.example`.
+- Migraciones de la base de datos (`backend/src/main/resources/db/migration/`).
 
 No se comparte:
 
@@ -491,6 +492,7 @@ No se comparte:
 - No subir `.env`, contraseñas ni archivos compilados.
 - No trabajar directamente en `main`.
 - No utilizar `git push --force`.
+- Cambiar la base de datos solo con migraciones nuevas (scripts en `db/migration`); no editar una migración ya integrada. Ver `CLAUDE.md`.
 - Integrar cambios mediante Pull Requests.
 
 ## Flujo resumido

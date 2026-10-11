@@ -9,7 +9,7 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 Es la **base del proyecto**: la estructura está creada pero **ningún caso de uso está implementado**.
 
-- **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. No hay entidades ni repositorios.
+- **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. No hay entidades ni repositorios todavía: Flyway ya está configurado y falta la migración `V1` con las tablas del modelo de datos.
 - **Frontend:** todas las pantallas existen como `PaginaPendiente`, con su opción en el menú del rol. El login no valida nada: tiene un selector "Solo desarrollo" para elegir el rol.
 - **Autenticación:** se usará **Firebase Authentication** (correo y Google). Falta implementarla (CU-1). El Documento de diseño todavía menciona Auth0 y validación de contraseñas propia; esas partes se van a corregir.
 
@@ -58,6 +58,32 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 - `services/api.js`: cliente HTTP único (`api.get/post/put/patch/delete`). No usar `fetch` directo en las pantallas.
 - `components/`: `Logo`, `PantallaAcceso` (login, registro, recuperar) y `PaginaPendiente`.
 
+## Base de datos y migraciones (Flyway)
+
+La estructura de la base **no la crea Hibernate**: la crean scripts SQL versionados que ejecuta **Flyway** cada vez que arranca el backend.
+
+- Los scripts están en `backend/src/main/resources/db/migration/` y se llaman `V<número>__<descripcion>.sql` (con **dos** guiones bajos). Ejemplo: `V1__crear_tablas.sql`, `V2__agrega_vigencia_a_pase.sql`.
+- Al arrancar, Flyway ejecuta en orden los scripts que todavía no se aplicaron en esa base y los anota en la tabla `flyway_schema_history`, junto con una huella (*checksum*) de su contenido.
+- `spring.jpa.hibernate.ddl-auto` está en **`validate`**: Hibernate no crea ni modifica nada, solo comprueba que cada entidad coincida con su tabla. Si no coincide, el backend **no arranca** y el error dice qué falta (`Schema-validation: missing column [...]`). Es una ventaja: los desajustes se ven al instante.
+- Para arrancar, el backend necesita PostgreSQL disponible (con `podman compose up -d postgres` alcanza).
+- **Nombres:** tablas y columnas en `snake_case` (`turno_semanal`, `id_turno_semanal`). En las entidades se escribe en camelCase (`idTurnoSemanal`) y Spring lo traduce solo. Si el nombre de la tabla no sale igual, se indica con `@Table(name = "turno_semanal")`.
+
+### Pasos para cambiar la base
+
+1. **Crear un script nuevo** con el número siguiente al último que haya en `db/migration` de `main`. Ejemplo: `V3__agrega_motivo_a_suspension_turno.sql` con `ALTER TABLE suspension_turno ADD COLUMN motivo VARCHAR(255);`.
+2. **Actualizar la entidad JPA** para que coincida (campo, tipo y si admite nulo).
+3. **Reiniciar el backend** (o `podman compose up -d --build backend`). Flyway aplica el script y Hibernate valida.
+4. Si el backend no arranca con `Schema-validation`, la entidad y el script no coinciden: corregir cualquiera de los dos.
+5. **Subir el script y la entidad en el mismo Pull Request.** Antes de abrirlo, mirar si alguien integró en `main` otro script con tu mismo número; si pasó, renombrar el tuyo al siguiente.
+
+### Reglas
+
+- **Nunca editar un script que ya se aplicó** (que esté en `main` o que otro compañero haya ejecutado). Flyway detecta el cambio y no arranca (`Migration checksum mismatch`). Todo cambio nuevo va en un script nuevo.
+- **Excepción:** un script que existe solo en tu rama y que nadie más ejecutó se puede editar. Después hay que reiniciar tu base local: `podman compose down -v` (borra los datos) y volver a arrancar.
+- Un script por cambio lógico, corto y legible en una revisión.
+- No usar `ddl-auto: update` ni `create`, y no modificar el esquema a mano con un cliente SQL: si hace falta un cambio, se escribe el script.
+- Los datos de prueba (*seed*) van en scripts aparte; la convención se define cuando se agreguen.
+
 ## Cómo implementar un caso de uso
 
 Ejemplo: CU-28, alta de especialidades.
@@ -66,7 +92,7 @@ Ejemplo: CU-28, alta de especialidades.
 2. **Leer** el caso de uso y su diagrama de secuencia (documentos del equipo): pasos, flujos alternativos y errores.
 3. **Backend** (paquete `especialidades`):
    - Completar los campos de los DTO que usa el caso de uso (`AltaEspecialidadDTO`, `EspecialidadResponseDTO`). Los comentarios de cada DTO resumen lo que dicen los documentos.
-   - Crear la entidad en `model/` y el repositorio en `repository/`.
+   - Crear la entidad en `model/` y el repositorio en `repository/`. Si el caso de uso necesita cambiar la base, agregar la migración (ver «Base de datos y migraciones»).
    - En `EspecialidadService.altaEspecialidad`, reemplazar el `throw new NoImplementadoException()` por la lógica: validar, buscar duplicados, guardar y devolver el DTO.
    - Cada flujo alternativo del caso de uso es un error con su código del diagrama: `throw new ResponseStatusException(HttpStatus.CONFLICT, "El código ya está en uso")`.
    - Validar el cuerpo con `@Valid` y anotaciones de `jakarta.validation` en el DTO.
@@ -156,7 +182,7 @@ Tablas, mensajes de error y de éxito, ventanas de confirmación (modales), pagi
 - Nunca devolver una entidad directamente desde un controlador: siempre un DTO.
 - El id del usuario autenticado sale de `UsuarioActual`, nunca del cliente.
 - Las validaciones que el diagrama marca como "operaciones internas del método" son métodos privados del servicio, no métodos públicos nuevos.
-- La estructura de tablas la maneja JPA con `ddl-auto: update` (provisorio). Cuando se acuerde el modelo de datos, evaluar migraciones (Flyway).
+- Los cambios en la base van **siempre** con migraciones de Flyway (ver «Base de datos y migraciones»). Hibernate solo valida.
 
 ### Frontend
 
