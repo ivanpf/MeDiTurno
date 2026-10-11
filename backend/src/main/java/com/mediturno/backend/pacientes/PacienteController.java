@@ -1,0 +1,78 @@
+package com.mediturno.backend.pacientes;
+
+import java.util.List;
+
+import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
+import com.mediturno.backend.common.dto.PerfilDTO;
+import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
+import com.mediturno.backend.common.seguridad.UsuarioActual;
+import com.mediturno.backend.pacientes.dto.AltaPacienteDTO;
+import com.mediturno.backend.pacientes.dto.ModificarPacienteDTO;
+import com.mediturno.backend.pacientes.dto.PacienteResponseDTO;
+import com.mediturno.backend.pacientes.dto.RegistroPacienteDTO;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+/**
+ * Endpoints de: CU-5, CU-7, CU-31, CU-32, CU-33, CU-44.
+ * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
+ */
+@RestController
+@RequestMapping("/api/pacientes")
+public class PacienteController {
+
+    private final PacienteService pacienteService;
+    private final UsuarioActual usuarioActual;
+
+    public PacienteController(PacienteService pacienteService, UsuarioActual usuarioActual) {
+        this.pacienteService = pacienteService;
+        this.usuarioActual = usuarioActual;
+    }
+
+    @PostMapping("/registro")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PacienteResponseDTO registrarCuentaPaciente(@RequestBody RegistroPacienteDTO datos) {
+        return pacienteService.registrarCuentaPaciente(datos);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public PacienteResponseDTO altaPaciente(@RequestBody AltaPacienteDTO datos) {
+        return pacienteService.altaPaciente(datos);
+    }
+
+    @PostMapping("/csv")
+    public ResultadoImportacionDTO altaPacientesCSV(@RequestParam("archivo") MultipartFile archivo) {
+        return pacienteService.altaPacientesCSV(archivo);
+    }
+
+    @GetMapping
+    public List<PacienteResponseDTO> listarPacientes(CriteriosBusquedaDTO criterios) {
+        return pacienteService.listarPacientes(criterios);
+    }
+
+    @GetMapping("/{idPaciente}")
+    public PacienteResponseDTO obtenerPaciente(@PathVariable Long idPaciente) {
+        return pacienteService.obtenerPaciente(idPaciente);
+    }
+
+    @PutMapping("/{idPaciente}")
+    public PacienteResponseDTO modificarPaciente(@PathVariable Long idPaciente, @RequestBody ModificarPacienteDTO datos) {
+        return pacienteService.modificarPaciente(idPaciente, datos);
+    }
+
+    @PutMapping("/me/perfil")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void actualizarPerfil(@RequestBody PerfilDTO datos) {
+        pacienteService.actualizarPerfil(usuarioActual.obtenerIdPacienteAutenticado(), datos);
+    }
+}

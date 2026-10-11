@@ -1,0 +1,201 @@
+/* ---------- Encabezado ---------- */
+.encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 24px;
+  background: linear-gradient(90deg, var(--azul-oscuro), var(--azul));
+  box-shadow: 0 2px 6px rgba(18, 54, 107, 0.3);
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--blanco);
+}
+
+.persona {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px 4px 4px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  background: var(--blanco);
+  border-radius: 50%;
+}
+
+.rol {
+  padding: 3px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  background: var(--mostaza);
+  border-radius: 999px;
+}
+
+.encabezado button {
+  padding: 6px 14px;
+  color: var(--blanco);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.encabezado button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ---------- Cuerpo: menú lateral y contenido ---------- */
+.cuerpo {
+  display: flex;
+  min-height: calc(100vh - 64px);
+}
+
+.menu {
+  width: 250px;
+  padding: 20px 14px;
+  background: var(--blanco);
+  border-right: 1px solid var(--borde);
+}
+
+.grupo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+}
+
+.grupo:hover {
+  background: var(--fondo);
+}
+
+.grupo::after {
+  content: '\203A';
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+
+.grupo[aria-expanded='true']::after {
+  transform: rotate(90deg);
+}
+
+.subitems {
+  margin: 0 0 6px 14px;
+  padding-left: 8px;
+  border-left: 2px solid var(--borde);
+}
+
+.item {
+  display: block;
+  margin-bottom: 2px;
+  padding: 10px 12px;
+  color: var(--texto);
+  text-decoration: none;
+  border-left: 4px solid transparent;
+  border-radius: 6px;
+}
+
+.item:hover {
+  background: var(--fondo);
+}
+
+.activo {
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  background: var(--azul-claro);
+  border-left-color: var(--mostaza);
+}
+
+.contenido {
+  flex: 1;
+  min-width: 0; /* evita que un contenido ancho (tablas) desborde la pantalla */
+  padding: 32px;
+}
+
+/* Solo se muestran en pantallas chicas (ver más abajo) */
+.botonMenu,
+.usuarioMovil {
+  display: none;
+}
+
+/* ---------- Pantallas chicas (celular y tablet vertical) ---------- */
+@media (max-width: 800px) {
+  .encabezado {
+    padding: 0 16px;
+  }
+
+  /* El usuario pasa al menú; en el encabezado queda solo el botón que lo abre */
+  .usuario {
+    display: none;
+  }
+
+  .botonMenu {
+    display: inline-block;
+  }
+
+  .cuerpo {
+    flex-direction: column;
+  }
+
+  /* El menú está oculto hasta que se abre */
+  .menu {
+    display: none;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--borde);
+  }
+
+  .abierto {
+    display: block;
+  }
+
+  .usuarioMovil {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--borde);
+  }
+
+  .usuarioMovil .persona {
+    background: var(--azul-claro);
+  }
+
+  .usuarioMovil .avatar {
+    color: var(--blanco);
+    background: var(--azul);
+  }
+
+  .usuarioMovil button {
+    margin-left: auto;
+  }
+
+  .contenido {
+    padding: 20px 16px;
+  }
+}
