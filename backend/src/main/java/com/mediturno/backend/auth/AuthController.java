@@ -1,8 +1,6 @@
 package com.mediturno.backend.auth;
 
 import com.mediturno.backend.auth.dto.CambiarContrasenaDTO;
-import com.mediturno.backend.auth.dto.GoogleLoginRequestDTO;
-import com.mediturno.backend.auth.dto.LoginRequestDTO;
 import com.mediturno.backend.auth.dto.LoginResponseDTO;
 import com.mediturno.backend.auth.dto.RestablecerContrasenaDTO;
 import com.mediturno.backend.auth.dto.SolicitarRecuperacionDTO;
@@ -32,20 +30,16 @@ public class AuthController {
         this.usuarioActual = usuarioActual;
     }
 
+    /** El front ya inició sesión en Firebase (correo o Google) y manda el token; acá se obtiene el rol. */
     @PostMapping("/login")
-    public LoginResponseDTO login(@RequestBody LoginRequestDTO credenciales) {
-        return authService.login(credenciales);
-    }
-
-    @PostMapping("/google")
-    public LoginResponseDTO loginConGoogle(@RequestBody GoogleLoginRequestDTO datos) {
-        return authService.loginConGoogle(datos);
+    public LoginResponseDTO login() {
+        return authService.login(usuarioActual.obtenerIdUsuarioAutenticado());
     }
 
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cerrarSesion() {
-        authService.cerrarSesion(usuarioActual.obtenerIdSesionActual());
+        authService.cerrarSesion(usuarioActual.obtenerIdUsuarioAutenticado());
     }
 
     @PostMapping("/contrasena")

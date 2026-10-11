@@ -45,6 +45,16 @@
   border-radius: 8px;
 }
 
+/* Mensaje de error (por ejemplo, credenciales inválidas). Uso: <p className="mensaje-error" role="alert">...</p> */
+.mensaje-error {
+  margin: 0;
+  padding: 16px 18px;
+  color: var(--error);
+  background: var(--error-claro);
+  border-left: 5px solid var(--error);
+  border-radius: 8px;
+}
+
 /* Envoltorio para tablas anchas: en pantallas chicas se desplaza de costado en lugar de
    desbordar la página. Uso: <div className="tabla-scroll"><table>...</table></div> */
 .tabla-scroll {

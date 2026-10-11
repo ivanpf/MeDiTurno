@@ -47,7 +47,11 @@ En PowerShell:
 Copy-Item .env.example .env
 ```
 
-### 3. Levantar todo en contenedores
+### 3. Configurar Firebase
+
+El inicio de sesión usa Firebase Authentication y casi todo ya viene configurado (datos públicos en `compose.yml`, usuarios de prueba cargados solos). Solo falta **copiar la clave de servicio** que te pasa el equipo a `secrets/firebase-clave.json` (la carpeta `secrets/` no se sube a Git). Los usuarios y contraseñas de prueba están en la sección *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md).
+
+### 4. Levantar todo en contenedores
 
 ```bash
 podman compose up -d --build
@@ -55,7 +59,7 @@ podman compose up -d --build
 
 La primera vez tarda varios minutos (descarga imágenes y compila el backend y el frontend).
 
-### 4. Comprobar que funciona
+### 5. Comprobar que funciona
 
 | Qué | Dirección | Qué se debe ver |
 |---|---|---|
@@ -63,7 +67,7 @@ La primera vez tarda varios minutos (descarga imágenes y compila el backend y e
 | Backend | http://localhost:8080/api/health | `{"estado":"ok"}` |
 | PostgreSQL | `localhost:5432` | (para clientes de base de datos) |
 
-En la pantalla de inicio de sesión **todavía no se valida nada**: elegir un rol en el cuadro **"Solo desarrollo"** y hacer clic en **Ingresar**. Se abre el menú de ese rol, y cada opción muestra una pantalla "pendiente de implementar".
+Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). Con el menú del rol, cada opción muestra una pantalla "pendiente de implementar".
 
 Los endpoints del backend existen pero todavía no están implementados: responden `501 Funcionalidad pendiente de implementar`. Es lo esperado.
 
@@ -169,6 +173,8 @@ Donde el Documento de diseño une casos de uso en una sola pantalla (CU-13 con C
 | `POSTGRES_PASSWORD` | `mediturno123` | PostgreSQL y backend |
 | `POSTGRES_DB` | `mediturno_db` | PostgreSQL y backend |
 | `DB_HOST` | `postgres` (nombre del contenedor) | backend; usar `localhost` si corre fuera de contenedores |
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | las del proyecto de Firebase de MeDiTurno | frontend (datos públicos de Firebase); se leen del `.env` de la raíz |
+| `FIREBASE_CREDENCIALES` | `../secrets/firebase-clave.json` (en contenedores, `/secrets/firebase-clave.json`) | backend; ruta de la clave de servicio |
 
 Los valores de `.env.example` sirven **únicamente para desarrollo local**. `.env` está ignorado por Git: no subir credenciales reales ni usar estas en producción.
 

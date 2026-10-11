@@ -39,8 +39,8 @@ export default function Layout() {
 
   const cerrarMenu = () => setMenuAbierto(false)
 
-  const salir = () => {
-    cerrarSesion() // TODO(CU-2): confirmar y pedir al backend que invalide la sesión
+  const salir = async () => {
+    await cerrarSesion()
     navigate('/login')
   }
 

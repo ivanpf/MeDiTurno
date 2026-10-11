@@ -10,8 +10,8 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 Es la **base del proyecto**: la estructura está creada pero **ningún caso de uso está implementado**.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio (vacío) por tabla.
-- **Frontend:** todas las pantallas existen como `PaginaPendiente`, con su opción en el menú del rol. El login no valida nada: tiene un selector "Solo desarrollo" para elegir el rol.
-- **Autenticación:** se usará **Firebase Authentication** (correo y Google). Falta implementarla (CU-1). El Documento de diseño todavía menciona Auth0 y validación de contraseñas propia; esas partes se van a corregir.
+- **Frontend:** todas las pantallas existen como `PaginaPendiente`, con su opción en el menú del rol. El login (CU-1) y el cierre de sesión (CU-2) funcionan con Firebase.
+- **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1 y CU-2 (ver «Autenticación (Firebase)»). Faltan CU-3, CU-4 y CU-7. El Documento de diseño todavía menciona Auth0 y validación de contraseñas propia; esas partes se van a corregir.
 
 ## Comandos
 
@@ -46,7 +46,7 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 - Los nombres de servicios, métodos y DTO salen del **Documento de diseño**. No renombrarlos sin avisar: los diagramas y el código tienen que seguir coincidiendo.
 - Todos los endpoints están bajo `/api`. Las rutas vienen de los diagramas de secuencia; las que el diagrama no indica son propuestas y se pueden ajustar.
 - `common/`: `CorsConfig`, `exception/` (`ApiError`, `GlobalExceptionHandler`, `NoImplementadoException`), `seguridad/UsuarioActual`, `dto/` (DTO compartidos) y `health/` (`GET /api/health`).
-- **`UsuarioActual`** entrega el id del usuario autenticado (paciente, médico, funcionario). Los controladores lo usan en lugar de recibir ese id por la URL o el cuerpo. Hoy lanza `NoImplementadoException`; se implementa con CU-1.
+- **`UsuarioActual`** entrega el id del usuario autenticado (paciente, médico, funcionario). Los controladores lo usan en lugar de recibir ese id por la URL o el cuerpo. Ver «Autenticación (Firebase)».
 - **Métodos internos** (sin endpoint): `AuthService.crearCuenta`, `PaseService.tienePaseVigente`, `EmailService`, `PushNotificationService.enviarPush` y los avisos de `NotificacionService`. Los llaman otros servicios.
 
 ### Frontend (`frontend/src/`)
@@ -58,6 +58,33 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 - `services/api.js`: cliente HTTP único (`api.get/post/put/patch/delete`). No usar `fetch` directo en las pantallas.
 - `components/`: `Logo`, `PantallaAcceso` (login, registro, recuperar) y `PaginaPendiente`.
 - `styles/`: CSS global compartido (`variables.css`, `base.css`, `compartidos.css`). Lo propio de cada componente o pantalla va en su `.module.css` (ver «Dónde va el CSS»).
+
+### Autenticación (Firebase)
+
+**CU-1 (inicio de sesión) y CU-2 (cierre) están implementados.** Firebase Authentication se ocupa de las contraseñas, de Google y de los tokens; el backend no guarda contraseñas.
+
+- **Flujo:** el front inicia sesión en Firebase (`signInWithEmailAndPassword` o `signInWithPopup` de Google) y llama a `POST /api/auth/login` con el token. Esa y todas las demás llamadas a `/api` (salvo `/api/health`) pasan por `FiltroAutenticacion`: verifica el token, busca a la persona por `firebase_uid` y exige cuenta `ACTIVO`. Si algo falla, `401` con un mensaje genérico (no revela si la cuenta existe ni su estado).
+- **Rol y nombre:** `login` los devuelve (`paciente`, `funcionario`, `medico`, `admin`); el rol sale de en cuál tabla está la persona. El menú se arma en el front con ese rol.
+- **`UsuarioActual`** lee al usuario que dejó el filtro. En los controladores se usa `obtenerIdPacienteAutenticado()` (o médico / funcionario); si la persona no tiene ese rol responde `403`.
+- **Cerrar sesión (CU-2):** `POST /api/auth/logout` revoca las sesiones en Firebase y el front cierra la sesión local. El token ya emitido sigue siendo válido hasta que vence (1 hora); para bloquear a alguien de inmediato, ponerlo `INACTIVO`: el filtro lo rechaza en la siguiente llamada.
+- **Quien entra con Google pero no está en la base** recibe el mismo error genérico (queda un usuario huérfano en Firebase, que se puede borrar desde la consola).
+- **Tests:** `AutenticacionTest` usa un `ProveedorIdentidad` falso, sin Firebase real.
+
+**Configuración:** los datos públicos de Firebase ya están en `compose.yml` y `.env.example`, y los cuatro usuarios de prueba se cargan solos al arrancar el backend. Lo único que hay que hacer es **copiar la clave de servicio** a `secrets/firebase-clave.json`: el archivo se lo pasa el equipo por un canal privado (nunca por Git: la carpeta `secrets/` está ignorada). Sin la clave, el backend arranca pero nadie puede iniciar sesión.
+
+**Usuarios de prueba** (migración repetible `db/seed/R__usuarios_de_prueba.sql`, correo y contraseña en Firebase): `admin@mediturno.com`, `medico@mediturno.com`, `funcionario@mediturno.com` y `paciente@mediturno.com`, con contraseña `admin123`, `medico123`, `funcionario123` y `paciente123`.
+
+**Cambiar el proyecto de Firebase o crear otro usuario a mano:**
+
+1. Completar los cuatro datos públicos de la app web en `.env` (variables `VITE_FIREBASE_*`; ver `.env.example`). los cuatro datos públicos de la app web de Firebase y completarlos en `.env` (ver `.env.example`, variables `VITE_FIREBASE_*`).
+2. Descargar la **clave de servicio** (consola de Firebase > Configuración del proyecto > Cuentas de servicio > Generar nueva clave privada) y guardarla como `secrets/firebase-clave.json`. Esa carpeta está ignorada por Git: **la clave nunca se sube**. Fuera de contenedores el backend la busca ahí (`../secrets/firebase-clave.json`); se puede cambiar con la variable `FIREBASE_CREDENCIALES`. Sin la clave, el backend arranca pero nadie puede iniciar sesión.
+3. **Usuario nuevo** (hasta que existan CU-7 y CU-34): crear la cuenta en la consola de Firebase (Authentication > Users > Add user), copiar su *User UID* y ejecutar en la base (DBeaver) con ese UID:
+
+```sql
+INSERT INTO usuario (correo, estado, proveedor_acceso, fecha_creacion, cedula, nombre, apellido, fecha_nacimiento, firebase_uid)
+VALUES ('admin@ejemplo.com', 'ACTIVO', 'PASSWORD', LOCALTIMESTAMP, '1.111.111-1', 'Nombre', 'Apellido', '1980-01-01', 'PEGAR_AQUI_EL_UID');
+INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE correo = 'admin@ejemplo.com';
+```
 
 ## Base de datos y migraciones (Flyway)
 
@@ -179,6 +206,7 @@ El aspecto de la aplicación es **sobrio y profesional**: azul y blanco, con mos
 | `--borde` | `#d3dce8` | bordes de campos y separadores |
 | `--fondo` | `#f4f7fb` | fondo de la página |
 | `--blanco` | `#fff` | paneles, tarjetas, campos |
+| `--error` / `--error-claro` | `#b42318` / `#fdecea` | mensajes de error (`.mensaje-error`): texto y borde / fondo |
 
 Reglas: no agregar colores de marca nuevos y no escribir colores sueltos en los componentes (usar las variables). El mostaza se usa con moderación: si hay más de uno o dos elementos mostaza por pantalla, se está abusando.
 
@@ -201,14 +229,14 @@ Reglas: no agregar colores de marca nuevos y no escribir colores sueltos en los 
 
 - **Botones:** el botón común es secundario (borde azul, fondo blanco). Usar `className="principal"` para la acción principal; **un solo botón principal por pantalla o formulario**. Deshabilitado = opacidad reducida.
 - **Formularios:** el `<label>` envuelve al campo (`<label>Nombre<input /></label>`). Los campos ocupan todo el ancho y tienen foco azul visible.
-- **Aviso:** `.pendiente` (fondo mostaza claro con barra mostaza) para avisos informativos.
+- **Aviso:** `.pendiente` (fondo mostaza claro con barra mostaza) para avisos informativos. **Error:** `.mensaje-error` (fondo rojo claro con barra roja).
 - **Panel y tarjeta:** `.panel` es el contenedor de una pantalla con sesión; `.tarjeta` es la de las pantallas de acceso. Ambas son clases globales de `compartidos.css`.
 - **Logo:** componente `Logo`. `variante="oscuro"` sobre fondo claro; `variante="claro"` sobre azul (el logo va dentro de un círculo blanco, porque el logo es azul y se perdería). Imagen en `src/assets/logo.png`, ícono de pestaña en `public/favicon.png`.
 - **Usuario en el encabezado:** avatar con iniciales, nombre y etiqueta del rol (mostaza).
 
 ### Todavía no existe (definirlo con este mismo estilo)
 
-Tablas, mensajes de error y de éxito, ventanas de confirmación (modales), paginación y estados de carga. Quien primero los necesite los agrega a `styles/compartidos.css` (si los van a usar varias pantallas) usando las variables de arriba, para que los reutilicen los demás, y actualiza esta guía. Para error y éxito se necesitan variables nuevas (`--error`, `--exito`): agregarlas a `variables.css` y documentarlas en la tabla de colores.
+Tablas, mensajes de éxito, ventanas de confirmación (modales), paginación y estados de carga. Quien primero los necesite los agrega a `styles/compartidos.css` (si los van a usar varias pantallas) usando las variables de arriba, para que los reutilicen los demás, y actualiza esta guía. El error ya existe (`.mensaje-error`, variables `--error`); para el éxito hace falta una variable nueva (`--exito`): agregarla a `variables.css` y documentarla en la tabla de colores.
 
 ### Responsive y accesibilidad
 
