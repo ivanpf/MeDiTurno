@@ -9,7 +9,7 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 Es la **base del proyecto**: la estructura está creada pero **ningún caso de uso está implementado**.
 
-- **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. No hay entidades ni repositorios todavía: Flyway ya está configurado y falta la migración `V1` con las tablas del modelo de datos.
+- **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio (vacío) por tabla.
 - **Frontend:** todas las pantallas existen como `PaginaPendiente`, con su opción en el menú del rol. El login no valida nada: tiene un selector "Solo desarrollo" para elegir el rol.
 - **Autenticación:** se usará **Firebase Authentication** (correo y Google). Falta implementarla (CU-1). El Documento de diseño todavía menciona Auth0 y validación de contraseñas propia; esas partes se van a corregir.
 
@@ -20,7 +20,7 @@ podman compose up -d --build          # todo en contenedores (frontend en :3000,
 podman compose up -d postgres         # solo la base, para desarrollar fuera de contenedores
 
 cd backend  && ./mvnw spring-boot:run # backend (PowerShell: $env:DB_HOST="localhost"; .\mvnw.cmd spring-boot:run)
-cd backend  && ./mvnw test            # tests del backend
+cd backend  && ./mvnw test            # tests del backend (levantan un PostgreSQL embebido; la primera vez descargan binarios)
 cd frontend && npm run dev            # frontend con recarga automática (:5173)
 cd frontend && npm run lint           # oxlint
 cd frontend && npm run build          # compilación
@@ -68,6 +68,44 @@ La estructura de la base **no la crea Hibernate**: la crean scripts SQL versiona
 - `spring.jpa.hibernate.ddl-auto` está en **`validate`**: Hibernate no crea ni modifica nada, solo comprueba que cada entidad coincida con su tabla. Si no coincide, el backend **no arranca** y el error dice qué falta (`Schema-validation: missing column [...]`). Es una ventaja: los desajustes se ven al instante.
 - Para arrancar, el backend necesita PostgreSQL disponible (con `podman compose up -d postgres` alcanza).
 - **Nombres:** tablas y columnas en `snake_case` (`turno_semanal`, `id_turno_semanal`). En las entidades se escribe en camelCase (`idTurnoSemanal`) y Spring lo traduce solo. Si el nombre de la tabla no sale igual, se indica con `@Table(name = "turno_semanal")`.
+
+### Modelo de datos
+
+La migración `V1__crear_tablas.sql` crea las 20 tablas del modelo. Hay una entidad JPA por tabla (en `<paquete>/model/`) y un repositorio vacío por entidad (en `<paquete>/repository/`). `medico_especialidad` es la tabla intermedia de `Medico.especialidades`, por eso no tiene entidad propia.
+
+- **Usuarios:** `Usuario` es una clase abstracta y `Paciente`, `Funcionario`, `Medico` y `Administrador` extienden de ella (herencia `JOINED`: una tabla por tipo). **No hay columna `rol`:** el tipo de una persona sale de en cuál de las cuatro tablas está su id. Cada persona tiene un solo rol.
+- **Autenticación (Firebase):** no se guardan contraseñas. `firebase_uid` es único y puede estar vacío: vacío significa que la persona está en el padrón pero todavía no creó su cuenta (CU-7).
+- **Estados:** son `enum` de Java guardados como texto, y la base valida los valores con un `CHECK`:
+
+| Enum | Valores |
+|---|---|
+| `EstadoActivacion` (usuario, especialidad, consultorio) | `ACTIVO`, `INACTIVO` |
+| `ProveedorAcceso` | `PASSWORD`, `GOOGLE` |
+| `EstadoTurnoSemanal` | `ACTIVO`, `SUSPENDIDO` |
+| `TipoSuspension` | `TEMPORAL`, `PERMANENTE` |
+| `DiaSemana` | `LUNES` … `DOMINGO` |
+| `EstadoOcurrenciaTurno` | `HABILITADA`, `SUSPENDIDA`, `FINALIZADA` |
+| `EstadoReserva` | `VIGENTE`, `ORDEN_EMITIDA`, `ATENDIDA`, `CANCELADA`, `ANULADA`, `VENCIDA` |
+| `EstadoOrden` | `EMITIDA`, `UTILIZADA` |
+| `EstadoPase` | `VIGENTE`, `USADO`, `VENCIDO` |
+| `EstadoAnuncio` | `PUBLICADO`, `ELIMINADO` |
+| `EstadoNotificacion` | `PENDIENTE`, `ENVIADA`, `FALLIDA`, `LEIDA` |
+| `TipoNotificacion` | `RECORDATORIO_CONSULTA`, `SUSPENSION_TURNO`, `CONSULTA_REGISTRADA` |
+| `CanalNotificacion` | `EMAIL`, `PUSH`, `APLICACION` |
+
+- **Flujo de estados de una reserva:** `VIGENTE` → `ORDEN_EMITIDA` (CU-16) → `ATENDIDA` (CU-23). Desde `VIGENTE`: `CANCELADA` (el paciente, CU-9) o `ANULADA` (suspensión del turno, CU-13). Si pasa la fecha sin atención, `VENCIDA`.
+- **Reglas que ya impone la base de datos:**
+  - Un número de una ocurrencia solo puede estar en una reserva que lo conserve; las `CANCELADA` y `ANULADA` lo liberan (`uq_reserva_numero_ocupado`).
+  - Una orden por reserva, y una consulta por orden y por reserva.
+  - Una ocurrencia por turno y fecha.
+  - `hora_fin` posterior a `hora_inicio`; `cupo_maximo` y `cupos` de al menos 1.
+  - El nombre de la especialidad es único.
+  - Una suspensión temporal exige fecha de fin.
+- **`ocurrencia_turno` guarda una copia** del cupo y del horario del turno al crearse. Si luego se cambia el turno, las ocurrencias ya creadas (y sus reservas) no se modifican.
+- **Cupos libres:** no se guardan. Se calculan como `cupos` menos las reservas que conservan su número.
+- **Vigencia de los pases:** el enum `VigenciaPase` define los 60 días; un pase vence 60 días después de `fecha_emision`.
+- **Tipos:** los textos largos (antecedentes, motivo, indicaciones, contenido del anuncio) son `TEXT`; las fechas con hora, `TIMESTAMP` (`LocalDateTime`); los horarios, `TIME`.
+- **Prueba automática:** `EsquemaBaseDeDatosTest` levanta un PostgreSQL embebido (no necesita Podman; la primera vez descarga los binarios), ejecuta las migraciones, comprueba que cada entidad coincida con su tabla y verifica las reglas más importantes. Se ejecuta con `./mvnw test`.
 
 ### Pasos para cambiar la base
 

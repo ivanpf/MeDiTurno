@@ -117,7 +117,7 @@ Abrir la dirección que muestra Vite (normalmente http://localhost:5173). Las ll
 ### Probar, revisar y compilar
 
 ```bash
-cd backend && ./mvnw test        # tests del backend
+cd backend && ./mvnw test        # tests del backend (la primera vez descargan un PostgreSQL embebido, hace falta internet)
 cd frontend && npm run lint      # revisión de código del frontend
 cd frontend && npm run build     # compilación del frontend
 ```

@@ -10,3 +10,4 @@ spring:
     hibernate:
       ddl-auto: validate # Hibernate no crea ni modifica tablas: lo hacen las migraciones de Flyway (db/migration)
     show-sql: true
+    open-in-view: false
