@@ -1,0 +1,59 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+}
+
+.marca img {
+  width: 78%;
+  height: auto;
+}
+
+/* Sobre fondo azul: el logo va dentro de un círculo blanco */
+.claro {
+  color: var(--blanco);
+}
+
+.claro .marca {
+  background: var(--blanco);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Sobre fondo claro */
+.oscuro {
+  color: var(--azul-oscuro);
+}
+
+/* Versión grande (panel de marca del login) */
+.grande {
+  font-size: 30px;
+}
+
+.grande .marca {
+  width: 72px;
+  height: 72px;
+}
+
+@media (max-width: 800px) {
+  .grande {
+    font-size: 24px;
+  }
+
+  .grande .marca {
+    width: 56px;
+    height: 56px;
+  }
+}

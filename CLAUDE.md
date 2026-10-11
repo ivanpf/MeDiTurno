@@ -57,6 +57,7 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 - `layout/Layout.jsx`: encabezado (logo, nombre, rol, cerrar sesión) y menú lateral con grupos desplegables.
 - `services/api.js`: cliente HTTP único (`api.get/post/put/patch/delete`). No usar `fetch` directo en las pantallas.
 - `components/`: `Logo`, `PantallaAcceso` (login, registro, recuperar) y `PaginaPendiente`.
+- `styles/`: CSS global compartido (`variables.css`, `base.css`, `compartidos.css`). Lo propio de cada componente o pantalla va en su `.module.css` (ver «Dónde va el CSS»).
 
 ## Base de datos y migraciones (Flyway)
 
@@ -106,9 +107,26 @@ Ejemplo: CU-28, alta de especialidades.
 
 ## Guía de diseño
 
-El aspecto de la aplicación es **sobrio y profesional**: azul y blanco, con mostaza solo para resaltar. Toda pantalla nueva tiene que verse como las que ya existen. Antes de crear un estilo nuevo, reutilizar las variables y clases de `frontend/src/index.css` (el único CSS del proyecto). Pantallas de referencia: `layout/Layout.jsx`, `features/auth/LoginPage.jsx` y `components/PaginaPendiente.jsx`.
+El aspecto de la aplicación es **sobrio y profesional**: azul y blanco, con mostaza solo para resaltar. Toda pantalla nueva tiene que verse como las que ya existen. Antes de crear un estilo nuevo, reutilizar las variables y las piezas compartidas de `frontend/src/styles/`. Pantallas de referencia: `layout/Layout.jsx`, `features/auth/LoginPage.jsx` y `components/PaginaPendiente.jsx`.
 
-### Colores (variables en `:root`)
+### Dónde va el CSS
+
+- **Global, en `src/styles/`** (cambia poco y lo tocan pocas personas):
+  - `variables.css`: colores, sombra y demás variables.
+  - `base.css`: estilos de los elementos HTML (tipografía, enlaces, formularios y botones).
+  - `compartidos.css`: piezas que usan varias pantallas (`.panel`, `.tarjeta`, `.pendiente`, `.enlace-volver`, `.tabla-scroll`).
+- **Propio de un componente o pantalla: un CSS Module** junto al componente, con el mismo nombre (`AltaTurnoPage.jsx` + `AltaTurnoPage.module.css`). Las clases de un módulo son **locales a ese archivo**, así que no pueden chocar con las de otro (es el equivalente a los estilos de componente de Angular). Se usa así:
+
+  ```jsx
+  import estilos from './AltaTurnoPage.module.css'
+
+  <div className={estilos.grilla}>...</div>
+  ```
+
+- **Reglas:** no agregar reglas específicas de una pantalla a los CSS globales. Si algo se repite en tres o más pantallas, pasarlo a `compartidos.css`. Los colores y sombras siempre salen de las variables. Los CSS Modules no necesitan configuración: Vite los soporta si el archivo termina en `.module.css`.
+- **Con `NavLink`** (menús): el enlace activo recibe una clase global `active` que un módulo no puede ver; se resuelve con la función de `className` (ver `layout/Layout.jsx`).
+
+### Colores (variables en `src/styles/variables.css`)
 
 | Variable | Valor | Uso |
 |---|---|---|
@@ -146,16 +164,25 @@ Reglas: no agregar colores de marca nuevos y no escribir colores sueltos en los 
 - **Botones:** el botón común es secundario (borde azul, fondo blanco). Usar `className="principal"` para la acción principal; **un solo botón principal por pantalla o formulario**. Deshabilitado = opacidad reducida.
 - **Formularios:** el `<label>` envuelve al campo (`<label>Nombre<input /></label>`). Los campos ocupan todo el ancho y tienen foco azul visible.
 - **Aviso:** `.pendiente` (fondo mostaza claro con barra mostaza) para avisos informativos.
+- **Panel y tarjeta:** `.panel` es el contenedor de una pantalla con sesión; `.tarjeta` es la de las pantallas de acceso. Ambas son clases globales de `compartidos.css`.
 - **Logo:** componente `Logo`. `variante="oscuro"` sobre fondo claro; `variante="claro"` sobre azul (el logo va dentro de un círculo blanco, porque el logo es azul y se perdería). Imagen en `src/assets/logo.png`, ícono de pestaña en `public/favicon.png`.
 - **Usuario en el encabezado:** avatar con iniciales, nombre y etiqueta del rol (mostaza).
 
 ### Todavía no existe (definirlo con este mismo estilo)
 
-Tablas, mensajes de error y de éxito, ventanas de confirmación (modales), paginación y estados de carga. Quien primero los necesite los agrega a `index.css` usando las variables de arriba, para que los reutilicen los demás, y actualiza esta guía. Para error y éxito se necesitan variables nuevas (`--error`, `--exito`): agregarlas a `:root` y documentarlas en la tabla de colores.
+Tablas, mensajes de error y de éxito, ventanas de confirmación (modales), paginación y estados de carga. Quien primero los necesite los agrega a `styles/compartidos.css` (si los van a usar varias pantallas) usando las variables de arriba, para que los reutilicen los demás, y actualiza esta guía. Para error y éxito se necesitan variables nuevas (`--error`, `--exito`): agregarlas a `variables.css` y documentarlas en la tabla de colores.
 
 ### Responsive y accesibilidad
 
-- **Responsive:** hay un punto de corte en 800 px (el menú pasa arriba y el login se apila). Probar cada pantalla con ancho de celular.
+- **Responsive:** el punto de corte es **800 px** (celular y tablet vertical). Debajo de ese ancho:
+  - El encabezado muestra solo el logo y un botón **Menú**. Nombre, rol y «Cerrar sesión» pasan al principio del menú, que está oculto hasta que se abre y se cierra al elegir una opción (`layout/Layout.jsx`).
+  - El login se apila (panel de marca arriba, formulario abajo); en celulares muy chicos (480 px) el panel se compacta.
+  - Los títulos bajan a 22 px y los campos a 16 px (con menos, algunos celulares agrandan la pantalla al tocarlos).
+- **Qué hacer en cada pantalla nueva:**
+  - Probarla con el navegador en modo celular (320, 375 y 768 px) y comprobar que **no aparece desplazamiento horizontal de toda la página**.
+  - Las **tablas anchas** van dentro de `<div className="tabla-scroll">` para que se desplacen de costado dentro de su contenedor.
+  - Usar `min-width: 0` en un hijo de flex o grid que pueda desbordar. Los textos largos sin espacios (rutas, correos) ya se cortan solos (`overflow-wrap`).
+  - El CSS específico para pantallas chicas se escribe con `@media (max-width: 800px)` dentro del `.module.css` de la pantalla. No usar anchos fijos en píxeles para contenedores.
 - **Contraste:** texto oscuro sobre fondo claro y blanco sobre azul. No poner texto gris claro sobre fondos de color.
 - **Foco visible** en todos los controles (ya lo resuelve el CSS global; no quitarlo).
 - Navegar con `<NavLink>`/`<Link>`; las acciones son `<button>`. Los desplegables llevan `aria-expanded`. Las imágenes decorativas tienen `alt=""`; las informativas, un `alt` descriptivo.
@@ -187,7 +214,7 @@ Tablas, mensajes de error y de éxito, ventanas de confirmación (modales), pagi
 ### Frontend
 
 - JavaScript con JSX. Componentes en `PascalCase`; las pantallas terminan en `Page`.
-- **Un solo CSS**, `src/index.css`, con variables en `:root`. Sin librerías de interfaz.
+- **CSS:** global solo para variables, estilos base y piezas compartidas (`src/styles/`); lo demás, en un **CSS Module** por componente o pantalla (`Nombre.module.css`). Ver «Dónde va el CSS». Sin librerías de interfaz.
 - Aspecto visual: seguir la **Guía de diseño** de este archivo.
 - Agregar una pantalla = crear el componente en `features/<área>/` y sumar una línea en `routes.jsx`.
 - No usar `fetch` directo: usar `api`.

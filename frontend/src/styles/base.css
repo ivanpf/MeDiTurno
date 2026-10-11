@@ -1,0 +1,127 @@
+/* Estilos base de los elementos HTML: tipografía, enlaces, formularios y botones. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--texto);
+  background: var(--fondo);
+  overflow-wrap: break-word; /* un texto largo sin espacios no debe desbordar la pantalla */
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--azul-oscuro);
+}
+
+h1::after {
+  content: '';
+  display: block;
+  width: 44px;
+  height: 4px;
+  margin-top: 10px;
+  border-radius: 2px;
+  background: var(--mostaza);
+}
+
+h2 {
+  margin: 24px 0 10px;
+  font-size: 18px;
+  color: var(--azul-oscuro);
+}
+
+a {
+  color: var(--azul);
+}
+
+a:hover {
+  color: var(--azul-oscuro);
+}
+
+code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--azul-claro);
+  color: var(--azul-oscuro);
+  overflow-wrap: anywhere; /* rutas de archivo largas */
+}
+
+/* ---------- Formularios ---------- */
+label {
+  display: block;
+  margin: 14px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris);
+}
+
+input,
+select,
+textarea {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  padding: 10px 12px;
+  font: inherit;
+  font-weight: 400;
+  color: var(--texto);
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid rgba(29, 79, 145, 0.25);
+  border-color: var(--azul);
+}
+
+/* ---------- Botones ---------- */
+button {
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--azul);
+  background: var(--blanco);
+  border: 1px solid var(--azul);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--azul-claro);
+}
+
+button.principal {
+  color: var(--blanco);
+  background: var(--azul);
+}
+
+button.principal:hover {
+  background: var(--azul-oscuro);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- Pantallas chicas ---------- */
+@media (max-width: 800px) {
+  h1 {
+    font-size: 22px;
+  }
+
+  /* Con menos de 16 px, algunos celulares agrandan la pantalla al tocar un campo */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

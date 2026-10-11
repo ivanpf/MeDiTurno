@@ -250,7 +250,7 @@ Editar en VS Code:
 
 ```text
 frontend/src/features/auth/LoginPage.jsx
-frontend/src/index.css
+frontend/src/features/auth/LoginPage.module.css
 ```
 
 Ver los cambios:
@@ -281,7 +281,7 @@ git diff
 Agregar archivos específicos:
 
 ```bash
-git add frontend/src/App.jsx frontend/src/App.css
+git add frontend/src/features/auth/LoginPage.jsx frontend/src/features/auth/LoginPage.module.css
 ```
 
 También se pueden agregar todos los cambios:

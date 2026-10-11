@@ -4,6 +4,10 @@ import { useAuth } from '../auth/useAuth'
 import { ETIQUETA_ROL } from '../auth/roles'
 import Logo from '../components/Logo'
 import { RUTAS } from '../routes'
+import estilos from './Layout.module.css'
+
+// NavLink agrega su propia clase `active`; con CSS Modules se usa la función de className para aplicar la local.
+const claseItem = ({ isActive }) => (isActive ? `${estilos.item} ${estilos.activo}` : estilos.item)
 
 const iniciales = (nombre) =>
   nombre.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('')
@@ -14,6 +18,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [abiertos, setAbiertos] = useState({}) // grupos que el usuario abrió o cerró a mano
+  const [menuAbierto, setMenuAbierto] = useState(false) // solo se usa en pantallas chicas
 
   if (!rol) return <Navigate to="/login" replace />
 
@@ -32,38 +37,61 @@ export default function Layout() {
   const estaAbierto = (grupo) => abiertos[grupo] ?? grupo === grupoActual
   const alternar = (grupo) => setAbiertos({ ...abiertos, [grupo]: !estaAbierto(grupo) })
 
+  const cerrarMenu = () => setMenuAbierto(false)
+
   const salir = () => {
     cerrarSesion() // TODO(CU-2): confirmar y pedir al backend que invalide la sesión
     navigate('/login')
   }
 
   return (
-    <div className="layout">
-      <header className="encabezado">
+    <div>
+      <header className={estilos.encabezado}>
         <Logo variante="claro" />
-        <div className="usuario">
+        {/* En pantallas grandes: usuario, rol y cerrar sesión en el encabezado */}
+        <div className={estilos.usuario}>
           {nombre && (
-            <span className="persona">
-              <span className="avatar">{iniciales(nombre)}</span>
+            <span className={estilos.persona}>
+              <span className={estilos.avatar}>{iniciales(nombre)}</span>
               {nombre}
             </span>
           )}
-          <span className="rol">{ETIQUETA_ROL[rol]}</span>
+          <span className={estilos.rol}>{ETIQUETA_ROL[rol]}</span>
           <button onClick={salir}>Cerrar sesión</button>
         </div>
+        {/* En pantallas chicas: un botón que abre y cierra el menú */}
+        <button
+          className={estilos.botonMenu}
+          aria-expanded={menuAbierto}
+          aria-controls="menu-principal"
+          onClick={() => setMenuAbierto(!menuAbierto)}
+        >
+          {menuAbierto ? 'Cerrar menú' : 'Menú'}
+        </button>
       </header>
-      <div className="cuerpo">
-        <nav className="menu">
+      <div className={estilos.cuerpo}>
+        <nav id="menu-principal" className={menuAbierto ? `${estilos.menu} ${estilos.abierto}` : estilos.menu}>
+          {/* Solo en pantallas chicas: usuario, rol y cerrar sesión dentro del menú */}
+          <div className={estilos.usuarioMovil}>
+            {nombre && (
+              <span className={estilos.persona}>
+                <span className={estilos.avatar}>{iniciales(nombre)}</span>
+                {nombre}
+              </span>
+            )}
+            <span className={estilos.rol}>{ETIQUETA_ROL[rol]}</span>
+            <button onClick={salir}>Cerrar sesión</button>
+          </div>
           {secciones.map((sec) =>
             sec.grupo ? (
               <div key={sec.grupo}>
-                <button className="grupo" aria-expanded={estaAbierto(sec.grupo)} onClick={() => alternar(sec.grupo)}>
+                <button className={estilos.grupo} aria-expanded={estaAbierto(sec.grupo)} onClick={() => alternar(sec.grupo)}>
                   {sec.grupo}
                 </button>
                 {estaAbierto(sec.grupo) && (
-                  <div className="subitems">
+                  <div className={estilos.subitems}>
                     {sec.items.map((r) => (
-                      <NavLink key={r.path} to={r.path} end>
+                      <NavLink key={r.path} to={r.path} end className={claseItem} onClick={cerrarMenu}>
                         {r.etiqueta}
                       </NavLink>
                     ))}
@@ -71,13 +99,13 @@ export default function Layout() {
                 )}
               </div>
             ) : (
-              <NavLink key={sec.items[0].path} to={sec.items[0].path} end>
+              <NavLink key={sec.items[0].path} to={sec.items[0].path} end className={claseItem} onClick={cerrarMenu}>
                 {sec.items[0].etiqueta}
               </NavLink>
             ),
           )}
         </nav>
-        <main className="contenido">
+        <main className={estilos.contenido}>
           <Outlet />
         </main>
       </div>

@@ -1,0 +1,15 @@
+/* Colores y medidas de MeDiTurno. Todo color o sombra que se use en un componente sale de acá. */
+:root {
+  --azul: #1d4f91;
+  --azul-oscuro: #12366b;
+  --azul-claro: #e8f0fa;
+  --mostaza: #e1ad01;
+  --mostaza-oscuro: #b88700;
+  --mostaza-claro: #fff6d6;
+  --texto: #1c2733;
+  --gris: #5b6b7c;
+  --borde: #d3dce8;
+  --fondo: #f4f7fb;
+  --blanco: #fff;
+  --sombra: 0 1px 3px rgba(18, 54, 107, 0.12), 0 4px 12px rgba(18, 54, 107, 0.06);
+}

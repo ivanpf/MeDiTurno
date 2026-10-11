@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/useAuth'
 import { ETIQUETA_ROL, ROLES } from '../../auth/roles'
 import PantallaAcceso from '../../components/PantallaAcceso'
 import { rutaInicio } from '../../routes'
+import estilos from './LoginPage.module.css'
 
 // CU-1 Inicio de sesión. Por ahora solo la interfaz: ninguna credencial se valida.
 export default function LoginPage() {
@@ -37,7 +38,7 @@ export default function LoginPage() {
         <p><Link to="/recuperar-acceso">¿Olvidó su contraseña? Recuperar acceso</Link></p>
         <p>¿Es paciente y no tiene cuenta? <Link to="/registro">Crear cuenta</Link></p>
 
-        <fieldset className="dev">
+        <fieldset className={estilos.dev}>
           <legend>Solo desarrollo</legend>
           <label>
             Ingresar como
