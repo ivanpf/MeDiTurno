@@ -15,8 +15,8 @@ import com.mediturno.backend.usuarios.model.Usuario;
 /**
  * Identidad del usuario autenticado en la solicitud actual. La resuelve {@link FiltroAutenticacion} a partir del token.
  * Los controladores usan esta clase para saber quién hace la llamada, en lugar de recibir el id por la URL.
- * Los métodos por rol responden 403 si la persona no tiene ese rol: **cada endpoint tiene que pedir el id del rol que
- * lo puede usar** (el filtro solo comprueba que haya una sesión válida, no qué rol tiene).
+ * Los métodos por rol devuelven el id y responden 403 si la persona no tiene ese rol. Qué roles pueden usar cada
+ * endpoint se declara con {@link RolesPermitidos}.
  */
 @Component
 public class UsuarioActual {
