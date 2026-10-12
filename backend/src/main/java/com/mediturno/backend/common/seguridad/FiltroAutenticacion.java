@@ -21,7 +21,8 @@ import com.mediturno.backend.usuarios.repository.UsuarioRepository;
  * Autentica cada llamada a /api: verifica el token de Firebase (cabecera Authorization: Bearer ...), busca a la persona
  * por su uid y comprueba que la cuenta esté activa. Si algo falla responde 401 con un mensaje genérico, que no revela
  * si la cuenta existe ni su estado. Deja al usuario en la solicitud para {@link UsuarioActual}.
- * Es público solo /api/health.
+ * Son públicas /api/health y las que usa quien todavía no tiene sesión: el registro de pacientes (CU-7) y la
+ * recuperación de acceso (CU-4).
  */
 @Component
 public class FiltroAutenticacion extends OncePerRequestFilter {
@@ -42,6 +43,8 @@ public class FiltroAutenticacion extends OncePerRequestFilter {
         String ruta = request.getRequestURI();
         return !ruta.startsWith("/api/")
             || ruta.equals("/api/health")
+            || ruta.equals("/api/pacientes/registro")
+            || ruta.startsWith("/api/auth/recuperacion")
             || HttpMethod.OPTIONS.matches(request.getMethod());
     }
 

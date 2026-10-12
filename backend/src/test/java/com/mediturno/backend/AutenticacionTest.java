@@ -93,6 +93,12 @@ class AutenticacionTest {
     }
 
     @Test
+    void registroDePacientesYRecuperacionDeAccesoSonPublicos() throws Exception {
+        assertEquals(200, llamar("/api/pacientes/registro", null).getStatus());
+        assertEquals(200, llamar("/api/auth/recuperacion/abc/contrasena", null).getStatus());
+    }
+
+    @Test
     void loginDevuelveElRolSegunLaTabla() {
         when(repositorio.findById(7L)).thenReturn(Optional.of(usuario(new Administrador(), EstadoActivacion.ACTIVO)));
 

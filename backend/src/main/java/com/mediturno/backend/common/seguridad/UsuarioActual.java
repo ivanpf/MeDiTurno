@@ -7,6 +7,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.mediturno.backend.pacientes.model.Paciente;
+import com.mediturno.backend.usuarios.model.Administrador;
 import com.mediturno.backend.usuarios.model.Funcionario;
 import com.mediturno.backend.usuarios.model.Medico;
 import com.mediturno.backend.usuarios.model.Usuario;
@@ -14,7 +15,8 @@ import com.mediturno.backend.usuarios.model.Usuario;
 /**
  * Identidad del usuario autenticado en la solicitud actual. La resuelve {@link FiltroAutenticacion} a partir del token.
  * Los controladores usan esta clase para saber quién hace la llamada, en lugar de recibir el id por la URL.
- * Los métodos por rol responden 403 si la persona no tiene ese rol.
+ * Los métodos por rol responden 403 si la persona no tiene ese rol: **cada endpoint tiene que pedir el id del rol que
+ * lo puede usar** (el filtro solo comprueba que haya una sesión válida, no qué rol tiene).
  */
 @Component
 public class UsuarioActual {
@@ -42,6 +44,10 @@ public class UsuarioActual {
 
     public Long obtenerIdFuncionarioAutenticado() {
         return idSiEs(Funcionario.class);
+    }
+
+    public Long obtenerIdAdministradorAutenticado() {
+        return idSiEs(Administrador.class);
     }
 
     private Long idSiEs(Class<? extends Usuario> rol) {

@@ -14,11 +14,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.usuarios.model.Funcionario;
+import com.mediturno.backend.pacientes.model.Paciente;
 
 /**
  * Endpoints de: CU-8, CU-9, CU-10, CU-15, CU-19.
  * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
  */
+@RolesPermitidos(Paciente.class)
 @RestController
 @RequestMapping("/api/reservas")
 public class ReservaController {
@@ -43,11 +47,13 @@ public class ReservaController {
         reservaService.cancelarReserva(idReserva, usuarioActual.obtenerIdPacienteAutenticado());
     }
 
+    @RolesPermitidos(Funcionario.class)
     @GetMapping("/{idReserva}")
     public ReservaResponseDTO buscarReservaPorId(@PathVariable Long idReserva) {
         return reservaService.buscarReservaPorId(idReserva);
     }
 
+    @RolesPermitidos(Funcionario.class)
     @GetMapping("/para-atencion")
     public List<ReservaResponseDTO> listarReservasParaAtencion(CriteriosBusquedaDTO criterios) {
         return reservaService.listarReservasParaAtencion(criterios);

@@ -19,11 +19,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.usuarios.model.Funcionario;
+import com.mediturno.backend.pacientes.model.Paciente;
 
 /**
  * Endpoints de: CU-8, CU-12, CU-13, CU-14, CU-20.
  * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
  */
+@RolesPermitidos(Funcionario.class)
 @RestController
 @RequestMapping("/api/turnos-semanales")
 public class TurnoSemanalController {
@@ -58,6 +62,7 @@ public class TurnoSemanalController {
         return turnoSemanalService.buscarTurnosSemanales(criterios);
     }
 
+    @RolesPermitidos(Paciente.class)
     @GetMapping("/ocurrencias-disponibles")
     public List<OcurrenciaTurnoDTO> listarOcurrenciasDisponibles(@RequestParam String codigoEspecialidad) {
         return turnoSemanalService.listarOcurrenciasDisponibles(codigoEspecialidad, usuarioActual.obtenerIdPacienteAutenticado());

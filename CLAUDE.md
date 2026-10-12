@@ -7,7 +7,7 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada pero **ningún caso de uso está implementado**.
+Es la **base del proyecto**: la estructura está creada y **solo están implementados CU-1 (inicio de sesión) y CU-2 (cierre de sesión)**. El resto responde `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio (vacío) por tabla.
 - **Frontend:** todas las pantallas existen como `PaginaPendiente`, con su opción en el menú del rol. El login (CU-1) y el cierre de sesión (CU-2) funcionan con Firebase.
@@ -53,7 +53,7 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 
 - **`routes.jsx` es la fuente única de las pantallas.** Cada entrada define roles, ruta, texto del menú, caso de uso, grupo del menú (opcional) y componente. De ahí salen las rutas de `App.jsx` y el menú de `layout/Layout.jsx`. Las entradas comunes a todos los perfiles van al final, así la primera de cada rol es su pantalla de inicio.
 - `features/<área>/` tiene una carpeta por área (`reservas`, `turnos`, `consultas`, `pases`, `anuncios`, `cuenta`, `especialidades`, `pacientes`, `usuarios`, `consultorios`, `estadisticas`, `auth`). Cada pantalla es `NombrePage.jsx`.
-- `auth/`: `AuthContext.jsx` guarda rol y nombre del usuario; se usa con `useAuth()`. `SoloRol.jsx` protege las rutas por rol. Cuando exista el login real, solo cambia `AuthContext.jsx` (rol, nombre y token vendrán del backend).
+- `auth/`: `AuthContext.jsx` guarda rol y nombre del usuario (los devuelve el backend al iniciar sesión) y cierra la sesión; se usa con `useAuth()`. `SoloRol.jsx` protege las rutas por rol. El token de Firebase lo agrega `api.js` en cada llamada.
 - `layout/Layout.jsx`: encabezado (logo, nombre, rol, cerrar sesión) y menú lateral con grupos desplegables.
 - `services/api.js`: cliente HTTP único (`api.get/post/put/patch/delete`). No usar `fetch` directo en las pantallas.
 - `components/`: `Logo`, `PantallaAcceso` (login, registro, recuperar) y `PaginaPendiente`.
@@ -65,7 +65,23 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 
 - **Flujo:** el front inicia sesión en Firebase (`signInWithEmailAndPassword` o `signInWithPopup` de Google) y llama a `POST /api/auth/login` con el token. Esa y todas las demás llamadas a `/api` (salvo `/api/health`) pasan por `FiltroAutenticacion`: verifica el token, busca a la persona por `firebase_uid` y exige cuenta `ACTIVO`. Si algo falla, `401` con un mensaje genérico (no revela si la cuenta existe ni su estado).
 - **Rol y nombre:** `login` los devuelve (`paciente`, `funcionario`, `medico`, `admin`); el rol sale de en cuál tabla está la persona. El menú se arma en el front con ese rol.
-- **`UsuarioActual`** lee al usuario que dejó el filtro. En los controladores se usa `obtenerIdPacienteAutenticado()` (o médico / funcionario); si la persona no tiene ese rol responde `403`.
+- **`UsuarioActual`** lee al usuario que dejó el filtro. En los controladores se usa `obtenerIdPacienteAutenticado()` (o `Medico`, `Funcionario`, `Administrador`); si la persona no tiene ese rol responde `403`. El **rol de cada endpoint** se declara con `@RolesPermitidos` (ver abajo); los métodos de `UsuarioActual` sirven para obtener el id.
+- **Roles por endpoint (`@RolesPermitidos`):** el filtro solo comprueba que haya una sesión válida; qué rol puede usar cada endpoint se declara con la anotación `@RolesPermitidos` y la aplica `InterceptorRoles` (responde `403` si el rol no corresponde). Va en la clase (vale para todos sus endpoints) y/o en el método (reemplaza a la de la clase):
+
+  ```java
+  @RolesPermitidos(Administrador.class)                           // en la clase: por defecto, solo el administrador
+  public class EspecialidadController {
+      @GetMapping
+      @RolesPermitidos                                            // sin valores: cualquier persona con sesión
+      public List<EspecialidadResponseDTO> listar(...) { ... }
+
+      @RolesPermitidos({Funcionario.class, Medico.class})         // varios roles
+      ...
+  }
+  ```
+
+  `RolesDeEndpointsTest` falla si un endpoint nuevo no tiene `@RolesPermitidos` (en el método o en la clase), así que no se puede olvidar. Los roles se definieron según quién ve cada pantalla en `routes.jsx`. Quedan **abiertos a más de un rol** los que usan varias pantallas: la lista y el detalle de especialidades (cualquier rol), la lista de consultorios (administrador y funcionario, para elegir el consultorio al dar de alta un turno) y la cartelera, las notificaciones y las rutas de `auth` (cualquier rol). Si un caso de uso necesita otro rol, se cambia la anotación de ese endpoint.
+- **Rutas públicas** (sin sesión): `/api/health`, `POST /api/pacientes/registro` (CU-7) y `/api/auth/recuperacion/**` (CU-4). Para agregar otra se edita `FiltroAutenticacion.shouldNotFilter`.
 - **Cerrar sesión (CU-2):** `POST /api/auth/logout` revoca las sesiones en Firebase y el front cierra la sesión local. El token ya emitido sigue siendo válido hasta que vence (1 hora); para bloquear a alguien de inmediato, ponerlo `INACTIVO`: el filtro lo rechaza en la siguiente llamada.
 - **Quien entra con Google pero no está en la base** recibe el mismo error genérico (queda un usuario huérfano en Firebase, que se puede borrar desde la consola).
 - **Tests:** `AutenticacionTest` usa un `ProveedorIdentidad` falso, sin Firebase real.
@@ -76,7 +92,7 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 
 **Cambiar el proyecto de Firebase o crear otro usuario a mano:**
 
-1. Completar los cuatro datos públicos de la app web en `.env` (variables `VITE_FIREBASE_*`; ver `.env.example`). los cuatro datos públicos de la app web de Firebase y completarlos en `.env` (ver `.env.example`, variables `VITE_FIREBASE_*`).
+1. Completar los cuatro datos públicos de la app web en `.env` (variables `VITE_FIREBASE_*`; ver `.env.example`).
 2. Descargar la **clave de servicio** (consola de Firebase > Configuración del proyecto > Cuentas de servicio > Generar nueva clave privada) y guardarla como `secrets/firebase-clave.json`. Esa carpeta está ignorada por Git: **la clave nunca se sube**. Fuera de contenedores el backend la busca ahí (`../secrets/firebase-clave.json`); se puede cambiar con la variable `FIREBASE_CREDENCIALES`. Sin la clave, el backend arranca pero nadie puede iniciar sesión.
 3. **Usuario nuevo** (hasta que existan CU-7 y CU-34): crear la cuenta en la consola de Firebase (Authentication > Users > Add user), copiar su *User UID* y ejecutar en la base (DBeaver) con ese UID:
 
@@ -161,6 +177,7 @@ Ejemplo: CU-28, alta de especialidades.
    - Crear la entidad en `model/` y el repositorio en `repository/`. Si el caso de uso necesita cambiar la base, agregar la migración (ver «Base de datos y migraciones»).
    - En `EspecialidadService.altaEspecialidad`, reemplazar el `throw new NoImplementadoException()` por la lógica: validar, buscar duplicados, guardar y devolver el DTO.
    - Cada flujo alternativo del caso de uso es un error con su código del diagrama: `throw new ResponseStatusException(HttpStatus.CONFLICT, "El código ya está en uso")`.
+   - Revisar que los endpoints del caso de uso tengan el `@RolesPermitidos` correcto (ya están puestos según `routes.jsx`).
    - Validar el cuerpo con `@Valid` y anotaciones de `jakarta.validation` en el DTO.
    - Si la operación toca varias tablas o necesita consistencia (reservar, cancelar, suspender, emitir orden), usar `@Transactional`.
    - Escribir tests del servicio.
@@ -273,7 +290,7 @@ Tablas, mensajes de éxito, ventanas de confirmación (modales), paginación y e
 
 - DTO como `record`. Entradas: `Alta...DTO`, `Modificar...DTO`, `...RequestDTO`. Salidas: `...ResponseDTO`.
 - Nunca devolver una entidad directamente desde un controlador: siempre un DTO.
-- El id del usuario autenticado sale de `UsuarioActual`, nunca del cliente.
+- El id del usuario autenticado sale de `UsuarioActual`, nunca del cliente. **Todo endpoint lleva `@RolesPermitidos`** con los roles que lo pueden usar (ver «Autenticación (Firebase)»).
 - Las validaciones que el diagrama marca como "operaciones internas del método" son métodos privados del servicio, no métodos públicos nuevos.
 - Los cambios en la base van **siempre** con migraciones de Flyway (ver «Base de datos y migraciones»). Hibernate solo valida.
 

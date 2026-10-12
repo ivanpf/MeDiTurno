@@ -55,6 +55,34 @@
   border-radius: 8px;
 }
 
+/* Ventana de confirmación (modal). La usa el componente Confirmacion. */
+.modal {
+  width: calc(100% - 32px);
+  max-width: 420px;
+  padding: 24px;
+  color: var(--texto);
+  background: var(--blanco);
+  border: 0;
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+}
+
+.modal::backdrop {
+  background: color-mix(in srgb, var(--azul-oscuro) 45%, transparent);
+}
+
+.modal h2 {
+  margin-top: 0;
+}
+
+.modal-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
 /* Envoltorio para tablas anchas: en pantallas chicas se desplaza de costado en lugar de
    desbordar la página. Uso: <div className="tabla-scroll"><table>...</table></div> */
 .tabla-scroll {
