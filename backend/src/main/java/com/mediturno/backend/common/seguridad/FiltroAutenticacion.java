@@ -43,7 +43,7 @@ public class FiltroAutenticacion extends OncePerRequestFilter {
         String ruta = request.getRequestURI();
         return !ruta.startsWith("/api/")
             || ruta.equals("/api/health")
-            || ruta.equals("/api/pacientes/registro")
+            || ruta.startsWith("/api/pacientes/registro")
             || ruta.startsWith("/api/auth/recuperacion")
             || HttpMethod.OPTIONS.matches(request.getMethod());
     }

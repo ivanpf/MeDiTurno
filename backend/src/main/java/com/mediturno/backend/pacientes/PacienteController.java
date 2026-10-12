@@ -10,6 +10,7 @@ import com.mediturno.backend.pacientes.dto.AltaPacienteDTO;
 import com.mediturno.backend.pacientes.dto.ModificarPacienteDTO;
 import com.mediturno.backend.pacientes.dto.PacienteResponseDTO;
 import com.mediturno.backend.pacientes.dto.RegistroPacienteDTO;
+import com.mediturno.backend.pacientes.dto.VerificacionRegistroDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,8 +47,16 @@ public class PacienteController {
     @RolesPermitidos
     @PostMapping("/registro")
     @ResponseStatus(HttpStatus.CREATED)
-    public PacienteResponseDTO registrarCuentaPaciente(@RequestBody RegistroPacienteDTO datos) {
+    public PacienteResponseDTO registrarCuentaPaciente(@Valid @RequestBody RegistroPacienteDTO datos) {
         return pacienteService.registrarCuentaPaciente(datos);
+    }
+
+    /** Paso previo al registro con Google: comprueba la cédula y el correo contra el padrón. */
+    @RolesPermitidos
+    @PostMapping("/registro/verificacion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void verificarPacienteEnPadron(@Valid @RequestBody VerificacionRegistroDTO datos) {
+        pacienteService.verificarPacienteEnPadron(datos);
     }
 
     @PostMapping

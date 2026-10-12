@@ -1,7 +1,5 @@
 package com.mediturno.backend.auth.dto;
 
-/**
- * Datos para crear la identidad en el proveedor de autenticación. TODO: definir los campos al implementar el caso de uso.
- */
-public record CrearCuentaRequestDTO() {
+/** Datos para crear la identidad (correo y contraseña) en el proveedor de autenticación. Uso interno (CU-7). */
+public record CrearCuentaRequestDTO(String correo, String contrasena) {
 }

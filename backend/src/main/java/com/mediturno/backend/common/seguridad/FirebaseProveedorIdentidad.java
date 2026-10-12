@@ -11,8 +11,11 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import com.google.firebase.auth.AuthErrorCode;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.auth.UserRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,11 +59,17 @@ public class FirebaseProveedorIdentidad implements ProveedorIdentidad {
 
     @Override
     public Optional<String> verificarToken(String token) {
+        return verificarIdentidad(token).map(IdentidadVerificada::uid);
+    }
+
+    @Override
+    public Optional<IdentidadVerificada> verificarIdentidad(String token) {
         if (firebaseAuth == null) {
             return Optional.empty();
         }
         try {
-            return Optional.of(firebaseAuth.verifyIdToken(token).getUid());
+            FirebaseToken verificado = firebaseAuth.verifyIdToken(token);
+            return Optional.of(new IdentidadVerificada(verificado.getUid(), verificado.getEmail()));
         } catch (FirebaseAuthException | IllegalArgumentException e) {
             log.warn("Token rechazado: {}", e.getMessage());
             return Optional.empty();
@@ -76,6 +85,34 @@ public class FirebaseProveedorIdentidad implements ProveedorIdentidad {
             firebaseAuth.revokeRefreshTokens(uid);
         } catch (FirebaseAuthException e) {
             log.warn("No se pudieron revocar las sesiones de {}: {}", uid, e.getMessage());
+        }
+    }
+
+    @Override
+    public String crearCuenta(String correo, String contrasena) {
+        if (firebaseAuth == null) {
+            throw new ProveedorIdentidadException("Firebase no está configurado");
+        }
+        try {
+            UserRecord.CreateRequest pedido = new UserRecord.CreateRequest().setEmail(correo).setPassword(contrasena);
+            return firebaseAuth.createUser(pedido).getUid();
+        } catch (FirebaseAuthException e) {
+            if (e.getAuthErrorCode() == AuthErrorCode.EMAIL_ALREADY_EXISTS) {
+                throw new CorreoYaRegistradoEnProveedorException();
+            }
+            throw new ProveedorIdentidadException("Firebase no pudo crear la cuenta: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void eliminarCuenta(String uid) {
+        if (firebaseAuth == null) {
+            return;
+        }
+        try {
+            firebaseAuth.deleteUser(uid);
+        } catch (FirebaseAuthException e) {
+            log.error("No se pudo borrar la cuenta {} que quedó sin vincular: {}", uid, e.getMessage());
         }
     }
 }

@@ -1,17 +1,21 @@
 package com.mediturno.backend.auth;
 
 import com.mediturno.backend.auth.dto.CrearCuentaRequestDTO;
-import com.mediturno.backend.auth.dto.CrearCuentaResponseDTO;
 import java.time.LocalDateTime;
 
 import com.mediturno.backend.auth.dto.LoginResponseDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
+import com.mediturno.backend.common.seguridad.CorreoYaRegistradoEnProveedorException;
+import com.mediturno.backend.common.seguridad.IdentidadVerificada;
 import com.mediturno.backend.common.seguridad.ProveedorIdentidad;
+import com.mediturno.backend.common.seguridad.ProveedorIdentidadException;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.usuarios.model.Funcionario;
 import com.mediturno.backend.usuarios.model.Medico;
 import com.mediturno.backend.usuarios.model.Usuario;
 import com.mediturno.backend.usuarios.repository.UsuarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +28,9 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private static final String MENSAJE_CUENTA_DE_ACCESO = "No se pudo completar el registro de la cuenta de acceso. Intente nuevamente.";
 
     private final UsuarioRepository usuarioRepository;
     private final ProveedorIdentidad proveedorIdentidad;
@@ -80,13 +87,26 @@ public class AuthService {
         throw new NoImplementadoException();
     }
 
-    /** CU-7. Uso interno (crea la identidad en el proveedor de autenticación). */
-    public CrearCuentaResponseDTO crearCuenta(CrearCuentaRequestDTO datos) {
-        throw new NoImplementadoException();
+    /** CU-7. Uso interno: crea la identidad (correo y contraseña) en el proveedor de autenticación y devuelve su uid. */
+    public String crearCuenta(CrearCuentaRequestDTO datos) {
+        try {
+            return proveedorIdentidad.crearCuenta(datos.correo(), datos.contrasena());
+        } catch (CorreoYaRegistradoEnProveedorException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo electrónico. La cuenta no pudo crearse.");
+        } catch (ProveedorIdentidadException e) {
+            log.error("No se pudo crear la identidad: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, MENSAJE_CUENTA_DE_ACCESO);
+        }
     }
 
-    /** CU-7. Uso interno (verifica el token del proveedor de autenticación). */
-    public String obtenerIdentidadVerificada(String tokenAcceso) {
-        throw new NoImplementadoException();
+    /** CU-7. Uso interno: verifica el token que el front obtuvo al iniciar sesión con Google y devuelve su uid y correo. */
+    public IdentidadVerificada obtenerIdentidadVerificada(String tokenAcceso) {
+        return proveedorIdentidad.verificarIdentidad(tokenAcceso)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, MENSAJE_CUENTA_DE_ACCESO));
+    }
+
+    /** CU-7. Uso interno: deshace la creación de una identidad cuando el registro no pudo completarse. */
+    public void eliminarCuenta(String idProveedor) {
+        proveedorIdentidad.eliminarCuenta(idProveedor);
     }
 }
