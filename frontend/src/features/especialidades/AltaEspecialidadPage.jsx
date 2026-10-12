@@ -76,13 +76,17 @@ export default function AltaEspecialidadPage() {
           <textarea name="descripcion" value={datos.descripcion} onChange={cambiar} maxLength={500} rows={4} />
         </label>
         <div className={estilos.fila}>
-          <label>
-            ¿Requiere pase previo? *
-            <select name="requierePase" value={datos.requierePase} onChange={cambiar} required>
-              <option value="si">Sí</option>
-              <option value="no">No</option>
-            </select>
-          </label>
+          <fieldset className={estilos.opciones}>
+            <legend>¿Requiere pase previo? *</legend>
+            <label className={estilos.opcion}>
+              <input type="radio" name="requierePase" value="si" checked={datos.requierePase === 'si'} onChange={cambiar} />
+              Sí
+            </label>
+            <label className={estilos.opcion}>
+              <input type="radio" name="requierePase" value="no" checked={datos.requierePase === 'no'} onChange={cambiar} />
+              No
+            </label>
+          </fieldset>
           <label>
             Estado *
             <select name="estado" value={datos.estado} onChange={cambiar} required>
