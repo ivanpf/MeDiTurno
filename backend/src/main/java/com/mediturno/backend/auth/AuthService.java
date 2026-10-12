@@ -1,7 +1,6 @@
 package com.mediturno.backend.auth;
 
 import com.mediturno.backend.auth.dto.CrearCuentaRequestDTO;
-import com.mediturno.backend.auth.dto.CrearCuentaResponseDTO;
 import java.time.LocalDateTime;
 
 import com.mediturno.backend.auth.dto.LoginResponseDTO;
@@ -88,10 +87,10 @@ public class AuthService {
         throw new NoImplementadoException();
     }
 
-    /** CU-7. Uso interno: crea la identidad (correo y contraseña) en el proveedor de autenticación. */
-    public CrearCuentaResponseDTO crearCuenta(CrearCuentaRequestDTO datos) {
+    /** CU-7. Uso interno: crea la identidad (correo y contraseña) en el proveedor de autenticación y devuelve su uid. */
+    public String crearCuenta(CrearCuentaRequestDTO datos) {
         try {
-            return new CrearCuentaResponseDTO(proveedorIdentidad.crearCuenta(datos.correo(), datos.contrasena()));
+            return proveedorIdentidad.crearCuenta(datos.correo(), datos.contrasena());
         } catch (CorreoYaRegistradoEnProveedorException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo electrónico. La cuenta no pudo crearse.");
         } catch (ProveedorIdentidadException e) {

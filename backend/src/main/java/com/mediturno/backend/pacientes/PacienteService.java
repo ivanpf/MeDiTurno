@@ -93,7 +93,7 @@ public class PacienteService {
     }
 
     private PacienteResponseDTO registrarConCorreoYContrasena(Paciente paciente, RegistroPacienteDTO datos) {
-        String uid = authService.crearCuenta(new CrearCuentaRequestDTO(paciente.getCorreo(), datos.contrasena())).idProveedor();
+        String uid = authService.crearCuenta(new CrearCuentaRequestDTO(paciente.getCorreo(), datos.contrasena()));
         return vincularCuentaOBorrarla(paciente, uid, ProveedorAcceso.PASSWORD, datos);
     }
 
