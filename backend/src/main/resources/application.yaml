@@ -11,3 +11,12 @@ spring:
       ddl-auto: validate # Hibernate no crea ni modifica tablas: lo hacen las migraciones de Flyway (db/migration)
     show-sql: true
     open-in-view: false
+
+  flyway:
+    # db/seed tiene los usuarios de prueba (migración repetible). En producción se quita esa carpeta de la lista.
+    locations: classpath:db/migration,classpath:db/seed
+
+mediturno:
+  firebase:
+    # Archivo con la clave de servicio de Firebase. Nunca se sube al repositorio (la carpeta secrets/ está ignorada por Git).
+    credenciales: ${FIREBASE_CREDENCIALES:../secrets/firebase-clave.json}

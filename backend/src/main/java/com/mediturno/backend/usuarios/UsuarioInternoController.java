@@ -20,11 +20,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.usuarios.model.Administrador;
+import com.mediturno.backend.usuarios.model.Funcionario;
+import com.mediturno.backend.usuarios.model.Medico;
 
 /**
  * Endpoints de: CU-5, CU-34, CU-35, CU-36, CU-45, CU-46.
  * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
  */
+@RolesPermitidos(Administrador.class)
 @RestController
 @RequestMapping("/api/usuarios-internos")
 public class UsuarioInternoController {
@@ -70,6 +75,7 @@ public class UsuarioInternoController {
         usuarioInternoService.inactivarUsuario(idUsuarioInterno);
     }
 
+    @RolesPermitidos({Funcionario.class, Medico.class, Administrador.class})
     @PutMapping("/me/perfil")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void actualizarPerfil(@RequestBody PerfilDTO datos) {

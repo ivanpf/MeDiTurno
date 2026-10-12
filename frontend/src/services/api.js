@@ -3,6 +3,8 @@
 //   await api.post('/reservas', { turnoId: 3, numero: 5 })
 // El backend responde los errores con { estado, mensaje, detalles }.
 
+import { auth } from './firebase'
+
 const BASE = '/api'
 
 export class ApiError extends Error {
@@ -13,11 +15,14 @@ export class ApiError extends Error {
   }
 }
 
-// TODO(CU-1): cuando exista el inicio de sesión real, devolver acá el token para enviarlo en cada llamada.
-const obtenerToken = () => null
+// Token de Firebase de la persona con sesión (el SDK lo renueva solo). Sin sesión, no se manda nada.
+async function obtenerToken() {
+  await auth.authStateReady()
+  return auth.currentUser?.getIdToken() ?? null
+}
 
 async function pedir(metodo, ruta, cuerpo) {
-  const token = obtenerToken()
+  const token = await obtenerToken()
   const respuesta = await fetch(BASE + ruta, {
     method: metodo,
     headers: {

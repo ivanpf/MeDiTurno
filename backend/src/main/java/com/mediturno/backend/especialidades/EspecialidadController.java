@@ -18,11 +18,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.usuarios.model.Administrador;
 
 /**
  * Endpoints de: CU-28, CU-29, CU-30, CU-43.
  * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
  */
+@RolesPermitidos(Administrador.class)
 @RestController
 @RequestMapping("/api/especialidades")
 public class EspecialidadController {
@@ -44,11 +47,13 @@ public class EspecialidadController {
         return especialidadService.altaEspecialidadesCSV(archivo);
     }
 
+    @RolesPermitidos
     @GetMapping
     public List<EspecialidadResponseDTO> listarEspecialidades(CriteriosBusquedaDTO criterios) {
         return especialidadService.listarEspecialidades(criterios);
     }
 
+    @RolesPermitidos
     @GetMapping("/{codigoEspecialidad}")
     public EspecialidadResponseDTO obtenerEspecialidad(@PathVariable String codigoEspecialidad) {
         return especialidadService.obtenerEspecialidad(codigoEspecialidad);

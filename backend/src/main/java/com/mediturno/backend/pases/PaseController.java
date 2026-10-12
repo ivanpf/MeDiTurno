@@ -15,11 +15,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.usuarios.model.Medico;
 
 /**
  * Endpoints de: CU-24, CU-25, CU-27.
  * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
  */
+@RolesPermitidos(Medico.class)
 @RestController
 @RequestMapping("/api")
 public class PaseController {

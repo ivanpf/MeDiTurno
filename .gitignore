@@ -25,3 +25,7 @@ Thumbs.db
 
 # ---------- Copias locales ----------
 backend.zip
+
+# Clave de servicio de Firebase (nunca se sube)
+secrets/*
+!secrets/.gitkeep

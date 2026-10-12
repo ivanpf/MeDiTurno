@@ -16,11 +16,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.usuarios.model.Medico;
+import com.mediturno.backend.pacientes.model.Paciente;
 
 /**
  * Endpoints de: CU-11, CU-21, CU-22, CU-23, CU-26.
  * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
  */
+@RolesPermitidos(Medico.class)
 @RestController
 @RequestMapping("/api")
 public class ConsultaController {
@@ -39,6 +43,7 @@ public class ConsultaController {
         return consultaService.registrarConsulta(usuarioActual.obtenerIdMedicoAutenticado(), numeroOrden, datos);
     }
 
+    @RolesPermitidos(Paciente.class)
     @GetMapping("/pacientes/me/historia-clinica")
     public List<ConsultaResponseDTO> consultarHistoriaClinicaPropia(CriteriosBusquedaDTO criterios) {
         return consultaService.consultarHistoriaClinicaPropia(usuarioActual.obtenerIdPacienteAutenticado(), criterios);

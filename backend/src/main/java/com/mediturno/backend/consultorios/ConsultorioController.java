@@ -18,11 +18,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.usuarios.model.Administrador;
+import com.mediturno.backend.usuarios.model.Funcionario;
 
 /**
  * Endpoints de: CU-37, CU-38, CU-39, CU-47.
  * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
  */
+@RolesPermitidos(Administrador.class)
 @RestController
 @RequestMapping("/api/consultorios")
 public class ConsultorioController {
@@ -44,6 +48,7 @@ public class ConsultorioController {
         return consultorioService.altaConsultoriosCSV(archivo);
     }
 
+    @RolesPermitidos({Administrador.class, Funcionario.class})
     @GetMapping
     public List<ConsultorioResponseDTO> listarConsultorios(CriteriosBusquedaDTO criterios) {
         return consultorioService.listarConsultorios(criterios);
