@@ -6,17 +6,22 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import com.mediturno.backend.auth.AuthService;
+import com.mediturno.backend.auth.dto.CrearCuentaRequestDTO;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.PerfilDTO;
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
+import com.mediturno.backend.common.seguridad.IdentidadVerificada;
 import com.mediturno.backend.pacientes.dto.AltaPacienteDTO;
 import com.mediturno.backend.pacientes.dto.ModificarPacienteDTO;
 import com.mediturno.backend.pacientes.dto.PacienteResponseDTO;
 import com.mediturno.backend.pacientes.dto.RegistroPacienteDTO;
+import com.mediturno.backend.pacientes.dto.VerificacionRegistroDTO;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.pacientes.repository.PacienteRepository;
+import com.mediturno.backend.usuarios.model.ProveedorAcceso;
 import com.mediturno.backend.usuarios.repository.UsuarioRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -31,19 +36,121 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class PacienteService {
 
+    private static final int LARGO_MINIMO_CONTRASENA = 6; // el mismo mínimo que exige Firebase
+
     private static final Pattern CORREO = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     private final PacienteRepository pacienteRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AuthService authService;
 
-    public PacienteService(PacienteRepository pacienteRepository, UsuarioRepository usuarioRepository) {
+    public PacienteService(PacienteRepository pacienteRepository, UsuarioRepository usuarioRepository, AuthService authService) {
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
+        this.authService = authService;
     }
 
-    /** CU-7. */
+    /**
+     * CU-7. La persona se identifica con la cédula y el correo que figuran en el padrón (CU-31) y no puede tener cuenta.
+     * Con correo y contraseña, el backend crea la cuenta en el proveedor de identidad; con Google, verifica el token que
+     * el front obtuvo y que la cuenta de Google use ese mismo correo. En los dos casos vincula la cuenta (firebase_uid) a
+     * la fila del padrón y guarda los datos de contacto.
+     */
     public PacienteResponseDTO registrarCuentaPaciente(RegistroPacienteDTO datos) {
-        throw new NoImplementadoException();
+        validarDatosDelMetodoDeRegistro(datos);
+        Paciente paciente = buscarPacienteSinCuenta(datos.cedula(), datos.correo());
+        return datos.proveedor() == ProveedorAcceso.PASSWORD
+            ? registrarConCorreoYContrasena(paciente, datos)
+            : registrarConGoogle(paciente, datos);
+    }
+
+    /**
+     * CU-7. Paso previo para el registro con Google: comprueba la cédula y el correo contra el padrón antes de abrir la
+     * ventana de Google, así no se crea una cuenta en Google para quien no puede registrarse.
+     */
+    public void verificarPacienteEnPadron(VerificacionRegistroDTO datos) {
+        buscarPacienteSinCuenta(datos.cedula(), datos.correo());
+    }
+
+    /**
+     * La cédula y el correo tienen que coincidir con los del padrón. Si no coinciden se responde lo mismo que si la
+     * persona no estuviera, para no revelar qué cédulas o correos existen.
+     */
+    private Paciente buscarPacienteSinCuenta(String cedulaIngresada, String correoIngresado) {
+        String cedula = normalizarCedula(cedulaIngresada);
+        if (cedula == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cédula no tiene un formato válido (ejemplo: 1.234.567-8).");
+        }
+        String correo = correoIngresado.trim();
+        Paciente paciente = pacienteRepository.findByCedula(cedula)
+            .filter(p -> p.getCorreo().equalsIgnoreCase(correo))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                "No se encontró una persona del padrón con esa cédula y ese correo electrónico. La cuenta no pudo crearse."));
+        if (paciente.getFirebaseUid() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta vinculada a esa cédula. La cuenta no pudo crearse.");
+        }
+        return paciente;
+    }
+
+    private PacienteResponseDTO registrarConCorreoYContrasena(Paciente paciente, RegistroPacienteDTO datos) {
+        String uid = authService.crearCuenta(new CrearCuentaRequestDTO(paciente.getCorreo(), datos.contrasena())).idProveedor();
+        return vincularCuentaOBorrarla(paciente, uid, ProveedorAcceso.PASSWORD, datos);
+    }
+
+    private PacienteResponseDTO registrarConGoogle(Paciente paciente, RegistroPacienteDTO datos) {
+        IdentidadVerificada identidad = authService.obtenerIdentidadVerificada(datos.tokenAcceso());
+        if (usuarioRepository.findByFirebaseUid(identidad.uid()).isPresent()) {
+            // Esa cuenta ya es de alguien: no se toca.
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esa cuenta de Google ya está vinculada a otra persona. La cuenta no pudo crearse.");
+        }
+        if (identidad.correo() == null || !identidad.correo().trim().equalsIgnoreCase(paciente.getCorreo())) {
+            authService.eliminarCuenta(identidad.uid()); // se creó al abrir Google y no le corresponde a nadie
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                "La cuenta de Google tiene que usar el mismo correo electrónico registrado en el padrón. La cuenta no pudo crearse.");
+        }
+        return vincularCuentaOBorrarla(paciente, identidad.uid(), ProveedorAcceso.GOOGLE, datos);
+    }
+
+    /** Si la cuenta no se puede vincular, se borra del proveedor: no debe quedar una cuenta que no es de nadie. */
+    private PacienteResponseDTO vincularCuentaOBorrarla(Paciente paciente, String uid, ProveedorAcceso proveedor, RegistroPacienteDTO datos) {
+        try {
+            return vincularCuenta(paciente, uid, proveedor, datos);
+        } catch (RuntimeException e) {
+            authService.eliminarCuenta(uid);
+            throw e;
+        }
+    }
+
+    private PacienteResponseDTO vincularCuenta(Paciente paciente, String uid, ProveedorAcceso proveedor, RegistroPacienteDTO datos) {
+        paciente.setFirebaseUid(uid);
+        paciente.setProveedorAcceso(proveedor);
+        if (aNullSiEstaVacio(datos.telefono()) != null) {
+            paciente.setTelefono(datos.telefono().trim());
+        }
+        if (aNullSiEstaVacio(datos.domicilio()) != null) {
+            paciente.setDomicilio(datos.domicilio().trim());
+        }
+        try {
+            pacienteRepository.saveAndFlush(paciente);
+        } catch (DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se pudo vincular la cuenta: ya está registrada.");
+        }
+        return aRespuesta(paciente);
+    }
+
+    /** Lo que exige cada método de registro (los campos comunes los valida @Valid). */
+    private static void validarDatosDelMetodoDeRegistro(RegistroPacienteDTO datos) {
+        List<String> errores = new ArrayList<>();
+        if (datos.proveedor() == ProveedorAcceso.PASSWORD) {
+            if (datos.contrasena() == null || datos.contrasena().length() < LARGO_MINIMO_CONTRASENA) {
+                errores.add("La contraseña debe tener al menos " + LARGO_MINIMO_CONTRASENA + " caracteres.");
+            }
+        } else if (datos.tokenAcceso() == null || datos.tokenAcceso().isBlank()) {
+            errores.add("Falta iniciar sesión con la cuenta de Google.");
+        }
+        if (!errores.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, String.join(" ", errores));
+        }
     }
 
     /**

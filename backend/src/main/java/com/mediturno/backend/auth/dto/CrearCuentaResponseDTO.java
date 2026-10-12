@@ -1,7 +1,5 @@
 package com.mediturno.backend.auth.dto;
 
-/**
- * Resultado de crear la identidad en el proveedor de autenticación. TODO: definir los campos al implementar el caso de uso.
- */
-public record CrearCuentaResponseDTO() {
+/** Resultado de crear la identidad: el uid que le asignó el proveedor de autenticación. Uso interno (CU-7). */
+public record CrearCuentaResponseDTO(String idProveedor) {
 }

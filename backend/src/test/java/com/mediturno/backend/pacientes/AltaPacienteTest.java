@@ -26,6 +26,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.mediturno.backend.auth.AuthService;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.pacientes.dto.AltaPacienteDTO;
 import com.mediturno.backend.pacientes.dto.PacienteResponseDTO;
@@ -45,7 +46,7 @@ class AltaPacienteTest {
     void preparar() {
         pacientes = mock(PacienteRepository.class);
         usuarios = mock(UsuarioRepository.class);
-        servicio = new PacienteService(pacientes, usuarios);
+        servicio = new PacienteService(pacientes, usuarios, mock(AuthService.class));
     }
 
     private AltaPacienteDTO datos(String cedula, String correo) {
