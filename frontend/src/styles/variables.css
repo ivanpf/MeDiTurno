@@ -13,5 +13,7 @@
   --blanco: #fff;
   --error: #b42318;
   --error-claro: #fdecea;
+  --exito: #1e7b4a;
+  --exito-claro: #e6f4ec;
   --sombra: 0 1px 3px rgba(18, 54, 107, 0.12), 0 4px 12px rgba(18, 54, 107, 0.06);
 }

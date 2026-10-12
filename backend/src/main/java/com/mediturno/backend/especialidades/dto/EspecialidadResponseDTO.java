@@ -1,7 +1,12 @@
 package com.mediturno.backend.especialidades.dto;
 
-/**
- * TODO: definir los campos al implementar el caso de uso.
- */
-public record EspecialidadResponseDTO() {
+import com.mediturno.backend.common.model.EstadoActivacion;
+
+/** Especialidad tal como la ven las pantallas (alta, listado y modificación). */
+public record EspecialidadResponseDTO(
+        String codigo,
+        String nombre,
+        String descripcion,
+        boolean requierePase,
+        EstadoActivacion estado) {
 }

@@ -45,13 +45,24 @@
   border-radius: 8px;
 }
 
-/* Mensaje de error (por ejemplo, credenciales inválidas). Uso: <p className="mensaje-error" role="alert">...</p> */
+/* Mensaje de error (por ejemplo, credenciales inválidas). Uso: <p className="mensaje-error" role="alert">...</p>
+   Si lleva una lista de detalles, se pone dentro de un <div>. */
 .mensaje-error {
   margin: 0;
   padding: 16px 18px;
   color: var(--error);
   background: var(--error-claro);
   border-left: 5px solid var(--error);
+  border-radius: 8px;
+}
+
+/* Mensaje de éxito (por ejemplo, «Especialidad registrada»). Uso: <p className="mensaje-exito" role="status">...</p> */
+.mensaje-exito {
+  margin: 0;
+  padding: 16px 18px;
+  color: var(--exito);
+  background: var(--exito-claro);
+  border-left: 5px solid var(--exito);
   border-radius: 8px;
 }
 
