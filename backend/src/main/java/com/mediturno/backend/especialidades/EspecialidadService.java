@@ -8,7 +8,12 @@ import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.especialidades.dto.AltaEspecialidadDTO;
 import com.mediturno.backend.especialidades.dto.EspecialidadResponseDTO;
 import com.mediturno.backend.especialidades.dto.ModificarEspecialidadDTO;
+import com.mediturno.backend.especialidades.model.Especialidad;
+import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -18,9 +23,49 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class EspecialidadService {
 
-    /** CU-28. */
+    private final EspecialidadRepository especialidadRepository;
+
+    public EspecialidadService(EspecialidadRepository especialidadRepository) {
+        this.especialidadRepository = especialidadRepository;
+    }
+
+    /** CU-28. Los campos obligatorios los valida el controlador (@Valid); acá se comprueba la unicidad. */
     public EspecialidadResponseDTO altaEspecialidad(AltaEspecialidadDTO datos) {
-        throw new NoImplementadoException();
+        String codigo = datos.codigo().trim();
+        String nombre = datos.nombre().trim();
+        validarCodigoYNombreUnicos(codigo, nombre);
+
+        Especialidad especialidad = new Especialidad();
+        especialidad.setCodigo(codigo);
+        especialidad.setNombre(nombre);
+        especialidad.setDescripcion(datos.descripcion() == null || datos.descripcion().isBlank() ? null : datos.descripcion().trim());
+        especialidad.setRequierePase(datos.requierePase());
+        especialidad.setEstado(datos.estado());
+        try {
+            especialidadRepository.saveAndFlush(especialidad);
+        } catch (DataIntegrityViolationException e) {
+            // Otro administrador la creó en el mismo instante: las restricciones de la base lo detectan.
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El código o el nombre ya están en uso por otra especialidad");
+        }
+        return aRespuesta(especialidad);
+    }
+
+    private void validarCodigoYNombreUnicos(String codigo, String nombre) {
+        boolean codigoEnUso = especialidadRepository.existsById(codigo);
+        boolean nombreEnUso = especialidadRepository.existsByNombreIgnoreCase(nombre);
+        if (codigoEnUso && nombreEnUso) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El código y el nombre ya están en uso por otras especialidades");
+        }
+        if (codigoEnUso) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El código ya está en uso por otra especialidad");
+        }
+        if (nombreEnUso) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre ya está en uso por otra especialidad");
+        }
+    }
+
+    private static EspecialidadResponseDTO aRespuesta(Especialidad e) {
+        return new EspecialidadResponseDTO(e.getCodigo(), e.getNombre(), e.getDescripcion(), e.isRequierePase(), e.getEstado());
     }
 
     /** CU-29. */

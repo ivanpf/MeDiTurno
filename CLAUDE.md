@@ -183,7 +183,7 @@ Ejemplo: CU-28, alta de especialidades.
    - Escribir tests del servicio.
 4. **Frontend** (`features/especialidades/AltaEspecialidadPage.jsx`):
    - Reemplazar `PaginaPendiente` por la pantalla real (el mock de referencia está en la rama `mocks`).
-   - Llamar al backend con `api.post('/especialidades', datos)` y mostrar los errores (`ApiError.mensaje`).
+   - Llamar al backend con `api.post('/especialidades', datos)` y mostrar los errores (`error.mensaje`, con los datos inválidos en `error.detalles`).
 5. **Probar** de punta a punta, correr `./mvnw test`, `npm run lint` y `npm run build`.
 6. **Pull Request** hacia `main`.
 
@@ -224,6 +224,7 @@ El aspecto de la aplicación es **sobrio y profesional**: azul y blanco, con mos
 | `--fondo` | `#f4f7fb` | fondo de la página |
 | `--blanco` | `#fff` | paneles, tarjetas, campos |
 | `--error` / `--error-claro` | `#b42318` / `#fdecea` | mensajes de error (`.mensaje-error`): texto y borde / fondo |
+| `--exito` / `--exito-claro` | `#1e7b4a` / `#e6f4ec` | mensajes de éxito (`.mensaje-exito`): texto y borde / fondo |
 
 Reglas: no agregar colores de marca nuevos y no escribir colores sueltos en los componentes (usar las variables). El mostaza se usa con moderación: si hay más de uno o dos elementos mostaza por pantalla, se está abusando.
 
@@ -246,14 +247,14 @@ Reglas: no agregar colores de marca nuevos y no escribir colores sueltos en los 
 
 - **Botones:** el botón común es secundario (borde azul, fondo blanco). Usar `className="principal"` para la acción principal; **un solo botón principal por pantalla o formulario**. Deshabilitado = opacidad reducida.
 - **Formularios:** el `<label>` envuelve al campo (`<label>Nombre<input /></label>`). Los campos ocupan todo el ancho y tienen foco azul visible.
-- **Aviso:** `.pendiente` (fondo mostaza claro con barra mostaza) para avisos informativos. **Error:** `.mensaje-error` (fondo rojo claro con barra roja).
+- **Aviso:** `.pendiente` (fondo mostaza claro con barra mostaza) para avisos informativos. **Error:** `.mensaje-error` (fondo rojo claro con barra roja). **Éxito:** `.mensaje-exito` (fondo verde claro con barra verde).
 - **Panel y tarjeta:** `.panel` es el contenedor de una pantalla con sesión; `.tarjeta` es la de las pantallas de acceso. Ambas son clases globales de `compartidos.css`.
 - **Logo:** componente `Logo`. `variante="oscuro"` sobre fondo claro; `variante="claro"` sobre azul (el logo va dentro de un círculo blanco, porque el logo es azul y se perdería). Imagen en `src/assets/logo.png`, ícono de pestaña en `public/favicon.png`.
 - **Usuario en el encabezado:** avatar con iniciales, nombre y etiqueta del rol (mostaza).
 
 ### Todavía no existe (definirlo con este mismo estilo)
 
-Tablas, mensajes de éxito, ventanas de confirmación (modales), paginación y estados de carga. Quien primero los necesite los agrega a `styles/compartidos.css` (si los van a usar varias pantallas) usando las variables de arriba, para que los reutilicen los demás, y actualiza esta guía. El error ya existe (`.mensaje-error`, variables `--error`); para el éxito hace falta una variable nueva (`--exito`): agregarla a `variables.css` y documentarla en la tabla de colores.
+Tablas, paginación y estados de carga. Quien primero los necesite los agrega a `styles/compartidos.css` (si los van a usar varias pantallas) usando las variables de arriba, para que los reutilicen los demás, y actualiza esta guía. Ya existen los mensajes de error y de éxito (`.mensaje-error`, `.mensaje-exito`) y la ventana de confirmación (componente `Confirmacion`, clase `.modal`).
 
 ### Responsive y accesibilidad
 

@@ -1,7 +1,8 @@
 // Cliente HTTP único del front. Todas las llamadas al backend pasan por acá:
 //   const reservas = await api.get('/reservas')
 //   await api.post('/reservas', { turnoId: 3, numero: 5 })
-// El backend responde los errores con { estado, mensaje, detalles }.
+// El backend responde los errores con { estado, mensaje, detalles, fecha }; acá se convierten en un ApiError
+// (error.mensaje, error.estado y error.detalles).
 
 import { auth } from './firebase'
 
@@ -10,6 +11,7 @@ const BASE = '/api'
 export class ApiError extends Error {
   constructor(estado, mensaje, detalles = []) {
     super(mensaje)
+    this.mensaje = mensaje
     this.estado = estado
     this.detalles = detalles
   }
@@ -21,7 +23,12 @@ async function obtenerToken() {
   return auth.currentUser?.getIdToken() ?? null
 }
 
-async function pedir(metodo, ruta, cuerpo) {
+// Esta función existe para no repetir el mismo código en cada petición al backend. Hace tres cosas:
+//  - Agrega el token de Firebase a la cabecera Authorization, para que el backend verifique quién llama.
+//    Se pide en cada llamada porque vence cada hora y getIdToken() lo renueva solo.
+//  - Manda el cuerpo como JSON y lee la respuesta.
+//  - Si el backend responde un error, lanza un ApiError.
+async function request(metodo, ruta, cuerpo) {
   const token = await obtenerToken()
   const respuesta = await fetch(BASE + ruta, {
     method: metodo,
@@ -40,9 +47,9 @@ async function pedir(metodo, ruta, cuerpo) {
 }
 
 export const api = {
-  get: (ruta) => pedir('GET', ruta),
-  post: (ruta, cuerpo) => pedir('POST', ruta, cuerpo ?? {}),
-  put: (ruta, cuerpo) => pedir('PUT', ruta, cuerpo ?? {}),
-  patch: (ruta, cuerpo) => pedir('PATCH', ruta, cuerpo ?? {}),
-  delete: (ruta) => pedir('DELETE', ruta),
+  get: (ruta) => request('GET', ruta),
+  post: (ruta, cuerpo) => request('POST', ruta, cuerpo ?? {}),
+  put: (ruta, cuerpo) => request('PUT', ruta, cuerpo ?? {}),
+  patch: (ruta, cuerpo) => request('PATCH', ruta, cuerpo ?? {}),
+  delete: (ruta) => request('DELETE', ruta),
 }

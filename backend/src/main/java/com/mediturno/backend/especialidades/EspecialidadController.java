@@ -7,6 +7,7 @@ import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
 import com.mediturno.backend.especialidades.dto.AltaEspecialidadDTO;
 import com.mediturno.backend.especialidades.dto.EspecialidadResponseDTO;
 import com.mediturno.backend.especialidades.dto.ModificarEspecialidadDTO;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,7 +39,7 @@ public class EspecialidadController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public EspecialidadResponseDTO altaEspecialidad(@RequestBody AltaEspecialidadDTO datos) {
+    public EspecialidadResponseDTO altaEspecialidad(@Valid @RequestBody AltaEspecialidadDTO datos) {
         return especialidadService.altaEspecialidad(datos);
     }
 
