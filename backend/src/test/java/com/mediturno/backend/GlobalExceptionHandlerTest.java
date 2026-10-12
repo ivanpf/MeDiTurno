@@ -3,6 +3,8 @@ package com.mediturno.backend;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -17,6 +19,15 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(404, respuesta.getStatusCode().value());
         assertEquals("No existe", respuesta.getBody().mensaje());
+    }
+
+    @Test
+    void unCuerpoQueNoSePuedeLeerDevuelve400() {
+        var respuesta = new GlobalExceptionHandler().cuerpoIlegible(
+            new HttpMessageNotReadableException("JSON mal formado", (HttpInputMessage) null));
+
+        assertEquals(400, respuesta.getStatusCode().value());
+        assertEquals("Hay datos inválidos", respuesta.getBody().mensaje());
     }
 
     @Test

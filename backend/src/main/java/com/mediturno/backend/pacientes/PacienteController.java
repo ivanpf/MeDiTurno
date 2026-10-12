@@ -10,6 +10,7 @@ import com.mediturno.backend.pacientes.dto.AltaPacienteDTO;
 import com.mediturno.backend.pacientes.dto.ModificarPacienteDTO;
 import com.mediturno.backend.pacientes.dto.PacienteResponseDTO;
 import com.mediturno.backend.pacientes.dto.RegistroPacienteDTO;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -51,7 +52,7 @@ public class PacienteController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public PacienteResponseDTO altaPaciente(@RequestBody AltaPacienteDTO datos) {
+    public PacienteResponseDTO altaPaciente(@Valid @RequestBody AltaPacienteDTO datos) {
         return pacienteService.altaPaciente(datos);
     }
 

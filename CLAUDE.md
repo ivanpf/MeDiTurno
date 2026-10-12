@@ -293,6 +293,7 @@ Tablas, paginación y estados de carga. Quien primero los necesite los agrega a 
 - Nunca devolver una entidad directamente desde un controlador: siempre un DTO.
 - El id del usuario autenticado sale de `UsuarioActual`, nunca del cliente. **Todo endpoint lleva `@RolesPermitidos`** con los roles que lo pueden usar (ver «Autenticación (Firebase)»).
 - Las validaciones que el diagrama marca como "operaciones internas del método" son métodos privados del servicio, no métodos públicos nuevos.
+- **Dónde va cada validación:** los campos obligatorios, los largos y los tipos simples se validan con anotaciones en el DTO y `@Valid` en el controlador (el resultado es el mismo `400` con la lista de campos). Lo que necesita lógica o consultar la base (formato de una cédula, unicidad, reglas de negocio) va en métodos privados del servicio. Un cuerpo ilegible (JSON roto, un valor que no es del tipo del campo) también responde `400`: lo resuelve `GlobalExceptionHandler`.
 - Los cambios en la base van **siempre** con migraciones de Flyway (ver «Base de datos y migraciones»). Hibernate solo valida.
 
 ### Frontend

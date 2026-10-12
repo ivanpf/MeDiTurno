@@ -6,11 +6,14 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+
+import tools.jackson.databind.exc.MismatchedInputException;
 
 /**
  * Convierte las excepciones en respuestas con el formato {@link ApiError}.
@@ -26,6 +29,21 @@ public class GlobalExceptionHandler {
             .toList();
         return ResponseEntity.badRequest()
             .body(new ApiError(400, "Hay datos inválidos", detalles, Instant.now()));
+    }
+
+    /**
+     * El cuerpo no se pudo leer: JSON mal formado o un valor que no corresponde al tipo del campo (un estado que no
+     * existe, una fecha mal escrita, un texto donde va un sí/no). Es un error de quien llama, no del servidor.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> cuerpoIlegible(HttpMessageNotReadableException ex) {
+        String detalle = "El cuerpo de la solicitud no es válido";
+        if (ex.getCause() instanceof MismatchedInputException mismatch && !mismatch.getPath().isEmpty()
+                && mismatch.getPath().get(0).getPropertyName() != null) {
+            detalle = "El valor del campo «" + mismatch.getPath().get(0).getPropertyName() + "» no es válido";
+        }
+        return ResponseEntity.badRequest()
+            .body(new ApiError(400, "Hay datos inválidos", List.of(detalle), Instant.now()));
     }
 
     /** Errores HTTP (ruta inexistente, método no permitido, ResponseStatusException) y errores inesperados. */
