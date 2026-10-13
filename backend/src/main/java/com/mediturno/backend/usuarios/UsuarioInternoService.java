@@ -21,6 +21,38 @@ public class UsuarioInternoService {
 
     /** CU-34. */
     public UsuarioResponseDTO altaUsuarioInterno(AltaUsuarioInternoDTO datos) {
+        // 1. Validar unicidad de Cédula (Flujo 4.B)
+        if (usuarioRepository.existsByCedula(dto.cedula())) {
+            throw new ReglaNegocioException("La cédula ya se encuentra asociada a otra cuenta");
+        }
+
+        // 2. Validar unicidad de Correo (Flujo 4.B)
+        if (usuarioRepository.existsByCorreo(dto.correo())) {
+            throw new ReglaNegocioException("El correo ya se encuentra asociado a otra cuenta");
+        }
+
+        // 3. Validaciones específicas cuando el Rol es MÉDICO (Flujo 4.A y 4.C)
+        if (dto.rol() == RolUsuarioInterno.MEDICO) {
+            
+            // Flujo 4.A.1: Si es médico, exige al menos una especialidad
+            if (dto.especialidadIds() == null || dto.especialidadIds().isEmpty()) {
+                throw new ReglaNegocioException("Debe seleccionar al menos una especialidad médica");
+            }
+
+            // Flujo 4.C.1: Validar que todas las especialidades existan y estén ACTIVAS
+            List<Especialidad> especialidades = especialidadRepository.findAllById(dto.especialidadIds());
+
+            if (especialidades.size() != dto.especialidadIds().size()) {
+                throw new ReglaNegocioException("Una o más especialidades seleccionadas no existen");
+            }
+
+            boolean hayInactivas = especialidades.stream().anyMatch(e -> !e.isActiva());
+            if (hayInactivas) {
+                throw new ReglaNegocioException("Una o más especialidades seleccionadas no se encuentran activas");
+            }
+        }
+        
+        
         throw new NoImplementadoException();
     }
 
