@@ -30,6 +30,7 @@ services:
       DB_USER: ${POSTGRES_USER:-mediturno}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-mediturno123}
       FIREBASE_CREDENCIALES: /secrets/firebase-clave.json
+      TZ: America/Montevideo # la fecha y la hora del servidor son las locales (si no, el contenedor usa UTC)
     volumes:
       - ./secrets:/secrets:ro # clave de servicio de Firebase (no se sube a Git)
     ports:

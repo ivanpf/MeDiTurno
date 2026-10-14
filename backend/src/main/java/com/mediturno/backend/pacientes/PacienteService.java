@@ -135,7 +135,7 @@ public class PacienteService {
         } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No se pudo vincular la cuenta: ya está registrada.");
         }
-        return aRespuesta(paciente);
+        return convertirAPacienteResponseDTO(paciente);
     }
 
     /** Lo que exige cada método de registro (los campos comunes los valida @Valid). */
@@ -181,7 +181,7 @@ public class PacienteService {
             // Otro administrador la cargó en el mismo instante: las restricciones de la base lo detectan.
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La cédula o el correo electrónico ya están registrados");
         }
-        return aRespuesta(paciente);
+        return convertirAPacienteResponseDTO(paciente);
     }
 
     /** La cédula se guarda siempre con el mismo formato (1.234.567-8) para que la unicidad no dependa de cómo se escriba. */
@@ -231,7 +231,7 @@ public class PacienteService {
         return texto == null || texto.isBlank() ? null : texto.trim();
     }
 
-    private static PacienteResponseDTO aRespuesta(Paciente p) {
+    private static PacienteResponseDTO convertirAPacienteResponseDTO(Paciente p) {
         return new PacienteResponseDTO(p.getIdUsuario(), p.getCedula(), p.getNombre(), p.getApellido(), p.getCorreo(),
             p.getFechaNacimiento(), p.getTelefono(), p.getDomicilio(), p.getEstado(), p.getFirebaseUid() != null, p.getFechaAlta());
     }

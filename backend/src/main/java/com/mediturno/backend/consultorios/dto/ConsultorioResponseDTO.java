@@ -1,7 +1,12 @@
 package com.mediturno.backend.consultorios.dto;
 
-/**
- * TODO: definir los campos al implementar el caso de uso.
- */
-public record ConsultorioResponseDTO() {
+import com.mediturno.backend.common.model.EstadoActivacion;
+
+/** Consultorio tal como lo ven las pantallas (alta, listado y modificación). */
+public record ConsultorioResponseDTO(
+        String codigo,
+        String nombre,
+        String ubicacion,
+        String descripcion,
+        EstadoActivacion estado) {
 }

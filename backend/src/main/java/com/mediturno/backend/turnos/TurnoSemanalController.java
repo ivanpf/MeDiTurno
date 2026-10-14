@@ -10,6 +10,7 @@ import com.mediturno.backend.turnos.dto.RehabilitacionTurnoDTO;
 import com.mediturno.backend.turnos.dto.SuspensionTurnoDTO;
 import com.mediturno.backend.turnos.dto.SuspensionTurnoResponseDTO;
 import com.mediturno.backend.turnos.dto.TurnoSemanalResponseDTO;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,7 +43,7 @@ public class TurnoSemanalController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TurnoSemanalResponseDTO altaTurnoSemanal(@RequestBody AltaTurnoSemanalDTO datos) {
+    public List<TurnoSemanalResponseDTO> altaTurnoSemanal(@Valid @RequestBody AltaTurnoSemanalDTO datos) {
         return turnoSemanalService.altaTurnoSemanal(datos);
     }
 

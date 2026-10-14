@@ -7,7 +7,7 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **solo están implementados CU-1, CU-2, CU-7, CU-28 y CU-31**. El resto responde `501`.
+Es la **base del proyecto**: la estructura está creada y **solo están implementados CU-1, CU-2, CU-7, CU-12, CU-28 y CU-31**. El resto responde `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio (vacío) por tabla.
 - **Frontend:** todas las pantallas existen como `PaginaPendiente`, con su opción en el menú del rol. El login (CU-1) y el cierre de sesión (CU-2) funcionan con Firebase.
@@ -47,6 +47,8 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 - Todos los endpoints están bajo `/api`. Las rutas vienen de los diagramas de secuencia; las que el diagrama no indica son propuestas y se pueden ajustar.
 - `common/`: `CorsConfig`, `exception/` (`ApiError`, `GlobalExceptionHandler`, `NoImplementadoException`), `seguridad/UsuarioActual`, `dto/` (DTO compartidos) y `health/` (`GET /api/health`).
 - **`UsuarioActual`** entrega el id del usuario autenticado (paciente, médico, funcionario). Los controladores lo usan en lugar de recibir ese id por la URL o el cuerpo. Ver «Autenticación (Firebase)».
+- **Consultas de apoyo para las pantallas** (no son casos de uso): `GET /api/medicos` (`MedicoController`: médicos activos con sus especialidades activas, para administrador y funcionario), `GET /api/especialidades` (todas, ordenadas por nombre; la pantalla filtra por estado) y `GET /api/consultorios` (todos, ordenados por nombre; administrador y funcionario). Devuelven todo, sin búsqueda ni filtros: son para llenar listas desplegables. Los listados con búsqueda de CU-30, CU-36 y CU-39 (si se hacen) los pueden reemplazar o ampliar.
+- **Zona horaria:** el contenedor del backend usa `America/Montevideo` (`TZ` en `compose.yml`). Sin eso usaría UTC y, por ejemplo, de noche «hoy» sería mañana para quien usa la pantalla (la fecha de vigencia de un turno no puede ser anterior a hoy). Fuera de contenedores se usa la zona de la máquina.
 - **Métodos internos** (sin endpoint): `AuthService.crearCuenta`, `PaseService.tienePaseVigente`, `EmailService`, `PushNotificationService.enviarPush` y los avisos de `NotificacionService`. Los llaman otros servicios.
 
 ### Frontend (`frontend/src/`)
@@ -80,7 +82,7 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
   }
   ```
 
-  `RolesDeEndpointsTest` falla si un endpoint nuevo no tiene `@RolesPermitidos` (en el método o en la clase), así que no se puede olvidar. Los roles se definieron según quién ve cada pantalla en `routes.jsx`. Quedan **abiertos a más de un rol** los que usan varias pantallas: la lista y el detalle de especialidades (cualquier rol), la lista de consultorios (administrador y funcionario, para elegir el consultorio al dar de alta un turno) y la cartelera, las notificaciones y las rutas de `auth` (cualquier rol). Si un caso de uso necesita otro rol, se cambia la anotación de ese endpoint.
+  `RolesDeEndpointsTest` falla si un endpoint nuevo no tiene `@RolesPermitidos` (en el método o en la clase), así que no se puede olvidar. Los roles se definieron según quién ve cada pantalla en `routes.jsx`. Quedan **abiertos a más de un rol** los que usan varias pantallas: la lista y el detalle de especialidades (cualquier rol), la lista de consultorios (administrador y funcionario, para elegir el consultorio al dar de alta un turno), la consulta de médicos (administrador y funcionario) y la cartelera, las notificaciones y las rutas de `auth` (cualquier rol). Si un caso de uso necesita otro rol, se cambia la anotación de ese endpoint.
 - **Rutas públicas** (sin sesión): `/api/health`, `/api/pacientes/registro/**` (CU-7) y `/api/auth/recuperacion/**` (CU-4). Para agregar otra se edita `FiltroAutenticacion.shouldNotFilter`.
 - **Cerrar sesión (CU-2):** `POST /api/auth/logout` revoca las sesiones en Firebase y el front cierra la sesión local. El token ya emitido sigue siendo válido hasta que vence (1 hora); para bloquear a alguien de inmediato, ponerlo `INACTIVO`: el filtro lo rechaza en la siguiente llamada.
 - **Registro de pacientes (CU-7):** `POST /api/pacientes/registro` es público. La persona se identifica con la **cédula y el correo que figuran en el padrón** (los dos tienen que coincidir): si no hay coincidencia responde `422` con el mismo mensaje en ambos casos, para no revelar qué datos existen; si ya tiene cuenta, `409`. Con `proveedor: PASSWORD` el backend crea la cuenta en Firebase con ese correo (`AuthService.crearCuenta`; contraseña de al menos 6 caracteres, como exige Firebase). Con `GOOGLE`, el front primero llama a `POST /api/pacientes/registro/verificacion` (comprueba cédula y correo **antes** de abrir la ventana de Google), después inicia sesión con Google y manda el token en `tokenAcceso`; el backend lo verifica (`obtenerIdentidadVerificada`, `503` si no puede) y exige que la cuenta de Google use el mismo correo del padrón. Al final completa `firebase_uid`, `proveedor_acceso` y, si se enviaron, teléfono y domicilio. Si no puede vincular, borra de Firebase la cuenta que se acababa de crear.
@@ -102,6 +104,15 @@ INSERT INTO usuario (correo, estado, proveedor_acceso, fecha_creacion, cedula, n
 VALUES ('admin@ejemplo.com', 'ACTIVO', 'PASSWORD', LOCALTIMESTAMP, '1.111.111-1', 'Nombre', 'Apellido', '1980-01-01', 'PEGAR_AQUI_EL_UID');
 INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE correo = 'admin@ejemplo.com';
 ```
+
+### Tareas programadas
+
+El backend tiene `@EnableScheduling` y la clase `common/tareas/TareasProgramadas`. La lógica de cada tarea va en un servicio; la clase solo decide cuándo se ejecuta. Hoy hace una cosa:
+
+- **Generar las ocurrencias de los turnos** (`GeneradorOcurrenciasService`): crea las fechas concretas en las que se atiende (y se puede reservar) para los turnos semanales `ACTIVO`. Corre **todos los días a las 2:00 y también al arrancar el backend**, y genera las fechas **hasta donde se permite reservar**: las próximas **8 semanas**, como dice CU-8 («la fecha seleccionada debe encontrarse dentro de las próximas ocho semanas»). Ese valor es `mediturno.reservas.semanas-adelante` y **CU-8 tiene que usar el mismo** para validar la fecha elegida, así las fechas generadas y las reservables nunca se desfasan; si la ventana de reserva cambia, se cambia ahí y la tarea se ajusta sola. El horario de la tarea es `mediturno.ocurrencias.cron`. Cada ocurrencia copia el cupo y el horario del turno y queda `HABILITADA`. Solo crea las que faltan (es seguro repetirla), respeta la vigencia del turno, ignora los turnos suspendidos y procesa cada turno en su propia transacción (uno con problemas no frena a los demás). **La fecha de hoy solo se genera si el turno todavía no empezó**: uno en curso o ya terminado no se ofrece para reservar; las fechas de días posteriores se generan siempre.
+- **CU-12 también genera las fechas al crear el turno**, en la misma transacción (`GeneradorOcurrenciasService.generarOcurrenciasDe`): el turno y sus fechas se guardan juntos o no se guarda ninguno. Así un turno que se carga hoy y todavía no empezó ya se puede reservar hoy, sin esperar a las 2:00. La tarea programada sigue siendo necesaria para que la ventana avance cada día.
+- **Faltan** (se agregan igual, con otro método `@Scheduled`): cerrar las suspensiones temporales que ya terminaron, marcar las reservas vencidas y enviar los recordatorios.
+- La hora usa la zona horaria del servidor (`America/Montevideo` en los contenedores).
 
 ## Base de datos y migraciones (Flyway)
 
