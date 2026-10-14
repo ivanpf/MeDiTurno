@@ -1,0 +1,44 @@
+.formulario,
+.mensajes {
+  max-width: 640px;
+}
+
+.mensajes {
+  margin-bottom: 16px;
+}
+
+.mensajes ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fila > * {
+  min-width: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+@media (max-width: 800px) {
+  .fila {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
