@@ -7,10 +7,10 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **solo están implementados CU-1, CU-2, CU-7, CU-28 y CU-31**. El resto responde `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-28 y CU-31**. El resto responde `501`.
 
-- **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio (vacío) por tabla.
-- **Frontend:** todas las pantallas existen como `PaginaPendiente`, con su opción en el menú del rol. El login (CU-1) y el cierre de sesión (CU-2) funcionan con Firebase.
+- **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta ocurrencias existentes y registra reservas mediante una transacción con bloqueo; no genera turnos ni datos de ejemplo. El listado básico y el detalle de especialidades también están disponibles para este flujo. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio (vacío) por tabla.
+- **Frontend:** las pantallas tienen su opción en el menú del rol. CU-8 permite seleccionar especialidad, médico, ocurrencia y número libre; su contrato está en `frontend/src/features/reservas/CONTRATO_CU8.md`. El resto de las pantallas pendientes conserva `PaginaPendiente`.
 - **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos

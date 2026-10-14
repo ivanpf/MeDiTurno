@@ -1,7 +1,13 @@
 package com.mediturno.backend.turnos.dto;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
 /**
- * Una fecha concreta de un turno semanal, con médico, fecha y disponibilidad. TODO: definir los campos al implementar el caso de uso.
+ * CU-8: una fecha concreta con médico, horario, cupos y números no disponibles.
  */
-public record OcurrenciaTurnoDTO() {
+public record OcurrenciaTurnoDTO(Long idOcurrenciaTurno, Long idMedico, String nombreMedico,
+        LocalDate fecha, LocalTime horaInicio, LocalTime horaFin,
+        String consultorio, Integer cupos, List<Integer> numerosOcupados) {
 }
