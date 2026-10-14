@@ -1,0 +1,73 @@
+.campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.filtros label {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.semana {
+  margin: 20px 0 12px;
+  font-size: 15px;
+  color: var(--gris);
+}
+
+.turnos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 240px));
+  gap: 12px;
+}
+
+.turno {
+  min-width: 0;
+  text-align: left;
+  font-weight: 400;
+}
+
+.turno span,
+.numeros span {
+  display: block;
+  font-size: 13px;
+}
+
+.turno[aria-pressed='true'],
+.numeros button[aria-pressed='true'] {
+  color: var(--blanco);
+  background: var(--azul);
+}
+
+.numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+}
+
+.numeros button {
+  padding: 10px 8px;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+@media (max-width: 800px) {
+  .filtros {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

@@ -1,7 +1,9 @@
 package com.mediturno.backend.reservas.dto;
 
+import java.time.LocalTime;
+
 /**
- * Paciente, médico, especialidad, fecha, horario, consultorio, número y estado. TODO: definir los campos al implementar el caso de uso.
+ * Confirmación CU-8. Los campos adicionales de consulta e historial se incorporarán con esos casos de uso.
  */
-public record ReservaResponseDTO() {
+public record ReservaResponseDTO(Long idReserva, Integer numero, LocalTime horaEstimada) {
 }
