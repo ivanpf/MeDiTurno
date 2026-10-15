@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 import com.mediturno.backend.auth.AuthService;
 import com.mediturno.backend.auth.dto.CrearCuentaRequestDTO;
@@ -14,6 +13,7 @@ import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.common.seguridad.IdentidadVerificada;
+import com.mediturno.backend.common.validation.FormatoUsuario;
 import com.mediturno.backend.pacientes.dto.AltaPacienteDTO;
 import com.mediturno.backend.pacientes.dto.ModificarPacienteDTO;
 import com.mediturno.backend.pacientes.dto.PacienteResponseDTO;
@@ -37,8 +37,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class PacienteService {
 
     private static final int LARGO_MINIMO_CONTRASENA = 6; // el mismo mínimo que exige Firebase
-
-    private static final Pattern CORREO = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     private final PacienteRepository pacienteRepository;
     private final UsuarioRepository usuarioRepository;
@@ -77,7 +75,7 @@ public class PacienteService {
      * persona no estuviera, para no revelar qué cédulas o correos existen.
      */
     private Paciente buscarPacienteSinCuenta(String cedulaIngresada, String correoIngresado) {
-        String cedula = normalizarCedula(cedulaIngresada);
+        String cedula = FormatoUsuario.normalizarCedula(cedulaIngresada);
         if (cedula == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cédula no tiene un formato válido (ejemplo: 1.234.567-8).");
         }
@@ -158,7 +156,7 @@ public class PacienteService {
      * cuando la persona crea su cuenta (CU-7). Los campos obligatorios los valida el controlador (@Valid).
      */
     public PacienteResponseDTO altaPaciente(AltaPacienteDTO datos) {
-        String cedula = normalizarCedula(datos.cedula());
+        String cedula = FormatoUsuario.normalizarCedula(datos.cedula());
         String correo = datos.correo().trim().toLowerCase(Locale.ROOT);
         validarFormato(cedula, correo);
         validarCedulaYCorreoUnicos(cedula, correo);
@@ -185,27 +183,12 @@ public class PacienteService {
     }
 
     /** La cédula se guarda siempre con el mismo formato (1.234.567-8) para que la unicidad no dependa de cómo se escriba. */
-    private static String normalizarCedula(String texto) {
-        String limpia = texto.trim();
-        if (!limpia.matches("[0-9.\\-\\s]+")) {
-            return null;
-        }
-        String digitos = limpia.replaceAll("[^0-9]", "");
-        if (digitos.length() < 7 || digitos.length() > 8) {
-            return null;
-        }
-        String cuerpo = digitos.substring(0, digitos.length() - 1);
-        String cuerpoAlReves = new StringBuilder(cuerpo).reverse().toString().replaceAll("(\\d{3})(?=\\d)", "$1.");
-        String conPuntos = new StringBuilder(cuerpoAlReves).reverse().toString();
-        return conPuntos + "-" + digitos.charAt(digitos.length() - 1);
-    }
-
     private static void validarFormato(String cedula, String correo) {
         List<String> errores = new ArrayList<>();
         if (cedula == null) {
             errores.add("La cédula no tiene un formato válido (ejemplo: 1.234.567-8).");
         }
-        if (!CORREO.matcher(correo).matches()) {
+        if (!FormatoUsuario.correoValido(correo)) {
             errores.add("El correo electrónico no tiene un formato válido.");
         }
         if (!errores.isEmpty()) {

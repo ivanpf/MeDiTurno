@@ -75,7 +75,9 @@ public class EspecialidadService {
 
     /** CU-30. */
     public List<EspecialidadResponseDTO> listarEspecialidades(CriteriosBusquedaDTO criterios) {
-        throw new NoImplementadoException();
+        return especialidadRepository.findAll().stream()
+            .map(EspecialidadService::aRespuesta)
+            .toList();
     }
 
     /** CU-30. */

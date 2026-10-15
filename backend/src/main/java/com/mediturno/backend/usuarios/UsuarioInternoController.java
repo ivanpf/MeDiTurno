@@ -9,6 +9,7 @@ import com.mediturno.backend.common.seguridad.UsuarioActual;
 import com.mediturno.backend.usuarios.dto.AltaUsuarioInternoDTO;
 import com.mediturno.backend.usuarios.dto.ModificarUsuarioDTO;
 import com.mediturno.backend.usuarios.dto.UsuarioResponseDTO;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,7 +45,7 @@ public class UsuarioInternoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UsuarioResponseDTO altaUsuarioInterno(@RequestBody AltaUsuarioInternoDTO datos) {
+    public UsuarioResponseDTO altaUsuarioInterno(@Valid @RequestBody AltaUsuarioInternoDTO datos) {
         return usuarioInternoService.altaUsuarioInterno(datos);
     }
 

@@ -30,6 +30,13 @@ services:
       DB_USER: ${POSTGRES_USER:-mediturno}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-mediturno123}
       FIREBASE_CREDENCIALES: /secrets/firebase-clave.json
+      MAIL_HOST: ${MAIL_HOST:-localhost}
+      MAIL_PORT: ${MAIL_PORT:-25}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-false}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@mediturno.local}
     volumes:
       - ./secrets:/secrets:ro # clave de servicio de Firebase (no se sube a Git)
     ports:

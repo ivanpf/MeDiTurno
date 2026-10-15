@@ -7,11 +7,11 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **solo están implementados CU-1, CU-2, CU-7, CU-28 y CU-31**. El resto responde `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-28, CU-31 y CU-34**. El resto responde `501`.
 
-- **Backend:** todos los servicios y controladores del Documento de diseño existen. Sus métodos lanzan `NoImplementadoException` (la API responde `501`). Los DTO son `record` vacíos. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio (vacío) por tabla.
-- **Frontend:** todas las pantallas existen como `PaginaPendiente`, con su opción en el menú del rol. El login (CU-1) y el cierre de sesión (CU-2) funcionan con Firebase.
-- **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
+- **Backend:** los servicios y controladores del Documento de diseño existen; los casos pendientes lanzan `NoImplementadoException` (la API responde `501`). El modelo de datos ya existe: la migración `V1` crea las 20 tablas.
+- **Frontend:** las pantallas de CU-31 y CU-34 ya están implementadas; las demás pendientes usan `PaginaPendiente`. El login (CU-1) y el cierre de sesión (CU-2) funcionan con Firebase.
+- **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2, CU-7 y CU-34 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos
 
@@ -87,15 +87,15 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 - **Quien entra (login) con Google pero no está en la base** recibe el mismo error genérico (queda un usuario huérfano en Firebase, que se puede borrar desde la consola).
 - **Tests:** `AutenticacionTest` usa un `ProveedorIdentidad` falso, sin Firebase real.
 
-**Configuración:** los datos públicos de Firebase ya están en `compose.yml` y `.env.example`, y los cuatro usuarios de prueba se cargan solos al arrancar el backend. Lo único que hay que hacer es **copiar la clave de servicio** a `secrets/firebase-clave.json`: el archivo se lo pasa el equipo por un canal privado (nunca por Git: la carpeta `secrets/` está ignorada). Sin la clave, el backend arranca pero nadie puede iniciar sesión.
+**Configuración:** los datos públicos de Firebase ya están en `compose.yml` y `.env.example`, y los cuatro usuarios de prueba se cargan solos al arrancar el backend. Para altas CU-34 también se configura SMTP con `MAIL_*` en `.env`. Lo único que hay que hacer es **copiar la clave de servicio** a `secrets/firebase-clave.json`: el archivo se lo pasa el equipo por un canal privado (nunca por Git: la carpeta `secrets/` está ignorada). Sin la clave, el backend arranca pero nadie puede iniciar sesión.
 
 **Usuarios de prueba** (migración repetible `db/seed/R__usuarios_de_prueba.sql`, correo y contraseña en Firebase): `admin@mediturno.com`, `medico@mediturno.com`, `funcionario@mediturno.com` y `paciente@mediturno.com`, con contraseña `admin123`, `medico123`, `funcionario123` y `paciente123`.
 
-**Cambiar el proyecto de Firebase o crear otro usuario a mano:**
+**Cambiar el proyecto de Firebase o crear otro usuario de prueba a mano:**
 
 1. Completar los cuatro datos públicos de la app web en `.env` (variables `VITE_FIREBASE_*`; ver `.env.example`).
 2. Descargar la **clave de servicio** (consola de Firebase > Configuración del proyecto > Cuentas de servicio > Generar nueva clave privada) y guardarla como `secrets/firebase-clave.json`. Esa carpeta está ignorada por Git: **la clave nunca se sube**. Fuera de contenedores el backend la busca ahí (`../secrets/firebase-clave.json`); se puede cambiar con la variable `FIREBASE_CREDENCIALES`. Sin la clave, el backend arranca pero nadie puede iniciar sesión.
-3. **Usuario nuevo** (hasta que existan CU-7 y CU-34): crear la cuenta en la consola de Firebase (Authentication > Users > Add user), copiar su *User UID* y ejecutar en la base (DBeaver) con ese UID:
+3. **Usuario nuevo de prueba** (no creado mediante CU-7 o CU-34): crear la cuenta en la consola de Firebase (Authentication > Users > Add user), copiar su *User UID* y ejecutar en la base (DBeaver) con ese UID:
 
 ```sql
 INSERT INTO usuario (correo, estado, proveedor_acceso, fecha_creacion, cedula, nombre, apellido, fecha_nacimiento, firebase_uid)
