@@ -23,7 +23,7 @@ import com.mediturno.backend.notificaciones.model.TipoNotificacion;
 import com.mediturno.backend.notificaciones.repository.NotificacionRepository;
 import com.mediturno.backend.usuarios.model.Usuario;
 
-/** CU-6 (parte de notificaciones): lo que muestra la campanita. */
+/** Campanita de notificaciones: lo que ve el paciente en el encabezado. */
 class CampanitaIntegracionTest extends PostgresIntegracionTest {
 
     @Autowired NotificacionService servicio;

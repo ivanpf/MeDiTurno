@@ -7,7 +7,7 @@ const CADA_MS = 60000 // cada cuánto se consultan las notificaciones nuevas
 const formatearFecha = (iso) =>
   new Date(iso).toLocaleString('es-UY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
-// Campanita del encabezado: avisos de la aplicación (CU-6) con la cantidad sin leer. Se actualiza sola.
+// Campanita del encabezado: avisos de la aplicación con la cantidad sin leer. Se actualiza sola.
 export default function Campanita() {
   const [lista, setLista] = useState([])
   const [abierta, setAbierta] = useState(false)
