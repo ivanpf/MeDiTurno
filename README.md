@@ -68,7 +68,7 @@ La primera vez tarda varios minutos (descarga imágenes y compila el backend y e
 | PostgreSQL | `localhost:5432` | (para clientes de base de datos) |
 | Correos de desarrollo (Mailpit) | http://localhost:8025 | los correos que manda el backend (por ejemplo, los avisos de suspensión de un turno) |
 
-Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). Con el menú del rol, cada opción muestra una pantalla "pendiente de implementar".
+Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). El alta de pacientes (CU-31) y el alta de usuarios internos (CU-34) ya tienen pantalla; las demás opciones muestran una pantalla "pendiente de implementar".
 
 Los endpoints de los casos de uso que todavía no se implementaron responden `501 Funcionalidad pendiente de implementar`. Es lo esperado.
 
