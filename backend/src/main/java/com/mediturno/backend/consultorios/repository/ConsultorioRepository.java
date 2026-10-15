@@ -6,3 +6,6 @@ import com.mediturno.backend.consultorios.model.Consultorio;
 
 public interface ConsultorioRepository extends JpaRepository<Consultorio, String> {
 }
+
+
+
