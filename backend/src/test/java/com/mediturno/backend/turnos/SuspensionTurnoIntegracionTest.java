@@ -221,12 +221,54 @@ class SuspensionTurnoIntegracionTest extends PostgresIntegracionTest {
     }
 
     @Test
-    void soloSeAnulanLasReservasVigentes() {
+    void laReservaConOrdenEmitidaNoSeAnulaPeroSeAvisaASuPaciente() {
         Reserva conOrden = reserva(beto, ocurrenciaDe(lunes2), 5, EstadoReserva.ORDEN_EMITIDA);
 
-        suspender(TipoSuspension.TEMPORAL, lunes2, lunes3);
+        SuspensionTurnoResponseDTO respuesta = suspender(TipoSuspension.TEMPORAL, lunes2, lunes3);
 
         assertEquals(EstadoReserva.ORDEN_EMITIDA, estadoDe(conOrden));
+        assertEquals(2, respuesta.reservasAnuladas());
+        assertEquals(3, respuesta.reservasAvisadas());
+        List<Notificacion> delPaciente = notificaciones.findAll().stream()
+            .filter(n -> n.getReserva().getIdReserva().equals(conOrden.getIdReserva())).toList();
+        assertEquals(2, delPaciente.size()); // en la aplicación y por correo
+        assertTrue(delPaciente.get(0).getMensaje().contains("no se atenderá"));
+    }
+
+    @Test
+    void sePuedeSuspenderUnSoloDia() {
+        SuspensionTurnoResponseDTO respuesta = suspender(TipoSuspension.TEMPORAL, lunes2, lunes2);
+
+        assertEquals(1, respuesta.fechasSuspendidas());
+        assertEquals(1, respuesta.reservasAnuladas());
+        assertEquals(EstadoOcurrenciaTurno.SUSPENDIDA, estadoDe(lunes2));
+        assertEquals(EstadoOcurrenciaTurno.HABILITADA, estadoDe(lunes3));
+        assertEquals(EstadoReserva.VIGENTE, estadoDe(reserva3));
+    }
+
+    @Test
+    void laSuspensionDeHoyNoTocaLasReservasCuyaHoraEstimadaYaPaso() {
+        // Hoy, de 00:00 a 23:59 con 1000 números: el 1 era a las 00:00 (ya pasó) y el 1000 es a las 23:57.
+        OcurrenciaTurno deHoy = new OcurrenciaTurno();
+        deHoy.setTurnoSemanal(turno);
+        deHoy.setFecha(HOY);
+        deHoy.setCupos(1000);
+        deHoy.setHoraInicio(LocalTime.of(0, 0));
+        deHoy.setHoraFin(LocalTime.of(23, 59));
+        deHoy.setOcurrenciaTurnoEstado(EstadoOcurrenciaTurno.HABILITADA);
+        deHoy = ocurrencias.saveAndFlush(deHoy);
+        Reserva yaPaso = reserva(ana, deHoy, 1, EstadoReserva.VIGENTE);
+        Reserva yaPasoConOrden = reserva(beto, deHoy, 2, EstadoReserva.ORDEN_EMITIDA);
+        Reserva porVenir = reserva(beto, deHoy, 1000, EstadoReserva.VIGENTE);
+
+        SuspensionTurnoResponseDTO respuesta = suspender(TipoSuspension.TEMPORAL, HOY, lunes1);
+
+        assertEquals(EstadoReserva.VIGENTE, estadoDe(yaPaso));
+        assertEquals(EstadoReserva.ORDEN_EMITIDA, estadoDe(yaPasoConOrden));
+        assertEquals(EstadoReserva.ANULADA, estadoDe(porVenir));
+        assertEquals(EstadoReserva.ANULADA, estadoDe(reserva1)); // un día posterior: se anula completo
+        assertEquals(2, respuesta.reservasAnuladas());
+        assertEquals(2, respuesta.reservasAvisadas());
     }
 
     // ------------------------------------------------------------------ avisos (paso 11)
@@ -289,8 +331,7 @@ class SuspensionTurnoIntegracionTest extends PostgresIntegracionTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, rechazo(TipoSuspension.TEMPORAL, HOY.minusDays(1), HOY.plusDays(5)).getStatusCode());
         assertEquals("Indique hasta qué fecha dura la suspensión temporal.", rechazo(TipoSuspension.TEMPORAL, lunes2, null).getReason());
-        assertEquals("La fecha hasta debe ser posterior a la fecha desde.", rechazo(TipoSuspension.TEMPORAL, lunes2, lunes2).getReason());
-        assertEquals("La fecha hasta debe ser posterior a la fecha desde.", rechazo(TipoSuspension.TEMPORAL, lunes3, lunes2).getReason());
+        assertEquals("La fecha hasta no puede ser anterior a la fecha desde.", rechazo(TipoSuspension.TEMPORAL, lunes3, lunes2).getReason());
 
         assertEquals(antes, suspensiones.count());
         assertEquals(EstadoReserva.VIGENTE, estadoDe(reserva2));

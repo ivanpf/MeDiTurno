@@ -228,17 +228,22 @@ public class TurnoSemanalService {
      * se suspenden y sus reservas se anulan al registrar la suspensión, para avisar con tiempo.
      */
     public SuspensionTurnoResponseDTO suspenderTurno(Long idTurnoSemanal, SuspensionTurnoDTO datos, Long idFuncionario) {
-        SuspensionTurnoResponseDTO respuesta = transaccion.execute(estado -> registrarSuspension(idTurnoSemanal, datos, idFuncionario));
+        SuspensionRegistrada registrada = transaccion.execute(estado -> registrarSuspension(idTurnoSemanal, datos, idFuncionario));
+        SuspensionTurnoResponseDTO respuesta = registrada.respuesta();
         // Los avisos van después de confirmar la suspensión: si fallan, la suspensión queda registrada igual.
         try {
-            notificacionService.notificarSuspensionTurno(respuesta.idSuspensionTurno());
+            notificacionService.notificarSuspensionTurno(respuesta.idSuspensionTurno(), registrada.idsReservasAvisadas());
         } catch (RuntimeException e) {
             log.error("La suspensión {} quedó registrada, pero no se pudieron generar los avisos: {}", respuesta.idSuspensionTurno(), e.getMessage(), e);
         }
         return respuesta;
     }
 
-    private SuspensionTurnoResponseDTO registrarSuspension(Long idTurnoSemanal, SuspensionTurnoDTO datos, Long idFuncionario) {
+    /** Lo que deja registrar una suspensión: la respuesta y las reservas (anuladas o con orden emitida) a las que hay que avisar. */
+    private record SuspensionRegistrada(SuspensionTurnoResponseDTO respuesta, List<Long> idsReservasAvisadas) {
+    }
+
+    private SuspensionRegistrada registrarSuspension(Long idTurnoSemanal, SuspensionTurnoDTO datos, Long idFuncionario) {
         LocalDateTime ahora = LocalDateTime.now(reloj);
         LocalDate hoy = ahora.toLocalDate();
         TurnoSemanal turno = turnoSemanalRepository.buscarConLock(idTurnoSemanal)
@@ -266,17 +271,35 @@ public class TurnoSemanalService {
                 fechasSuspendidas++;
             }
         }
-        List<Reserva> reservas = reservaRepository.buscarVigentesDelTurnoEntreFechas(idTurnoSemanal, datos.fechaDesde(), hasta);
-        for (Reserva reserva : reservas) {
-            reserva.setReservaEstado(EstadoReserva.ANULADA);
-            reserva.setFechaCancelacion(ahora);
-            reserva.setMotivoCancelacion(MotivoAnulacionPorSuspension.de(suspension.getIdSuspensionTurno()));
+        // Se anulan las vigentes. Las que ya tienen orden emitida conservan su estado, pero también se avisa a sus pacientes.
+        List<Reserva> alcanzadas = reservasAlcanzadas(idTurnoSemanal, datos.fechaDesde(), hasta, ahora);
+        int anuladas = 0;
+        for (Reserva reserva : alcanzadas) {
+            if (reserva.getReservaEstado() == EstadoReserva.VIGENTE) {
+                reserva.setReservaEstado(EstadoReserva.ANULADA);
+                reserva.setFechaCancelacion(ahora);
+                reserva.setMotivoCancelacion(MotivoAnulacionPorSuspension.de(suspension.getIdSuspensionTurno()));
+                anuladas++;
+            }
         }
         if (!datos.fechaDesde().isAfter(hoy)) {
             turno.setEstado(EstadoTurnoSemanal.SUSPENDIDO);
         }
-        return new SuspensionTurnoResponseDTO(suspension.getIdSuspensionTurno(), idTurnoSemanal, datos.modalidad(), datos.fechaDesde(),
-            suspension.getFechaFin(), suspension.getMotivo(), ahora, fechasSuspendidas, reservas.size(), turno.getEstado());
+        SuspensionTurnoResponseDTO respuesta = new SuspensionTurnoResponseDTO(suspension.getIdSuspensionTurno(), idTurnoSemanal,
+            datos.modalidad(), datos.fechaDesde(), suspension.getFechaFin(), suspension.getMotivo(), ahora, fechasSuspendidas, anuladas,
+            alcanzadas.size(), turno.getEstado());
+        return new SuspensionRegistrada(respuesta, alcanzadas.stream().map(Reserva::getIdReserva).toList());
+    }
+
+    /**
+     * Reservas que alcanza la suspensión: las vigentes y las que ya tienen orden emitida de las fechas cubiertas. Las de hoy cuya
+     * hora estimada ya pasó quedan afuera: esa consulta ya se dio (o se perdió) y no se toca.
+     */
+    private List<Reserva> reservasAlcanzadas(Long idTurnoSemanal, LocalDate desde, LocalDate hasta, LocalDateTime ahora) {
+        return reservaRepository.buscarPendientesDelTurnoEntreFechas(idTurnoSemanal, desde, hasta).stream()
+            .filter(r -> !r.getOcurrenciaTurno().getFecha().equals(ahora.toLocalDate())
+                || disponibilidadService.horaEstimada(r.getOcurrenciaTurno(), r.getNumero()).isAfter(ahora.toLocalTime()))
+            .toList();
     }
 
     /**
@@ -285,18 +308,20 @@ public class TurnoSemanalService {
      */
     @Transactional(readOnly = true)
     public VistaPreviaSuspensionDTO vistaPreviaSuspension(Long idTurnoSemanal, SuspensionTurnoDTO datos) {
-        LocalDate hoy = LocalDate.now(reloj);
+        LocalDateTime ahora = LocalDateTime.now(reloj);
+        LocalDate hoy = ahora.toLocalDate();
         TurnoSemanal turno = turnoSemanalRepository.findById(idTurnoSemanal)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El turno seleccionado no existe."));
         validarQueSePuedeSuspender(turno, hoy);
         validarPeriodoDeSuspension(datos, hoy);
         LocalDate hasta = datos.modalidad() == TipoSuspension.TEMPORAL ? datos.fechaHasta() : SIN_FIN;
 
-        List<VistaPreviaSuspensionDTO.ReservaAfectada> reservas = reservaRepository
-            .buscarVigentesDelTurnoEntreFechas(idTurnoSemanal, datos.fechaDesde(), hasta).stream()
+        List<VistaPreviaSuspensionDTO.ReservaAfectada> reservas = reservasAlcanzadas(idTurnoSemanal, datos.fechaDesde(), hasta, ahora)
+            .stream()
             .map(r -> new VistaPreviaSuspensionDTO.ReservaAfectada(r.getIdReserva(), r.getOcurrenciaTurno().getFecha(),
                 r.getOcurrenciaTurno().getHoraInicio(), r.getNumero(),
-                r.getPaciente().getApellido() + ", " + r.getPaciente().getNombre(), r.getPaciente().getCedula()))
+                r.getPaciente().getApellido() + ", " + r.getPaciente().getNombre(), r.getPaciente().getCedula(),
+                r.getReservaEstado() == EstadoReserva.ORDEN_EMITIDA))
             .toList();
         int fechas = ocurrenciaTurnoRepository.fechasExistentes(idTurnoSemanal, datos.fechaDesde(), hasta).size();
         return new VistaPreviaSuspensionDTO(idTurnoSemanal, datos.modalidad(), datos.fechaDesde(),
@@ -326,8 +351,8 @@ public class TurnoSemanalService {
         if (datos.modalidad() == TipoSuspension.TEMPORAL) {
             if (datos.fechaHasta() == null) {
                 errores.add("Indique hasta qué fecha dura la suspensión temporal.");
-            } else if (!datos.fechaHasta().isAfter(datos.fechaDesde())) {
-                errores.add("La fecha hasta debe ser posterior a la fecha desde.");
+            } else if (datos.fechaHasta().isBefore(datos.fechaDesde())) {
+                errores.add("La fecha hasta no puede ser anterior a la fecha desde.");
             }
         }
         if (!errores.isEmpty()) {

@@ -21,6 +21,6 @@ public record VistaPreviaSuspensionDTO(
         List<ReservaAfectada> reservas) {
 
     public record ReservaAfectada(Long idReserva, LocalDate fecha, LocalTime horaInicio, Integer numero,
-            String nombrePaciente, String cedulaPaciente) {
+            String nombrePaciente, String cedulaPaciente, boolean conOrdenEmitida) {
     }
 }

@@ -25,7 +25,7 @@ import com.mediturno.backend.notificaciones.model.TipoNotificacion;
 import com.mediturno.backend.notificaciones.repository.NotificacionRepository;
 import com.mediturno.backend.reservas.model.Reserva;
 import com.mediturno.backend.reservas.repository.ReservaRepository;
-import com.mediturno.backend.turnos.MotivoAnulacionPorSuspension;
+import com.mediturno.backend.reservas.model.EstadoReserva;
 import com.mediturno.backend.turnos.model.OcurrenciaTurno;
 import com.mediturno.backend.turnos.model.SuspensionTurno;
 import com.mediturno.backend.turnos.repository.SuspensionTurnoRepository;
@@ -66,12 +66,13 @@ public class NotificacionService {
     }
 
     /**
-     * CU-13. Uso interno. Avisa a cada paciente cuya reserva anuló la suspensión: una notificación en la aplicación y un
+     * CU-13. Uso interno. Recibe las reservas alcanzadas por la suspensión (las anuladas y las que tienen orden emitida, que no
+     * se anulan). Avisa a cada paciente: una notificación en la aplicación y un
      * correo por reserva. El correo se manda fuera de la transacción: si falla, esa notificación queda FALLIDA y las demás
      * siguen. El aviso push lo hará otro caso de uso (necesita la aplicación móvil).
      */
-    public void notificarSuspensionTurno(Long idSuspensionTurno) {
-        List<Long> correosPendientes = transaccion.execute(estado -> registrarNotificaciones(idSuspensionTurno));
+    public void notificarSuspensionTurno(Long idSuspensionTurno, List<Long> idsReservas) {
+        List<Long> correosPendientes = transaccion.execute(estado -> registrarNotificaciones(idSuspensionTurno, idsReservas));
         if (correosPendientes == null) {
             return;
         }
@@ -81,12 +82,12 @@ public class NotificacionService {
     }
 
     /** Guarda las notificaciones (en la aplicación ya enviadas, por correo pendientes) y devuelve los ids de los correos. */
-    private List<Long> registrarNotificaciones(Long idSuspensionTurno) {
+    private List<Long> registrarNotificaciones(Long idSuspensionTurno, List<Long> idsReservas) {
         SuspensionTurno suspension = suspensionTurnoRepository.findById(idSuspensionTurno)
             .orElseThrow(() -> new IllegalArgumentException("No existe la suspensión " + idSuspensionTurno));
         LocalDateTime ahora = LocalDateTime.now(reloj);
         List<Long> correos = new ArrayList<>();
-        for (Reserva reserva : reservaRepository.buscarAnuladasConMotivo(MotivoAnulacionPorSuspension.de(idSuspensionTurno))) {
+        for (Reserva reserva : reservaRepository.findAllById(idsReservas)) {
             String mensaje = armarMensaje(reserva, suspension);
 
             Notificacion enLaAplicacion = nueva(reserva, CanalNotificacion.APLICACION, mensaje, ahora);
@@ -117,7 +118,9 @@ public class NotificacionService {
         var medico = turno.getMedico();
         String texto = "Su reserva de " + turno.getEspecialidad().getNombre() + " con " + medico.getNombre() + " " + medico.getApellido()
             + " para el " + ocurrencia.getFecha().format(FECHA) + " (turno de " + ocurrencia.getHoraInicio().format(HORA) + " a "
-            + ocurrencia.getHoraFin().format(HORA) + ", número " + reserva.getNumero() + ") fue anulada porque el turno fue suspendido.";
+            + ocurrencia.getHoraFin().format(HORA) + ", número " + reserva.getNumero() + ") " + (reserva.getReservaEstado() == EstadoReserva.ANULADA
+            ? "fue anulada porque el turno fue suspendido."
+            : "no se atenderá porque el turno fue suspendido (la orden emitida no podrá usarse).");
         if (suspension.getMotivo() != null) {
             texto += " Motivo: " + suspension.getMotivo() + ".";
         }

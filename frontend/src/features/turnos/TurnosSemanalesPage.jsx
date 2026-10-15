@@ -172,10 +172,11 @@ export default function TurnosSemanalesPage() {
       setVistaPrevia(null)
       setASuspender(null)
       setAviso(
-        respuesta.reservasAnuladas === 0
+        respuesta.reservasAvisadas === 0
           ? 'Turno suspendido correctamente. No había reservas afectadas.'
           : `Turno suspendido correctamente. Se ${respuesta.reservasAnuladas === 1 ? 'anuló' : 'anularon'} ` +
-            `${cantidad(respuesta.reservasAnuladas, 'reserva', 'reservas')} y se avisó a los pacientes.`,
+            `${cantidad(respuesta.reservasAnuladas, 'reserva', 'reservas')} y se avisó a ` +
+            `${cantidad(respuesta.reservasAvisadas, 'paciente', 'pacientes')}.`,
       )
       buscar(filtros)
     } catch (err) {
@@ -368,13 +369,13 @@ export default function TurnosSemanalesPage() {
           {vistaPrevia.cantidadReservasAfectadas > 0 ? (
             <>
               <p>
-                {vistaPrevia.cantidadReservasAfectadas === 1 ? 'Se anulará esta reserva' : 'Se anularán estas reservas'} y se avisará a los
-                pacientes por correo y en la aplicación:
+                Se anularán las reservas vigentes y se avisará a todos los pacientes por correo y en la aplicación. Las reservas con
+                orden emitida no se anulan, pero también se avisa a sus pacientes:
               </p>
               <div className="tabla-scroll">
                 <table className="tabla">
                   <thead>
-                    <tr><th>Fecha</th><th>Número</th><th>Paciente</th></tr>
+                    <tr><th>Fecha</th><th>Número</th><th>Paciente</th><th>Situación</th></tr>
                   </thead>
                   <tbody>
                     {vistaPrevia.reservas.map((r) => (
@@ -382,6 +383,7 @@ export default function TurnosSemanalesPage() {
                         <td>{fecha(r.fecha)} {hora(r.horaInicio)}</td>
                         <td>{r.numero}</td>
                         <td>{r.nombrePaciente}</td>
+                        <td>{r.conOrdenEmitida ? 'Orden emitida' : 'Se anula'}</td>
                       </tr>
                     ))}
                   </tbody>
