@@ -11,7 +11,7 @@ gesture-handler). Hace falta un development build (una compilación propia de la
 Requisitos
 
 - Node.js 20 o superior con npm: correr Metro/Expo y la app.
-- Backend MeDiTurno corriendo en http://localhost:8080.
+- Podman con podman compose: levantar la base de datos y el backend.
 - JDK 17: compilar e instalar en Android.
 - Android Studio + SDK + emulador, o un teléfono con depuración USB activada.
 - adb en el PATH: viene con platform-tools.
@@ -19,18 +19,24 @@ Requisitos
 
 1. Ejecutar en Mac
 
-Se usan tres terminales: base de datos, backend y app.
+Se usan dos terminales: una para los contenedores (base de datos + backend)
+y otra para la app.
 
-Terminal 1 - Base de datos
+Terminal 1 - Base de datos y backend (contenedores Podman)
 
-    podman compose up -d postgres
+El backend ya viene empaquetado en la imagen, no hace falta correrlo a mano.
 
-Terminal 2 - Backend
+    podman compose up -d postgres backend
 
-    cd backend
-    DB_HOST=localhost ./mvnw spring-boot:run
+Verificar que quedó arriba (debe responder en http://localhost:8080):
 
-Terminal 3 - App móvil
+    podman compose ps
+
+Frenarlos:
+
+    podman compose down
+
+Terminal 2 - App móvil
 
     cd mobile
     npm install
@@ -48,19 +54,13 @@ Con Metro corriendo, apretá "a" para abrir Android. Si el dispositivo no conect
 
 2. Ejecutar en Windows (PowerShell)
 
-Se usan tres terminales, igual que en Mac.
+Se usan dos terminales, igual que en Mac.
 
-Terminal 1 - Base de datos
+Terminal 1 - Base de datos y backend (contenedores Podman)
 
-    podman compose up -d postgres
+    podman compose up -d postgres backend
 
-Terminal 2 - Backend
-
-    cd backend
-    $env:DB_HOST = "localhost"
-    .\mvnw.cmd spring-boot:run
-
-Terminal 3 - App móvil
+Terminal 2 - App móvil
 
     cd mobile
     npm install
