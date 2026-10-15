@@ -30,6 +30,14 @@ services:
       DB_USER: ${POSTGRES_USER:-mediturno}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-mediturno123}
       FIREBASE_CREDENCIALES: /secrets/firebase-clave.json
+      # Correo: por defecto va a Mailpit (abajo). Para usar un servidor real, se definen estas variables en el .env (ver .env.example).
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USUARIO: ${MAIL_USUARIO:-}
+      MAIL_CLAVE: ${MAIL_CLAVE:-}
+      MAIL_AUTENTICAR: ${MAIL_AUTENTICAR:-false}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-false}
+      MAIL_REMITENTE: "${MAIL_REMITENTE:-MeDiTurno <no-responder@mediturno.local>}"
     volumes:
       - ./secrets:/secrets:ro # clave de servicio de Firebase (no se sube a Git)
     ports:
@@ -37,6 +45,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - mediturno-net
+
+  # Servidor de correo de desarrollo: recibe los correos que manda el backend (por ejemplo, los avisos de suspensión de un
+  # turno) sin enviarlos a nadie. Se leen en http://localhost:8025.
+  mailpit:
+    image: docker.io/axllent/mailpit:latest
+    container_name: mailpit
+    ports:
+      - "8025:8025"
     networks:
       - mediturno-net
 

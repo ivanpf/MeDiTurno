@@ -57,6 +57,7 @@ class AltaConsultorioTest {
         when(repositorio.save(any())).thenAnswer(invocacion -> invocacion.getArgument(0));
         var respuesta = servicio.altaConsultorio(new AltaConsultorioDTO("C1", "Piso 1", "Consultorio", null, EstadoActivacion.ACTIVO));
         assertEquals("C1", respuesta.codigo());
+        assertEquals("Consultorio", respuesta.nombre());
         assertEquals("Piso 1", respuesta.ubicacion());
         assertEquals(EstadoActivacion.ACTIVO, respuesta.estado());
         verify(repositorio).save(any());

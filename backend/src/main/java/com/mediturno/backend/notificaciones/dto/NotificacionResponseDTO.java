@@ -1,7 +1,15 @@
 package com.mediturno.backend.notificaciones.dto;
 
-/**
- * TODO: definir los campos al implementar el caso de uso.
- */
-public record NotificacionResponseDTO() {
+import java.time.LocalDateTime;
+
+import com.mediturno.backend.notificaciones.model.TipoNotificacion;
+
+/** Una notificación de la aplicación (la campanita). {@code leida} es falso hasta que la persona la abre. */
+public record NotificacionResponseDTO(
+        Long idNotificacion,
+        TipoNotificacion tipo,
+        String mensaje,
+        LocalDateTime fecha,
+        boolean leida,
+        Long idReserva) {
 }

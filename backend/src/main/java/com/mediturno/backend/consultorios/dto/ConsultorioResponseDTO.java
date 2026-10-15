@@ -2,13 +2,11 @@ package com.mediturno.backend.consultorios.dto;
 
 import com.mediturno.backend.common.model.EstadoActivacion;
 
-/**
- * DTO para la respuesta del caso de uso CU-37.
- */
+/** Consultorio tal como lo ven las pantallas (alta, listado y modificación). */
 public record ConsultorioResponseDTO(
-    String codigo,
-    String ubicacion,
-    String nombre,
-    String descripcion,
-    EstadoActivacion estado
-) {}
+        String codigo,
+        String nombre,
+        String ubicacion,
+        String descripcion,
+        EstadoActivacion estado) {
+}

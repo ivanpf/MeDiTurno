@@ -12,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -46,7 +47,7 @@ class AltaPacienteTest {
     void preparar() {
         pacientes = mock(PacienteRepository.class);
         usuarios = mock(UsuarioRepository.class);
-        servicio = new PacienteService(pacientes, usuarios, mock(AuthService.class));
+        servicio = new PacienteService(pacientes, usuarios, mock(AuthService.class), Clock.systemDefaultZone());
     }
 
     private AltaPacienteDTO datos(String cedula, String correo) {

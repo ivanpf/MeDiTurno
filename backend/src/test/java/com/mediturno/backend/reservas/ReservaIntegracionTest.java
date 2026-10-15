@@ -2,8 +2,6 @@ package com.mediturno.backend.reservas;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.*;
 import java.util.List;
 import java.util.UUID;
@@ -19,30 +17,20 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.server.ResponseStatusException;
+import com.mediturno.backend.BasePostgresEmbebida;
 import com.mediturno.backend.reservas.dto.ReservaRequestDTO;
 import com.mediturno.backend.turnos.TurnoSemanalService;
-import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
 
 /** CU-8 contra PostgreSQL aislado: transacciones, bloqueo, filtros y pases reales. */
 @SpringBootTest
-class ReservaCU8Test {
-    static final EmbeddedPostgres POSTGRES = iniciarPostgres();
+class ReservaIntegracionTest extends BasePostgresEmbebida {
     static final LocalDate HOY = LocalDate.of(2026, 10, 14);
-
-    static EmbeddedPostgres iniciarPostgres() {
-        try { return EmbeddedPostgres.start(); }
-        catch (IOException e) { throw new UncheckedIOException(e); }
-    }
 
     @DynamicPropertySource
     static void base(DynamicPropertyRegistry registro) {
-        registro.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl("postgres", "postgres"));
-        registro.add("spring.datasource.username", () -> "postgres");
-        registro.add("spring.datasource.password", () -> "postgres");
+        registrarBaseDeDatos(registro, "reservas");
         registro.add("spring.jpa.show-sql", () -> "false");
     }
-
-    @AfterAll static void cerrar() throws IOException { POSTGRES.close(); }
 
     @TestConfiguration
     static class Configuracion {
@@ -116,7 +104,7 @@ class ReservaCU8Test {
         reservaDirecta(3, "ORDEN_EMITIDA");
         var disponibles = turnos.listarOcurrenciasDisponibles(especialidad, paciente);
         assertEquals(1, disponibles.size());
-        assertEquals(List.of(3), disponibles.get(0).numerosOcupados());
+        assertEquals(List.of(3), disponibles.get(0).numerosNoDisponibles());
         reservas.reservarOrden(otroPaciente, new ReservaRequestDTO(ocurrencia, 1));
         error(409, () -> reservas.reservarOrden(paciente, new ReservaRequestDTO(ocurrencia, 3)));
     }
@@ -132,7 +120,7 @@ class ReservaCU8Test {
         Long hoy = ocurrencia(HOY);
         var lista = turnos.listarOcurrenciasDisponibles(especialidad, paciente);
         assertEquals(2, lista.size());
-        assertEquals(List.of(1), lista.get(0).numerosOcupados());
+        assertEquals(List.of(1), lista.get(0).numerosNoDisponibles());
         error(409, () -> reservas.reservarOrden(paciente, new ReservaRequestDTO(pasado, 1)));
         error(409, () -> reservas.reservarOrden(paciente, new ReservaRequestDTO(lejano, 1)));
         error(409, () -> reservas.reservarOrden(paciente, new ReservaRequestDTO(hoy, 1)));

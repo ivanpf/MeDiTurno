@@ -3,6 +3,8 @@ package com.mediturno.backend.reservas;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
+import com.mediturno.backend.especialidades.model.Especialidad;
+import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.pacientes.repository.PacienteRepository;
 import com.mediturno.backend.pases.PaseService;
 import com.mediturno.backend.reservas.dto.ReservaRequestDTO;
@@ -11,6 +13,7 @@ import com.mediturno.backend.reservas.model.EstadoReserva;
 import com.mediturno.backend.reservas.model.Reserva;
 import com.mediturno.backend.reservas.repository.ReservaRepository;
 import com.mediturno.backend.turnos.DisponibilidadService;
+import com.mediturno.backend.turnos.model.OcurrenciaTurno;
 import com.mediturno.backend.turnos.repository.OcurrenciaTurnoRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -27,62 +30,64 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public class ReservaService {
-    private final OcurrenciaTurnoRepository ocurrencias;
-    private final ReservaRepository reservas;
-    private final PacienteRepository pacientes;
-    private final PaseService pases;
-    private final DisponibilidadService disponibilidad;
+    private final OcurrenciaTurnoRepository ocurrenciaTurnoRepository;
+    private final ReservaRepository reservaRepository;
+    private final PacienteRepository pacienteRepository;
+    private final PaseService paseService;
+    private final DisponibilidadService disponibilidadService;
     private final Clock reloj;
 
-    public ReservaService(OcurrenciaTurnoRepository ocurrencias,
-            ReservaRepository reservas,
-            PacienteRepository pacientes,
-            PaseService pases,
-            DisponibilidadService disponibilidad, Clock reloj) {
-        this.ocurrencias = ocurrencias;
-        this.reservas = reservas;
-        this.pacientes = pacientes;
-        this.pases = pases;
-        this.disponibilidad = disponibilidad;
+    public ReservaService(OcurrenciaTurnoRepository ocurrenciaTurnoRepository,
+            ReservaRepository reservaRepository,
+            PacienteRepository pacienteRepository,
+            PaseService paseService,
+            DisponibilidadService disponibilidadService, Clock reloj) {
+        this.ocurrenciaTurnoRepository = ocurrenciaTurnoRepository;
+        this.reservaRepository = reservaRepository;
+        this.pacienteRepository = pacienteRepository;
+        this.paseService = paseService;
+        this.disponibilidadService = disponibilidadService;
         this.reloj = reloj;
     }
 
     /** CU-8. */
     @Transactional
     public ReservaResponseDTO reservarOrden(Long idPaciente, ReservaRequestDTO datos) {
-        var paciente = pacientes.findById(idPaciente).orElseThrow(() ->
+        Paciente paciente = pacienteRepository.findById(idPaciente).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "El paciente no existe"));
         if (paciente.getEstado() != EstadoActivacion.ACTIVO) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "La cuenta no está habilitada");
         }
         // Serializa todas las reservas de una misma ocurrencia antes de comprobar el número.
-        var ocurrencia = ocurrencias.bloquearPorId(datos.idOcurrenciaTurno()).orElseThrow(() ->
+        OcurrenciaTurno ocurrencia = ocurrenciaTurnoRepository.buscarConLock(datos.idOcurrenciaTurno()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "El turno no existe"));
-        if (!disponibilidad.habilitada(ocurrencia)) {
+        if (!disponibilidadService.estaHabilitada(ocurrencia)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El turno ya no está disponible");
         }
         if (datos.numero() < 1 || datos.numero() > ocurrencia.getCupos()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El número no pertenece al turno");
         }
-        if (!disponibilidad.numeroFuturo(ocurrencia, datos.numero())
-                || reservas.numerosOcupados(ocurrencia.getIdOcurrenciaTurno()).contains(datos.numero())) {
+        if (!disponibilidadService.esNumeroFuturo(ocurrencia, datos.numero())
+                || reservaRepository.buscarNumerosOcupados(ocurrencia.getIdOcurrenciaTurno()).contains(datos.numero())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El número ya no está disponible");
         }
-        var reserva = new Reserva();
-        var especialidad = ocurrencia.getTurnoSemanal().getEspecialidad();
-        if (especialidad.isRequierePase()) reserva.setPase(pases.obtenerPaseParaReserva(idPaciente, especialidad.getCodigo()));
+        Reserva reserva = new Reserva();
+        Especialidad especialidad = ocurrencia.getTurnoSemanal().getEspecialidad();
+        if (especialidad.isRequierePase()) {
+            reserva.setPase(paseService.obtenerPaseParaReserva(idPaciente, especialidad.getCodigo()));
+        }
         reserva.setPaciente(paciente);
         reserva.setOcurrenciaTurno(ocurrencia);
         reserva.setNumero(datos.numero());
         reserva.setReservaEstado(EstadoReserva.VIGENTE);
         reserva.setFechaReserva(LocalDateTime.now(reloj));
         try {
-            reservas.saveAndFlush(reserva);
+            reservaRepository.saveAndFlush(reserva);
         } catch (DataIntegrityViolationException error) {
             // Segunda barrera: la restricción parcial de PostgreSQL protege el mismo número.
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No fue posible reservar el número seleccionado");
         }
-        return new ReservaResponseDTO(reserva.getIdReserva(), reserva.getNumero(), disponibilidad.horaEstimada(ocurrencia, reserva.getNumero()));
+        return new ReservaResponseDTO(reserva.getIdReserva(), reserva.getNumero(), disponibilidadService.horaEstimada(ocurrencia, reserva.getNumero()));
     }
 
     /** CU-9. */

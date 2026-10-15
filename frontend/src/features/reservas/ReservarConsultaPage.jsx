@@ -10,15 +10,9 @@ const horaEstimada = (turno, numero) => {
   const valor = Math.floor(inicio + (numero - 1) * (minutos(turno.horaFin) - inicio) / turno.cupos)
   return `${String(Math.floor(valor / 60)).padStart(2, '0')}:${String(valor % 60).padStart(2, '0')}`
 }
-const enPlazo = (turno) => {
-  const hoy = new Date()
-  const limite = new Date(hoy)
-  limite.setDate(limite.getDate() + 56)
-  return turno.fecha >= fechaLocal(hoy) && turno.fecha <= fechaLocal(limite)
-}
 const comoError = (err, mensaje) => err instanceof ApiError ? err : new ApiError(0, mensaje)
 
-// CU-8. El contrato de integración se documenta en CONTRATO_CU8.md.
+// CU-8 Reserva de una orden de consulta. La ventana de reserva (cuántas semanas hacia adelante) la define el backend: acá no se repite.
 export default function ReservarConsultaPage() {
   const [especialidades, setEspecialidades] = useState([])
   const [codigo, setCodigo] = useState('')
@@ -63,7 +57,7 @@ export default function ReservarConsultaPage() {
     try {
       const lista = await api.get(`/turnos-semanales/ocurrencias-disponibles?${new URLSearchParams({ codigoEspecialidad: especialidad })}`)
       if (actual === solicitud.current) {
-        setOcurrencias(lista.filter(enPlazo).sort((a, b) => `${a.fecha} ${a.horaInicio}`.localeCompare(`${b.fecha} ${b.horaInicio}`)))
+        setOcurrencias(lista.sort((a, b) => `${a.fecha} ${a.horaInicio}`.localeCompare(`${b.fecha} ${b.horaInicio}`)))
       }
     } catch (err) {
       if (actual === solicitud.current) setError(comoError(err, 'No fue posible consultar los turnos. Intente nuevamente.'))
@@ -83,16 +77,12 @@ export default function ReservarConsultaPage() {
     if (!semanas.has(semana)) semanas.set(semana, [])
     semanas.get(semana).push(item)
   })
-  const ocupados = (item) => item.numerosOcupados ?? []
+  const ocupados = (item) => item.numerosNoDisponibles ?? []
   const libres = (item) => item.cupos - ocupados(item).length
 
   const reservar = async (e) => {
     e.preventDefault()
     if (enviando || !turno || numero === null || ocupados(turno).includes(numero)) return
-    if (!enPlazo(turno)) {
-      setError(new ApiError(400, 'La fecha del turno ya no está dentro del período permitido. Actualice los turnos.'))
-      return
-    }
     setEnviando(true)
     setError(null)
     try {

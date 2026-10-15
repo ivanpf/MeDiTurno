@@ -86,12 +86,52 @@
   margin-top: 0;
 }
 
+.modal-amplio {
+  max-width: 640px;
+}
+
+/* Contenido de la ventana: si es largo (por ejemplo, una lista), se desplaza dentro de la ventana */
+.modal-contenido {
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.modal-contenido > :first-child {
+  margin-top: 0;
+}
+
 .modal-acciones {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
+}
+
+/* Tabla de datos (listados). Va dentro de .tabla-scroll para que, en pantallas chicas, se desplace de costado.
+   Uso: <div className="tabla-scroll"><table className="tabla"><thead>...</thead><tbody>...</tbody></table></div> */
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla th,
+.tabla td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--borde);
+}
+
+.tabla th {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gris);
+  white-space: nowrap;
+}
+
+.tabla tbody tr:hover {
+  background: var(--azul-claro);
 }
 
 /* Envoltorio para tablas anchas: en pantallas chicas se desplaza de costado en lugar de

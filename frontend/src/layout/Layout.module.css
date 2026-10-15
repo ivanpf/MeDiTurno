@@ -9,6 +9,12 @@
   box-shadow: 0 2px 6px rgba(18, 54, 107, 0.3);
 }
 
+.derecha {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .usuario {
   display: flex;
   align-items: center;
