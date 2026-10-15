@@ -10,6 +10,7 @@ import com.mediturno.backend.turnos.dto.RehabilitacionTurnoDTO;
 import com.mediturno.backend.turnos.dto.SuspensionTurnoDTO;
 import com.mediturno.backend.turnos.dto.SuspensionTurnoResponseDTO;
 import com.mediturno.backend.turnos.dto.TurnoSemanalResponseDTO;
+import com.mediturno.backend.turnos.dto.VistaPreviaSuspensionDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,8 +50,14 @@ public class TurnoSemanalController {
 
     @PostMapping("/{idTurnoSemanal}/suspension")
     @ResponseStatus(HttpStatus.CREATED)
-    public SuspensionTurnoResponseDTO suspenderTurno(@PathVariable Long idTurnoSemanal, @RequestBody SuspensionTurnoDTO datos) {
-        return turnoSemanalService.suspenderTurno(idTurnoSemanal, datos);
+    public SuspensionTurnoResponseDTO suspenderTurno(@PathVariable Long idTurnoSemanal, @Valid @RequestBody SuspensionTurnoDTO datos) {
+        return turnoSemanalService.suspenderTurno(idTurnoSemanal, datos, usuarioActual.obtenerIdFuncionarioAutenticado());
+    }
+
+    /** Qué pasaría si se suspende el turno con esos datos (cantidad de fechas y reservas afectadas). No modifica nada. */
+    @GetMapping("/{idTurnoSemanal}/suspension/vista-previa")
+    public VistaPreviaSuspensionDTO vistaPreviaSuspension(@PathVariable Long idTurnoSemanal, @Valid SuspensionTurnoDTO datos) {
+        return turnoSemanalService.vistaPreviaSuspension(idTurnoSemanal, datos);
     }
 
     @PostMapping("/{idTurnoSemanal}/rehabilitacion")

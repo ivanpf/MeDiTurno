@@ -62,7 +62,7 @@ class ListasParaPantallasIntegracionTest extends PostgresIntegracionTest {
         especialidad("ZZZ");
         especialidadInactiva("AAA");
 
-        List<EspecialidadResponseDTO> lista = especialidadService.listarEspecialidades(new CriteriosBusquedaDTO());
+        List<EspecialidadResponseDTO> lista = especialidadService.listarEspecialidades(CriteriosBusquedaDTO.vacio());
 
         List<String> codigos = lista.stream().map(EspecialidadResponseDTO::codigo).toList();
         assertTrue(codigos.contains("AAA") && codigos.contains("ZZZ"));
@@ -75,7 +75,7 @@ class ListasParaPantallasIntegracionTest extends PostgresIntegracionTest {
         consultorio("ZC", EstadoActivacion.ACTIVO);
         consultorio("AC", EstadoActivacion.INACTIVO);
 
-        List<ConsultorioResponseDTO> lista = consultorioService.listarConsultorios(new CriteriosBusquedaDTO());
+        List<ConsultorioResponseDTO> lista = consultorioService.listarConsultorios(CriteriosBusquedaDTO.vacio());
 
         List<String> codigos = lista.stream().map(ConsultorioResponseDTO::codigo).toList();
         assertTrue(codigos.indexOf("AC") < codigos.indexOf("ZC"));

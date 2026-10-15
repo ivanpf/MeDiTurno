@@ -70,7 +70,7 @@ public class DisponibilidadService {
         TurnoSemanal turno = ocurrencia.getTurnoSemanal();
         return dentroDeLaVentanaDeReserva(fecha, hoy)
                 && ocurrencia.getOcurrenciaTurnoEstado() == EstadoOcurrenciaTurno.HABILITADA
-                && turnoActivoConTodosSusDatosActivos(turno)
+                && turnoConTodosSusDatosActivos(turno)
                 && dentroDeLaVigencia(turno, fecha)
                 && !suspendido(turno, fecha)
                 && !yaTermino(ocurrencia, hoy);
@@ -91,14 +91,24 @@ public class DisponibilidadService {
         return !fecha.isBefore(hoy) && !fecha.isAfter(ultimaFechaReservable(hoy));
     }
 
-    /** El turno, su médico, su especialidad y su consultorio están activos, y el médico atiende esa especialidad. */
-    private static boolean turnoActivoConTodosSusDatosActivos(TurnoSemanal turno) {
-        return turno.getEstado() == EstadoTurnoSemanal.ACTIVO
+    /**
+     * El turno, su médico, su especialidad y su consultorio están activos, y el médico atiende esa especialidad. Un turno
+     * SUSPENDIDO cuenta como activo mientras tenga una suspensión sin rehabilitar: lo que no se puede reservar son las fechas
+     * que esa suspensión cubre (ver {@link #suspendido}), y una suspensión temporal deja libres las posteriores a su fin.
+     */
+    private boolean turnoConTodosSusDatosActivos(TurnoSemanal turno) {
+        return estadoPermiteReservar(turno)
                 && turno.getMedico().getEstado() == EstadoActivacion.ACTIVO
                 && turno.getEspecialidad().getEstado() == EstadoActivacion.ACTIVO
                 && turno.getConsultorio().getEstado() == EstadoActivacion.ACTIVO
                 && turno.getMedico().getEspecialidades().stream()
                     .anyMatch(e -> e.getCodigo().equals(turno.getEspecialidad().getCodigo()));
+    }
+
+    private boolean estadoPermiteReservar(TurnoSemanal turno) {
+        return turno.getEstado() == EstadoTurnoSemanal.ACTIVO
+                || (turno.getEstado() == EstadoTurnoSemanal.SUSPENDIDO
+                    && !suspensionTurnoRepository.buscarSinRehabilitarDelTurno(turno.getIdTurnoSemanal()).isEmpty());
     }
 
     private static boolean dentroDeLaVigencia(TurnoSemanal turno, LocalDate fecha) {

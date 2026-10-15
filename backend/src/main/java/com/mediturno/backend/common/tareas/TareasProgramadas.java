@@ -10,6 +10,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.mediturno.backend.turnos.ActualizadorEstadosPorSuspensionService;
 import com.mediturno.backend.turnos.DisponibilidadService;
 import com.mediturno.backend.turnos.GeneradorOcurrenciasService;
 
@@ -25,11 +26,14 @@ public class TareasProgramadas {
 
     private final GeneradorOcurrenciasService generadorOcurrenciasService;
     private final DisponibilidadService disponibilidadService;
+    private final ActualizadorEstadosPorSuspensionService actualizadorEstadosPorSuspensionService;
     private final Clock reloj;
 
-    public TareasProgramadas(GeneradorOcurrenciasService generadorOcurrenciasService, DisponibilidadService disponibilidadService, Clock reloj) {
+    public TareasProgramadas(GeneradorOcurrenciasService generadorOcurrenciasService, DisponibilidadService disponibilidadService,
+            ActualizadorEstadosPorSuspensionService actualizadorEstadosPorSuspensionService, Clock reloj) {
         this.generadorOcurrenciasService = generadorOcurrenciasService;
         this.disponibilidadService = disponibilidadService;
+        this.actualizadorEstadosPorSuspensionService = actualizadorEstadosPorSuspensionService;
         this.reloj = reloj;
     }
 
@@ -46,6 +50,13 @@ public class TareasProgramadas {
     }
 
     private void generarOcurrencias() {
+        // Primero se actualizan los estados de los turnos con suspensión: así la generación ya ve el estado del día.
+        try {
+            int cambios = actualizadorEstadosPorSuspensionService.actualizarEstados(LocalDateTime.now(reloj));
+            log.info("Turnos con suspensión: se actualizaron {} estados", cambios);
+        } catch (RuntimeException e) {
+            log.error("Falló la actualización de los estados de turnos suspendidos: {}", e.getMessage(), e);
+        }
         try {
             // Se generan hasta donde se puede reservar (la misma ventana que usa CU-8).
             int dias = disponibilidadService.diasDeReserva();
