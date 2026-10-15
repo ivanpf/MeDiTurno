@@ -270,7 +270,7 @@ class AltaTurnoSemanalIntegracionTest extends PostgresIntegracionTest {
     @Test
     void alCrearElTurnoYaQuedanGeneradasSusFechasHastaDondeSePuedeReservar() {
         Especialidad esp = especialidad("CARD");
-        Consultorio cons = consultorio("C1", EstadoActivacion.ACTIVO);
+        consultorio("C1", EstadoActivacion.ACTIVO);
         Medico med = medico("9001", EstadoActivacion.ACTIVO, esp);
         LocalDate desde = HOY.plusDays(1); // mañana: no depende de la hora a la que corra la prueba
         LocalDate limite = HOY.plusWeeks(semanasDeReserva);
@@ -293,7 +293,7 @@ class AltaTurnoSemanalIntegracionTest extends PostgresIntegracionTest {
     void unTurnoDeHoyQueTodaviaNoEmpezoQuedaDisponibleHoy() {
         assumeTrue(LocalTime.now(FechaConfig.ZONA).isBefore(LocalTime.of(22, 0)), "hace falta que falte tiempo para las 23:00");
         Especialidad esp = especialidad("CARD");
-        Consultorio cons = consultorio("C1", EstadoActivacion.ACTIVO);
+        consultorio("C1", EstadoActivacion.ACTIVO);
         Medico med = medico("9001", EstadoActivacion.ACTIVO, esp);
         DiaSemana hoy = DiaSemana.values()[HOY.getDayOfWeek().getValue() - 1];
 
@@ -307,7 +307,7 @@ class AltaTurnoSemanalIntegracionTest extends PostgresIntegracionTest {
     void unTurnoDeHoyQueYaEmpezoNoSeOfreceHoyPeroSiLasSemanasSiguientes() {
         assumeTrue(LocalTime.now(FechaConfig.ZONA).isAfter(LocalTime.of(0, 5)), "hace falta que ya haya pasado la medianoche");
         Especialidad esp = especialidad("CARD");
-        Consultorio cons = consultorio("C1", EstadoActivacion.ACTIVO);
+        consultorio("C1", EstadoActivacion.ACTIVO);
         Medico med = medico("9001", EstadoActivacion.ACTIVO, esp);
         DiaSemana hoy = DiaSemana.values()[HOY.getDayOfWeek().getValue() - 1];
 
