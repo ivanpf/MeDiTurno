@@ -25,7 +25,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> validacion(MethodArgumentNotValidException ex) {
         List<String> detalles = ex.getBindingResult().getFieldErrors().stream()
-            .map(e -> e.getField() + ": " + e.getDefaultMessage())
+            .map(e -> e.isBindingFailure()
+                ? "El valor del campo «" + e.getField() + "» no es válido" // el valor no es del tipo del campo (una fecha mal escrita)
+                : e.getField() + ": " + e.getDefaultMessage())
             .toList();
         return ResponseEntity.badRequest()
             .body(new ApiError(400, "Hay datos inválidos", detalles, Instant.now()));

@@ -1,0 +1,124 @@
+.filtros {
+  margin: 16px 0 24px;
+}
+
+/* Campos de a varios por fila; en pantallas chicas, uno debajo del otro */
+.camposDeFiltro {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0 16px;
+}
+
+.camposDeFiltro > * {
+  min-width: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* Casilla suelta: el estilo global de input (ancho completo, borde) no sirve para una casilla */
+.inversa {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  color: var(--texto);
+}
+
+.inversa input {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--azul);
+}
+
+/* Panel de la suspensión de un turno */
+.suspension {
+  margin: 0 0 24px;
+  padding: 16px 20px;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+}
+
+.suspension h2 {
+  margin-top: 0;
+}
+
+.turnoElegido {
+  margin: 0 0 12px;
+  font-weight: 600;
+  color: var(--azul-oscuro);
+}
+
+.ayuda {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+/* Opciones Temporal / Permanente (botones de radio) */
+.opciones {
+  min-width: 0;
+  margin: 14px 0;
+  padding: 0;
+  border: 0;
+}
+
+.opciones legend {
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris);
+}
+
+.opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 24px 0 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--texto);
+}
+
+.opcion input {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--azul);
+}
+
+/* Estado de cada turno en la tabla */
+.activo {
+  font-weight: 700;
+  color: var(--exito);
+}
+
+.suspendido {
+  font-weight: 700;
+  color: var(--error);
+}
+
+.detalleSuspension {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+/* Texto solo para lectores de pantalla (encabezado de la columna de botones) */
+.soloLectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

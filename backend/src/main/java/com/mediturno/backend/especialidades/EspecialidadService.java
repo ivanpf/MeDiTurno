@@ -1,7 +1,5 @@
 package com.mediturno.backend.especialidades;
 
-import java.util.List;
-
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
@@ -10,11 +8,13 @@ import com.mediturno.backend.especialidades.dto.EspecialidadResponseDTO;
 import com.mediturno.backend.especialidades.dto.ModificarEspecialidadDTO;
 import com.mediturno.backend.especialidades.model.Especialidad;
 import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
+import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-28, CU-29, CU-30, CU-43.
@@ -47,7 +47,7 @@ public class EspecialidadService {
             // Otro administrador la creó en el mismo instante: las restricciones de la base lo detectan.
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El código o el nombre ya están en uso por otra especialidad");
         }
-        return aRespuesta(especialidad);
+        return convertirAEspecialidadResponseDTO(especialidad);
     }
 
     private void validarCodigoYNombreUnicos(String codigo, String nombre) {
@@ -64,7 +64,7 @@ public class EspecialidadService {
         }
     }
 
-    private static EspecialidadResponseDTO aRespuesta(Especialidad e) {
+    private static EspecialidadResponseDTO convertirAEspecialidadResponseDTO(Especialidad e) {
         return new EspecialidadResponseDTO(e.getCodigo(), e.getNombre(), e.getDescripcion(), e.isRequierePase(), e.getEstado());
     }
 
@@ -73,16 +73,15 @@ public class EspecialidadService {
         throw new NoImplementadoException();
     }
 
-    /** CU-30. */
+    /** CU-30. Por ahora devuelve todas las especialidades (activas e inactivas) ordenadas por nombre, sin búsqueda ni filtros. */
     public List<EspecialidadResponseDTO> listarEspecialidades(CriteriosBusquedaDTO criterios) {
-        return especialidadRepository.findAll().stream()
-            .map(EspecialidadService::aRespuesta)
-            .toList();
+        return especialidadRepository.findAll(Sort.by("nombre")).stream().map(EspecialidadService::convertirAEspecialidadResponseDTO).toList();
     }
 
     /** CU-30. */
     public EspecialidadResponseDTO obtenerEspecialidad(String codigoEspecialidad) {
-        throw new NoImplementadoException();
+        return convertirAEspecialidadResponseDTO(especialidadRepository.findById(codigoEspecialidad)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La especialidad no existe")));
     }
 
     /** CU-43. */

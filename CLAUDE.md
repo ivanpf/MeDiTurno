@@ -7,11 +7,11 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-28, CU-31 y CU-34**. El resto responde `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-28, CU-31, CU-34**. El resto responde `501`.
 
-- **Backend:** los servicios y controladores del Documento de diseño existen; los casos pendientes lanzan `NoImplementadoException` (la API responde `501`). El modelo de datos ya existe: la migración `V1` crea las 20 tablas.
-- **Frontend:** las pantallas de CU-31 y CU-34 ya están implementadas; las demás pendientes usan `PaginaPendiente`. El login (CU-1) y el cierre de sesión (CU-2) funcionan con Firebase.
-- **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2, CU-7 y CU-34 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
+- **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
+- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-28, CU-31 y CU-34; el resto conserva `PaginaPendiente`.
+- **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos
 
@@ -47,6 +47,11 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
 - Todos los endpoints están bajo `/api`. Las rutas vienen de los diagramas de secuencia; las que el diagrama no indica son propuestas y se pueden ajustar.
 - `common/`: `CorsConfig`, `exception/` (`ApiError`, `GlobalExceptionHandler`, `NoImplementadoException`), `seguridad/UsuarioActual`, `dto/` (DTO compartidos) y `health/` (`GET /api/health`).
 - **`UsuarioActual`** entrega el id del usuario autenticado (paciente, médico, funcionario). Los controladores lo usan en lugar de recibir ese id por la URL o el cuerpo. Ver «Autenticación (Firebase)».
+- **Consultas de apoyo para las pantallas** (no son casos de uso): `GET /api/medicos` (`MedicoController`: médicos activos con sus especialidades activas, para administrador y funcionario), `GET /api/especialidades` (todas, ordenadas por nombre; la pantalla filtra por estado) y `GET /api/consultorios` (todos, ordenados por nombre; administrador y funcionario). Devuelven todo, sin búsqueda ni filtros: son para llenar listas desplegables. Los listados con búsqueda de CU-30, CU-36 y CU-39 (si se hacen) los pueden reemplazar o ampliar.
+- **Correo:** el backend envía correos con `EmailService` (hoy solo el aviso de suspensión de un turno, CU-13). Se configura con `MAIL_HOST`, `MAIL_PORT`, `MAIL_USUARIO`, `MAIL_CLAVE`, `MAIL_AUTENTICAR`, `MAIL_STARTTLS` y `MAIL_REMITENTE` (ver `.env.example`). En desarrollo, `compose.yml` levanta **Mailpit**: recibe los correos sin enviarlos a nadie y se leen en http://localhost:8025. Los avisos a los pacientes se guardan en la tabla `notificacion` (una por canal: aplicación, correo; el push lo hará otro caso de uso) y, si el correo falla, queda `FALLIDA` sin revertir la operación que lo originó.
+- **Campanita (notificaciones de la aplicación):** `GET /api/notificaciones` devuelve las últimas 50 notificaciones del canal `APLICACION` de la persona con sesión (la más nueva primero) y `POST /api/notificaciones/{id}/lectura` marca una como leída (404 si no es suya). El front las muestra en `layout/Campanita.jsx`, en el encabezado, solo para el paciente (los avisos son para pacientes): contador de sin leer, panel desplegable, se actualiza cada 60 s y al volver a la pestaña. Es el único ícono de la interfaz (un SVG simple, sin librería).
+- **Criterios de búsqueda:** `CriteriosBusquedaDTO` es compartido por los listados. Todos sus campos son opcionales; cada caso de uso usa los suyos y agrega los que necesite al final del record (hoy, los de CU-20: médico, especialidad, día, consultorio, estado, orden). En un test se usa `CriteriosBusquedaDTO.vacio()`.
+- **Fecha y hora:** toda hora «de ahora» sale del `Clock` de la aplicación (`common/config/FechaConfig`, zona `America/Montevideo`), con `LocalDate.now(reloj)` o `LocalDateTime.now(reloj)`; **no usar `now()` sin reloj**. Así no depende de cómo esté configurado el servidor (el contenedor usa UTC) y las pruebas pueden fijar la hora (ver `ReservaIntegracionTest`).
 - **Métodos internos** (sin endpoint): `AuthService.crearCuenta`, `PaseService.tienePaseVigente`, `EmailService`, `PushNotificationService.enviarPush` y los avisos de `NotificacionService`. Los llaman otros servicios.
 
 ### Frontend (`frontend/src/`)
@@ -80,7 +85,7 @@ Pantalla (React) → services/api.js → /api/... → Controller → Service →
   }
   ```
 
-  `RolesDeEndpointsTest` falla si un endpoint nuevo no tiene `@RolesPermitidos` (en el método o en la clase), así que no se puede olvidar. Los roles se definieron según quién ve cada pantalla en `routes.jsx`. Quedan **abiertos a más de un rol** los que usan varias pantallas: la lista y el detalle de especialidades (cualquier rol), la lista de consultorios (administrador y funcionario, para elegir el consultorio al dar de alta un turno) y la cartelera, las notificaciones y las rutas de `auth` (cualquier rol). Si un caso de uso necesita otro rol, se cambia la anotación de ese endpoint.
+  `RolesDeEndpointsTest` falla si un endpoint nuevo no tiene `@RolesPermitidos` (en el método o en la clase), así que no se puede olvidar. Los roles se definieron según quién ve cada pantalla en `routes.jsx`. Quedan **abiertos a más de un rol** los que usan varias pantallas: la lista y el detalle de especialidades (cualquier rol), la lista de consultorios (administrador y funcionario, para elegir el consultorio al dar de alta un turno), la consulta de médicos (administrador y funcionario) y la cartelera y las rutas de `auth` (cualquier rol); las notificaciones son solo del paciente. Si un caso de uso necesita otro rol, se cambia la anotación de ese endpoint.
 - **Rutas públicas** (sin sesión): `/api/health`, `/api/pacientes/registro/**` (CU-7) y `/api/auth/recuperacion/**` (CU-4). Para agregar otra se edita `FiltroAutenticacion.shouldNotFilter`.
 - **Cerrar sesión (CU-2):** `POST /api/auth/logout` revoca las sesiones en Firebase y el front cierra la sesión local. El token ya emitido sigue siendo válido hasta que vence (1 hora); para bloquear a alguien de inmediato, ponerlo `INACTIVO`: el filtro lo rechaza en la siguiente llamada.
 - **Registro de pacientes (CU-7):** `POST /api/pacientes/registro` es público. La persona se identifica con la **cédula y el correo que figuran en el padrón** (los dos tienen que coincidir): si no hay coincidencia responde `422` con el mismo mensaje en ambos casos, para no revelar qué datos existen; si ya tiene cuenta, `409`. Con `proveedor: PASSWORD` el backend crea la cuenta en Firebase con ese correo (`AuthService.crearCuenta`; contraseña de al menos 6 caracteres, como exige Firebase). Con `GOOGLE`, el front primero llama a `POST /api/pacientes/registro/verificacion` (comprueba cédula y correo **antes** de abrir la ventana de Google), después inicia sesión con Google y manda el token en `tokenAcceso`; el backend lo verifica (`obtenerIdentidadVerificada`, `503` si no puede) y exige que la cuenta de Google use el mismo correo del padrón. Al final completa `firebase_uid`, `proveedor_acceso` y, si se enviaron, teléfono y domicilio. Si no puede vincular, borra de Firebase la cuenta que se acababa de crear.
@@ -102,6 +107,16 @@ INSERT INTO usuario (correo, estado, proveedor_acceso, fecha_creacion, cedula, n
 VALUES ('admin@ejemplo.com', 'ACTIVO', 'PASSWORD', LOCALTIMESTAMP, '1.111.111-1', 'Nombre', 'Apellido', '1980-01-01', 'PEGAR_AQUI_EL_UID');
 INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE correo = 'admin@ejemplo.com';
 ```
+
+### Tareas programadas
+
+El backend tiene `@EnableScheduling` y la clase `common/tareas/TareasProgramadas`. La lógica de cada tarea va en un servicio; la clase solo decide cuándo se ejecuta. Hoy hace una cosa:
+
+- **Generar las ocurrencias de los turnos** (`GeneradorOcurrenciasService`): crea las fechas concretas en las que se atiende (y se puede reservar) para los turnos semanales `ACTIVO`. Corre **todos los días a las 2:00 y también al arrancar el backend**, y genera las fechas **hasta donde se permite reservar**: las próximas **8 semanas**, como dice CU-8 («la fecha seleccionada debe encontrarse dentro de las próximas ocho semanas»). Ese valor es `mediturno.reservas.semanas-adelante`, y lo lee un solo lugar, `DisponibilidadService` (`diasDeReserva()` y `ultimaFechaReservable(hoy)`), que usan tanto CU-8, para validar la fecha elegida, como la tarea y el alta de CU-12, para generar: las fechas generadas y las reservables nunca se desfasan. Si la ventana de reserva cambia, se cambia ahí y todo se ajusta solo. El horario de la tarea es `mediturno.ocurrencias.cron`. Cada ocurrencia copia el cupo y el horario del turno y queda `HABILITADA`. Solo crea las que faltan (es seguro repetirla), respeta la vigencia del turno, no crea las fechas cubiertas por una suspensión sin rehabilitar (también procesa los turnos `SUSPENDIDO`, porque una suspensión temporal deja libres las fechas posteriores) y procesa cada turno en su propia transacción (uno con problemas no frena a los demás). **La fecha de hoy solo se genera si el turno todavía no empezó**: uno en curso o ya terminado no se genera hoy; las fechas de días posteriores se generan siempre. (CU-8 aplica otra regla al ofrecer una fecha de hoy que ya existe, porque la generó la tarea de las 2:00: la ofrece hasta que el turno termina, y solo con los números cuya hora estimada todavía no pasó. Las dos reglas están juntas en `DisponibilidadService`.)
+- **CU-12 también genera las fechas al crear el turno**, en la misma transacción (`GeneradorOcurrenciasService.generarOcurrenciasDe`): el turno y sus fechas se guardan juntos o no se guarda ninguno. Así un turno que se carga hoy y todavía no empezó ya se puede reservar hoy, sin esperar a las 2:00. La tarea programada sigue siendo necesaria para que la ventana avance cada día.
+- **Estados de los turnos suspendidos** (`ActualizadorEstadosPorSuspensionService`, CU-13): la misma tarea, antes de generar las fechas, pasa a SUSPENDIDO los turnos cuya suspensión ya rige (llegó la fecha desde) y cierra sola las suspensiones temporales que terminaron (quedan con fecha de rehabilitación y el turno vuelve a ACTIVO). Una suspensión registrada **no cambia el estado del turno hasta que llega su fecha desde**; mientras tanto el turno y sus fechas anteriores siguen igual. Lo que decide si una fecha se puede reservar (o generar) son **las fechas que cubre cada suspensión sin rehabilitar** (`DisponibilidadService`, `GeneradorOcurrenciasService`), no el estado: por eso un turno con una suspensión temporal sigue reservable después de que ésta termina.
+- **Faltan** (se agregan igual, con otro método `@Scheduled`): marcar las reservas vencidas y enviar los recordatorios.
+- La hora sale del `Clock` de la aplicación (zona `America/Montevideo`), no de la configuración del servidor.
 
 ## Base de datos y migraciones (Flyway)
 
@@ -247,15 +262,16 @@ Reglas: no agregar colores de marca nuevos y no escribir colores sueltos en los 
 ### Componentes disponibles
 
 - **Botones:** el botón común es secundario (borde azul, fondo blanco). Usar `className="principal"` para la acción principal; **un solo botón principal por pantalla o formulario**. Deshabilitado = opacidad reducida.
-- **Formularios:** el `<label>` envuelve al campo (`<label>Nombre<input /></label>`). Los campos ocupan todo el ancho y tienen foco azul visible.
+- **Formularios:** el `<label>` envuelve al campo (`<label>Nombre<input /></label>`). Los campos ocupan todo el ancho y tienen foco azul visible. Un campo que no corresponde en ese momento no se oculta: se deja `disabled` y se ve en gris (ver «Hasta» en `TurnosSemanalesPage`).
 - **Aviso:** `.pendiente` (fondo mostaza claro con barra mostaza) para avisos informativos. **Error:** `.mensaje-error` (fondo rojo claro con barra roja). **Éxito:** `.mensaje-exito` (fondo verde claro con barra verde).
+- **Tabla:** clase `.tabla` dentro de `<div className="tabla-scroll">` (ver `TurnosSemanalesPage`).
 - **Panel y tarjeta:** `.panel` es el contenedor de una pantalla con sesión; `.tarjeta` es la de las pantallas de acceso. Ambas son clases globales de `compartidos.css`.
 - **Logo:** componente `Logo`. `variante="oscuro"` sobre fondo claro; `variante="claro"` sobre azul (el logo va dentro de un círculo blanco, porque el logo es azul y se perdería). Imagen en `src/assets/logo.png`, ícono de pestaña en `public/favicon.png`.
 - **Usuario en el encabezado:** avatar con iniciales, nombre y etiqueta del rol (mostaza).
 
 ### Todavía no existe (definirlo con este mismo estilo)
 
-Tablas, paginación y estados de carga. Quien primero los necesite los agrega a `styles/compartidos.css` (si los van a usar varias pantallas) usando las variables de arriba, para que los reutilicen los demás, y actualiza esta guía. Ya existen los mensajes de error y de éxito (`.mensaje-error`, `.mensaje-exito`) y la ventana de confirmación (componente `Confirmacion`, clase `.modal`).
+Paginación y estados de carga. Quien primero los necesite los agrega a `styles/compartidos.css` (si los van a usar varias pantallas) usando las variables de arriba, para que los reutilicen los demás, y actualiza esta guía. Ya existen los mensajes de error y de éxito (`.mensaje-error`, `.mensaje-exito`) y la ventana de confirmación (componente `Confirmacion`, clase `.modal`).
 
 ### Responsive y accesibilidad
 
@@ -295,6 +311,8 @@ Tablas, paginación y estados de carga. Quien primero los necesite los agrega a 
 - El id del usuario autenticado sale de `UsuarioActual`, nunca del cliente. **Todo endpoint lleva `@RolesPermitidos`** con los roles que lo pueden usar (ver «Autenticación (Firebase)»).
 - Las validaciones que el diagrama marca como "operaciones internas del método" son métodos privados del servicio, no métodos públicos nuevos.
 - **Dónde va cada validación:** los campos obligatorios, los largos y los tipos simples se validan con anotaciones en el DTO y `@Valid` en el controlador (el resultado es el mismo `400` con la lista de campos). Lo que necesita lógica o consultar la base (formato de una cédula, unicidad, reglas de negocio) va en métodos privados del servicio. Un cuerpo ilegible (JSON roto, un valor que no es del tipo del campo) también responde `400`: lo resuelve `GlobalExceptionHandler`.
+- **Repositorios con bloqueo:** el método que busca una fila y la bloquea (`@Lock(PESSIMISTIC_WRITE)`, un `SELECT ... FOR UPDATE`) se llama `buscarConLock`. Hay que llamarlo dentro de una transacción (`@Transactional`); el bloqueo dura hasta que termina.
+- **Conversión a DTO:** los métodos que arman un DTO de respuesta se llaman `convertirAXxxResponseDTO` (por ejemplo, `convertirAPacienteResponseDTO`).
 - Los cambios en la base van **siempre** con migraciones de Flyway (ver «Base de datos y migraciones»). Hibernate solo valida.
 
 ### Frontend

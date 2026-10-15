@@ -48,6 +48,12 @@
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
+		<!-- Envío de correos (avisos a los pacientes) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
 		<!-- Autenticación: verifica los tokens que emite Firebase Authentication -->
 		<dependency>
 			<groupId>com.google.firebase</groupId>
