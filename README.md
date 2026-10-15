@@ -69,7 +69,7 @@ La primera vez tarda varios minutos (descarga imágenes y compila el backend y e
 
 Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). Con el menú del rol, cada opción muestra una pantalla "pendiente de implementar".
 
-Los endpoints del backend existen pero todavía no están implementados: responden `501 Funcionalidad pendiente de implementar`. Es lo esperado.
+Los endpoints de los casos de uso que todavía no se implementaron responden `501 Funcionalidad pendiente de implementar`. Es lo esperado.
 
 ### Comandos útiles
 

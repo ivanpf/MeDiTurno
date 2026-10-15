@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.util.Optional;
 
 import jakarta.servlet.FilterChain;
@@ -102,7 +103,7 @@ class AutenticacionTest {
     void loginDevuelveElRolSegunLaTabla() {
         when(repositorio.findById(7L)).thenReturn(Optional.of(usuario(new Administrador(), EstadoActivacion.ACTIVO)));
 
-        LoginResponseDTO respuesta = new AuthService(repositorio, proveedor).login(7L);
+        LoginResponseDTO respuesta = new AuthService(repositorio, proveedor, Clock.systemDefaultZone()).login(7L);
 
         assertEquals("admin", respuesta.rol());
         assertEquals("Ana López", respuesta.nombre());
@@ -112,7 +113,7 @@ class AutenticacionTest {
     void cerrarSesionRevocaLasSesionesEnFirebase() {
         when(repositorio.findById(7L)).thenReturn(Optional.of(usuario(new Paciente(), EstadoActivacion.ACTIVO)));
 
-        new AuthService(repositorio, proveedor).cerrarSesion(7L);
+        new AuthService(repositorio, proveedor, Clock.systemDefaultZone()).cerrarSesion(7L);
 
         verify(proveedor).revocarSesiones("uid-1");
     }

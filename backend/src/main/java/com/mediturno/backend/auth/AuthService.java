@@ -1,6 +1,7 @@
 package com.mediturno.backend.auth;
 
 import com.mediturno.backend.auth.dto.CrearCuentaRequestDTO;
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import com.mediturno.backend.auth.dto.LoginResponseDTO;
@@ -34,10 +35,12 @@ public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
     private final ProveedorIdentidad proveedorIdentidad;
+    private final Clock reloj;
 
-    public AuthService(UsuarioRepository usuarioRepository, ProveedorIdentidad proveedorIdentidad) {
+    public AuthService(UsuarioRepository usuarioRepository, ProveedorIdentidad proveedorIdentidad, Clock reloj) {
         this.usuarioRepository = usuarioRepository;
         this.proveedorIdentidad = proveedorIdentidad;
+        this.reloj = reloj;
     }
 
     /**
@@ -48,7 +51,7 @@ public class AuthService {
     public LoginResponseDTO login(Long idUsuario) {
         Usuario usuario = usuarioRepository.findById(idUsuario)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No fue posible iniciar sesión. Verifique sus datos e intente nuevamente."));
-        usuario.setUltimoAcceso(LocalDateTime.now());
+        usuario.setUltimoAcceso(LocalDateTime.now(reloj));
         return new LoginResponseDTO(usuario.getIdUsuario(), usuario.getNombre() + " " + usuario.getApellido(), identificarRol(usuario));
     }
 

@@ -12,11 +12,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PaseRepository extends JpaRepository<Pase, Long> {
-    List<Pase> findByPacienteIdUsuarioAndEspecialidadDestinoCodigoAndPaseEstadoAndFechaEmisionBetweenOrderByFechaEmisionAsc(
-            Long paciente, String especialidad, EstadoPase estado,
-            LocalDateTime desde, LocalDateTime hasta);
+    /** Pases del paciente para esa especialidad, en ese estado y emitidos entre las dos fechas, del más antiguo al más nuevo. */
+    @Query("""
+        select p from Pase p
+        where p.paciente.idUsuario = :idPaciente
+          and p.especialidadDestino.codigo = :codigoEspecialidad
+          and p.paseEstado = :estado
+          and p.fechaEmision between :desde and :hasta
+        order by p.fechaEmision
+        """)
+    List<Pase> buscarPorPacienteEspecialidadYEstado(
+            @Param("idPaciente") Long idPaciente, @Param("codigoEspecialidad") String codigoEspecialidad,
+            @Param("estado") EstadoPase estado, @Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 
+    /** Busca el pase y lo bloquea hasta el fin de la transacción (SELECT ... FOR UPDATE): un pase no se vincula a dos reservas. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Pase p where p.idPase = :id")
-    Optional<Pase> bloquearPorId(@Param("id") Long id);
+    Optional<Pase> buscarConLock(@Param("id") Long id);
 }

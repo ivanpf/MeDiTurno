@@ -5,13 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -43,36 +40,17 @@ import com.mediturno.backend.usuarios.model.Usuario;
 import com.mediturno.backend.usuarios.repository.MedicoRepository;
 import com.mediturno.backend.usuarios.repository.UsuarioRepository;
 
-import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-
 /**
  * Prueba la base de datos con un PostgreSQL real que se levanta solo para el test (no hace falta Podman):
  * Flyway ejecuta las migraciones, Hibernate valida que cada entidad coincida con su tabla y se comprueban
  * las restricciones más importantes del modelo.
  */
 @SpringBootTest
-class EsquemaBaseDeDatosTest {
-
-    static final EmbeddedPostgres POSTGRES = iniciarPostgres();
-
-    private static EmbeddedPostgres iniciarPostgres() {
-        try {
-            return EmbeddedPostgres.start();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
+class EsquemaBaseDeDatosTest extends BasePostgresEmbebida {
 
     @DynamicPropertySource
     static void baseDeDatos(DynamicPropertyRegistry registro) {
-        registro.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl("postgres", "postgres"));
-        registro.add("spring.datasource.username", () -> "postgres");
-        registro.add("spring.datasource.password", () -> "postgres");
-    }
-
-    @AfterAll
-    static void detenerPostgres() throws IOException {
-        POSTGRES.close();
+        registrarBaseDeDatos(registro, "esquema");
     }
 
     @Autowired JdbcTemplate jdbc;

@@ -20,3 +20,9 @@ mediturno:
   firebase:
     # Archivo con la clave de servicio de Firebase. Nunca se sube al repositorio (la carpeta secrets/ está ignorada por Git).
     credenciales: ${FIREBASE_CREDENCIALES:../secrets/firebase-clave.json}
+  reservas:
+    # Hasta cuántas semanas hacia adelante se puede reservar (CU-8: "dentro de las próximas ocho semanas"). La tarea programada
+    # genera las fechas de los turnos hasta ahí, y CU-8 tiene que usar este mismo valor para validar la fecha elegida.
+    semanas-adelante: 8
+  ocurrencias:
+    cron: "0 0 2 * * *"       # cuándo se generan las fechas de los turnos (todos los días a las 2:00)

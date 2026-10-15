@@ -24,11 +24,11 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public class PaseService {
-    private final PaseRepository pases;
+    private final PaseRepository paseRepository;
     private final Clock reloj;
 
-    public PaseService(PaseRepository pases, Clock reloj) {
-        this.pases = pases;
+    public PaseService(PaseRepository paseRepository, Clock reloj) {
+        this.paseRepository = paseRepository;
         this.reloj = reloj;
     }
 
@@ -52,19 +52,18 @@ public class PaseService {
         return !pasesVigentes(idPaciente, codigoEspecialidad).isEmpty();
     }
 
-    private List<Pase> pasesVigentes(Long paciente, String especialidad) {
-        var ahora = LocalDateTime.now(reloj);
-        return pases.findByPacienteIdUsuarioAndEspecialidadDestinoCodigoAndPaseEstadoAndFechaEmisionBetweenOrderByFechaEmisionAsc(
-                paciente, especialidad, EstadoPase.VIGENTE,
-                ahora.minusDays(VigenciaPase.MAXIMA.getDias()), ahora);
+    private List<Pase> pasesVigentes(Long idPaciente, String codigoEspecialidad) {
+        LocalDateTime ahora = LocalDateTime.now(reloj);
+        return paseRepository.buscarPorPacienteEspecialidadYEstado(
+                idPaciente, codigoEspecialidad, EstadoPase.VIGENTE, ahora.minusDays(VigenciaPase.MAXIMA.getDias()), ahora);
     }
 
     /** Bloquea y vincula el pase dentro de la transacción de reserva. */
     @Transactional(propagation = Propagation.MANDATORY)
-    public Pase obtenerPaseParaReserva(Long paciente, String especialidad) {
-        for (var candidato : pasesVigentes(paciente, especialidad)) {
-            var pase = pases.bloquearPorId(candidato.getIdPase()).orElseThrow();
-            var ahora = LocalDateTime.now(reloj);
+    public Pase obtenerPaseParaReserva(Long idPaciente, String codigoEspecialidad) {
+        for (Pase candidato : pasesVigentes(idPaciente, codigoEspecialidad)) {
+            Pase pase = paseRepository.buscarConLock(candidato.getIdPase()).orElseThrow();
+            LocalDateTime ahora = LocalDateTime.now(reloj);
             if (pase.getPaseEstado() == EstadoPase.VIGENTE
                     && !pase.getFechaEmision().isAfter(ahora)
                     && !VigenciaPase.MAXIMA.vencimiento(pase.getFechaEmision()).isBefore(ahora)) {

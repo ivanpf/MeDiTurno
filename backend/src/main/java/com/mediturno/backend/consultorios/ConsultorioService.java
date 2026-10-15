@@ -8,6 +8,8 @@ import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.consultorios.dto.AltaConsultorioDTO;
 import com.mediturno.backend.consultorios.dto.ConsultorioResponseDTO;
 import com.mediturno.backend.consultorios.dto.ModificarConsultorioDTO;
+import com.mediturno.backend.consultorios.repository.ConsultorioRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,6 +19,12 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Service
 public class ConsultorioService {
+
+    private final ConsultorioRepository consultorioRepository;
+
+    public ConsultorioService(ConsultorioRepository consultorioRepository) {
+        this.consultorioRepository = consultorioRepository;
+    }
 
     /** CU-37. */
     public ConsultorioResponseDTO altaConsultorio(AltaConsultorioDTO datos) {
@@ -28,9 +36,11 @@ public class ConsultorioService {
         throw new NoImplementadoException();
     }
 
-    /** CU-39. */
+    /** CU-39. Devuelve todos los consultorios (activos e inactivos) ordenados por nombre, sin búsqueda ni filtros. */
     public List<ConsultorioResponseDTO> listarConsultorios(CriteriosBusquedaDTO criterios) {
-        throw new NoImplementadoException();
+        return consultorioRepository.findAll(Sort.by("nombre")).stream()
+            .map(c -> new ConsultorioResponseDTO(c.getCodigo(), c.getNombre(), c.getUbicacion(), c.getDescripcion(), c.getEstado()))
+            .toList();
     }
 
     /** CU-47. */

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +50,7 @@ class RegistroCuentaPacienteTest {
         pacientes = mock(PacienteRepository.class);
         usuarios = mock(UsuarioRepository.class);
         proveedor = mock(ProveedorIdentidad.class);
-        servicio = new PacienteService(pacientes, usuarios, new AuthService(usuarios, proveedor));
+        servicio = new PacienteService(pacientes, usuarios, new AuthService(usuarios, proveedor, Clock.systemDefaultZone()), Clock.systemDefaultZone());
 
         delPadron = new Paciente();
         delPadron.setIdUsuario(7L);

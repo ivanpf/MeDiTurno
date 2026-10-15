@@ -47,7 +47,7 @@ public class EspecialidadService {
             // Otro administrador la creó en el mismo instante: las restricciones de la base lo detectan.
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El código o el nombre ya están en uso por otra especialidad");
         }
-        return aRespuesta(especialidad);
+        return convertirAEspecialidadResponseDTO(especialidad);
     }
 
     private void validarCodigoYNombreUnicos(String codigo, String nombre) {
@@ -64,7 +64,7 @@ public class EspecialidadService {
         }
     }
 
-    private static EspecialidadResponseDTO aRespuesta(Especialidad e) {
+    private static EspecialidadResponseDTO convertirAEspecialidadResponseDTO(Especialidad e) {
         return new EspecialidadResponseDTO(e.getCodigo(), e.getNombre(), e.getDescripcion(), e.isRequierePase(), e.getEstado());
     }
 
@@ -73,15 +73,14 @@ public class EspecialidadService {
         throw new NoImplementadoException();
     }
 
-    /** CU-30. */
+    /** CU-30. Por ahora devuelve todas las especialidades (activas e inactivas) ordenadas por nombre, sin búsqueda ni filtros. */
     public List<EspecialidadResponseDTO> listarEspecialidades(CriteriosBusquedaDTO criterios) {
-        return especialidadRepository.findAll(Sort.by("nombre")).stream()
-                .map(EspecialidadService::aRespuesta).toList();
+        return especialidadRepository.findAll(Sort.by("nombre")).stream().map(EspecialidadService::convertirAEspecialidadResponseDTO).toList();
     }
 
     /** CU-30. */
     public EspecialidadResponseDTO obtenerEspecialidad(String codigoEspecialidad) {
-        return aRespuesta(especialidadRepository.findById(codigoEspecialidad)
+        return convertirAEspecialidadResponseDTO(especialidadRepository.findById(codigoEspecialidad)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La especialidad no existe")));
     }
 
