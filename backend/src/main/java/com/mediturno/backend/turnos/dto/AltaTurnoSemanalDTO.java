@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
-import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -41,6 +40,5 @@ public record AltaTurnoSemanalDTO(
         Integer cupoMaximo,
 
         @NotNull(message = "La fecha de vigencia es obligatoria")
-        @FutureOrPresent(message = "La fecha de vigencia no puede ser anterior a hoy")
         LocalDate vigenteDesde) {
 }

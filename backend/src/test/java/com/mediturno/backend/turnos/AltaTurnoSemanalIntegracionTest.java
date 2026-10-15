@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.mediturno.backend.PostgresIntegracionTest;
+import com.mediturno.backend.common.config.FechaConfig;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.consultorios.model.Consultorio;
 import com.mediturno.backend.especialidades.model.Especialidad;
@@ -242,6 +243,20 @@ class AltaTurnoSemanalIntegracionTest extends PostgresIntegracionTest {
         assertEquals(HttpStatus.BAD_REQUEST, rechazo(alta(med, esp, cons, List.of(DiaSemana.LUNES), "12:00", "09:00")).getStatusCode());
     }
 
+    @Test
+    void laVigenciaNoPuedeSerAnteriorAHoyPeroPuedeSerHoy() {
+        Especialidad esp = especialidad("CARD");
+        Consultorio cons = consultorio("C1", EstadoActivacion.ACTIVO);
+        Medico med = medico("9001", EstadoActivacion.ACTIVO, esp);
+
+        ResponseStatusException error = rechazo(new AltaTurnoSemanalDTO(med.getIdUsuario(), "CARD", "C1", List.of(DiaSemana.LUNES),
+            LocalTime.of(9, 0), LocalTime.of(12, 0), 10, HOY.minusDays(1)));
+
+        assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
+        assertEquals("La fecha de vigencia no puede ser anterior a hoy.", error.getReason());
+        assertEquals(1, servicio.altaTurnoSemanal(alta(med, esp, cons, List.of(DiaSemana.LUNES), "09:00", "12:00")).size()); // hoy sí
+    }
+
     // ------------------------------------------------------------------ las fechas reservables
 
     private List<LocalDate> fechasDe(TurnoSemanalResponseDTO turno) {
@@ -276,7 +291,7 @@ class AltaTurnoSemanalIntegracionTest extends PostgresIntegracionTest {
 
     @Test
     void unTurnoDeHoyQueTodaviaNoEmpezoQuedaDisponibleHoy() {
-        assumeTrue(LocalTime.now().isBefore(LocalTime.of(22, 0)), "hace falta que falte tiempo para las 23:00");
+        assumeTrue(LocalTime.now(FechaConfig.ZONA).isBefore(LocalTime.of(22, 0)), "hace falta que falte tiempo para las 23:00");
         Especialidad esp = especialidad("CARD");
         Consultorio cons = consultorio("C1", EstadoActivacion.ACTIVO);
         Medico med = medico("9001", EstadoActivacion.ACTIVO, esp);
@@ -290,7 +305,7 @@ class AltaTurnoSemanalIntegracionTest extends PostgresIntegracionTest {
 
     @Test
     void unTurnoDeHoyQueYaEmpezoNoSeOfreceHoyPeroSiLasSemanasSiguientes() {
-        assumeTrue(LocalTime.now().isAfter(LocalTime.of(0, 5)), "hace falta que ya haya pasado la medianoche");
+        assumeTrue(LocalTime.now(FechaConfig.ZONA).isAfter(LocalTime.of(0, 5)), "hace falta que ya haya pasado la medianoche");
         Especialidad esp = especialidad("CARD");
         Consultorio cons = consultorio("C1", EstadoActivacion.ACTIVO);
         Medico med = medico("9001", EstadoActivacion.ACTIVO, esp);

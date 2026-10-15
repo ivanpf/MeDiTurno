@@ -40,15 +40,4 @@ class AltaTurnoSemanalDTOTest {
 
         assertEquals(Set.of("cupoMaximo"), camposInvalidos(dto));
     }
-
-    @Test
-    void laVigenciaNoPuedeSerAnteriorAHoyPeroPuedeSerHoy() {
-        AltaTurnoSemanalDTO ayer = new AltaTurnoSemanalDTO(1L, "CARD", "C1", List.of(DiaSemana.LUNES),
-            LocalTime.of(9, 0), LocalTime.of(12, 0), 10, LocalDate.now().minusDays(1));
-        AltaTurnoSemanalDTO hoy = new AltaTurnoSemanalDTO(1L, "CARD", "C1", List.of(DiaSemana.LUNES),
-            LocalTime.of(9, 0), LocalTime.of(12, 0), 10, LocalDate.now());
-
-        assertEquals(Set.of("vigenteDesde"), camposInvalidos(ayer));
-        assertTrue(camposInvalidos(hoy).isEmpty());
-    }
 }

@@ -1,7 +1,5 @@
 package com.mediturno.backend;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -12,6 +10,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mediturno.backend.common.config.FechaConfig;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.consultorios.model.Consultorio;
 import com.mediturno.backend.consultorios.repository.ConsultorioRepository;
@@ -24,8 +23,6 @@ import com.mediturno.backend.turnos.repository.TurnoSemanalRepository;
 import com.mediturno.backend.usuarios.model.Medico;
 import com.mediturno.backend.usuarios.repository.MedicoRepository;
 
-import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-
 /**
  * Base de las pruebas que necesitan una base PostgreSQL real (se levanta una sola vez y se comparte, sin Podman). Cada
  * prueba se deshace sola al terminar. Trae datos de ejemplo para armar médicos, consultorios y turnos.
@@ -33,31 +30,11 @@ import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
  */
 @SpringBootTest
 @Transactional
-public abstract class PostgresIntegracionTest {
-
-    static final EmbeddedPostgres POSTGRES = iniciarPostgres();
-
-    private static EmbeddedPostgres iniciarPostgres() {
-        try {
-            EmbeddedPostgres postgres = EmbeddedPostgres.start();
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    postgres.close();
-                } catch (IOException e) {
-                    // al apagar la JVM no hay nada más que hacer
-                }
-            }));
-            return postgres;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
+public abstract class PostgresIntegracionTest extends BasePostgresEmbebida {
 
     @DynamicPropertySource
     static void baseDeDatos(DynamicPropertyRegistry registro) {
-        registro.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl("postgres", "postgres"));
-        registro.add("spring.datasource.username", () -> "postgres");
-        registro.add("spring.datasource.password", () -> "postgres");
+        registrarBaseDeDatos(registro, "integracion");
     }
 
     @Autowired protected TurnoSemanalRepository turnos;
@@ -65,7 +42,8 @@ public abstract class PostgresIntegracionTest {
     @Autowired protected ConsultorioRepository consultorios;
     @Autowired protected EspecialidadRepository especialidades;
 
-    protected static final LocalDate HOY = LocalDate.now();
+    /** «Hoy» en la zona de la aplicación (la misma del Clock). */
+    protected static final LocalDate HOY = LocalDate.now(FechaConfig.ZONA);
 
     protected Especialidad especialidad(String codigo) {
         Especialidad e = new Especialidad();

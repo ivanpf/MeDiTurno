@@ -28,8 +28,8 @@ import com.mediturno.backend.turnos.repository.TurnoSemanalRepository;
  * Lo usan la tarea programada (todos los turnos activos, ver {@code TareasProgramadas}) y el alta de un turno (CU-12,
  * solo el turno nuevo). Es seguro repetirlo: solo crea las que todavía no existen.
  * <p>
- * Regla de la fecha de hoy: se genera únicamente si el turno todavía no empezó. Un turno en curso o terminado no se
- * ofrece para reservar. Las fechas de días posteriores se generan siempre.
+ * Regla de la fecha de hoy ({@link DisponibilidadService#turnoTodaviaNoEmpezo}): se genera únicamente si el turno todavía
+ * no empezó. Las fechas de días posteriores se generan siempre.
  */
 @Service
 public class GeneradorOcurrenciasService {
@@ -38,12 +38,15 @@ public class GeneradorOcurrenciasService {
 
     private final TurnoSemanalRepository turnoSemanalRepository;
     private final OcurrenciaTurnoRepository ocurrenciaTurnoRepository;
+    private final DisponibilidadService disponibilidadService;
     private final TransactionTemplate transaccion;
 
     public GeneradorOcurrenciasService(TurnoSemanalRepository turnoSemanalRepository,
-            OcurrenciaTurnoRepository ocurrenciaTurnoRepository, PlatformTransactionManager administradorDeTransacciones) {
+            OcurrenciaTurnoRepository ocurrenciaTurnoRepository, DisponibilidadService disponibilidadService,
+            PlatformTransactionManager administradorDeTransacciones) {
         this.turnoSemanalRepository = turnoSemanalRepository;
         this.ocurrenciaTurnoRepository = ocurrenciaTurnoRepository;
+        this.disponibilidadService = disponibilidadService;
         this.transaccion = new TransactionTemplate(administradorDeTransacciones);
     }
 
@@ -82,7 +85,7 @@ public class GeneradorOcurrenciasService {
         List<OcurrenciaTurno> nuevas = new ArrayList<>();
         LocalDate fecha = desde.with(TemporalAdjusters.nextOrSame(turno.getDia().aDayOfWeek()));
         for (; !fecha.isAfter(limite); fecha = fecha.plusWeeks(1)) {
-            if (!existentes.contains(fecha) && todaviaNoEmpezo(turno, fecha, ahora)) {
+            if (!existentes.contains(fecha) && disponibilidadService.turnoTodaviaNoEmpezo(turno, fecha, ahora)) {
                 nuevas.add(nuevaOcurrencia(turno, fecha));
             }
         }
@@ -96,11 +99,6 @@ public class GeneradorOcurrenciasService {
             return 0; // cambió desde que se listó (por ejemplo, lo suspendieron)
         }
         return generarOcurrenciasDe(turno, ahora, diasHaciaAdelante);
-    }
-
-    /** Un turno de un día posterior siempre empieza en el futuro; el de hoy solo si su hora de inicio todavía no llegó. */
-    private static boolean todaviaNoEmpezo(TurnoSemanal turno, LocalDate fecha, LocalDateTime ahora) {
-        return LocalDateTime.of(fecha, turno.getHoraInicio()).isAfter(ahora);
     }
 
     /** La ocurrencia guarda una copia del cupo y del horario del turno: si el turno cambia, las ya creadas no se modifican. */

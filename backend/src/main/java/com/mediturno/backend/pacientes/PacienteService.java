@@ -1,5 +1,6 @@
 package com.mediturno.backend.pacientes;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,11 +44,14 @@ public class PacienteService {
     private final PacienteRepository pacienteRepository;
     private final UsuarioRepository usuarioRepository;
     private final AuthService authService;
+    private final Clock reloj;
 
-    public PacienteService(PacienteRepository pacienteRepository, UsuarioRepository usuarioRepository, AuthService authService) {
+    public PacienteService(PacienteRepository pacienteRepository, UsuarioRepository usuarioRepository, AuthService authService,
+            Clock reloj) {
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
         this.authService = authService;
+        this.reloj = reloj;
     }
 
     /**
@@ -163,7 +167,7 @@ public class PacienteService {
         validarFormato(cedula, correo);
         validarCedulaYCorreoUnicos(cedula, correo);
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = LocalDateTime.now(reloj);
         Paciente paciente = new Paciente();
         paciente.setCedula(cedula);
         paciente.setNombre(datos.nombre().trim());
