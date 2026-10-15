@@ -5,7 +5,7 @@ import estilos from './AltaConsultorioPage.module.css'
 const FORMULARIO_VACIO = { codigo: '', nombre: '', ubicacion: '', descripcion: '', estado: 'ACTIVO' }
 const soloMensaje = (detalle) => detalle.split(': ').slice(1).join(': ') || detalle
 
-// CU-37 Alta individual de consultorios, siguiendo los campos del mock.
+// CU-37 Alta individual de consultorios.
 export default function AltaConsultorioPage() {
   const [datos, setDatos] = useState(FORMULARIO_VACIO)
   const [error, setError] = useState(null)
@@ -34,7 +34,6 @@ export default function AltaConsultorioPage() {
     }
     setEnviando(true)
     try {
-      // Contrato propuesto según CU-37; el DTO del backend aún está pendiente.
       await api.post('/consultorios', {
         codigo: datos.codigo.trim(),
         nombre: datos.nombre.trim(),
