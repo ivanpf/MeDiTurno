@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "MeDiTurno",
+    "slug": "mediturno-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "mediturno",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "ios": {
+      "bundleIdentifier": "com.mediturno.mobile",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permite escanear códigos QR para acceder a la app"
+      }
+    },
+    "android": {
+      "package": "com.mediturno.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "INTERNET",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-notifications",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "extra": {
+      "firebaseApiKey": "AIzaSyBOnEVcO4U5g79lNqwF21idgrYM8M4ZjJM",
+      "firebaseAuthDomain": "mediturno-auth-db915.firebaseapp.com",
+      "firebaseProjectId": "mediturno-auth-db915",
+      "firebaseAppId": "1:364481560232:web:80098cbaa6c85a09d28c9d"
+    }
+  }
+}
