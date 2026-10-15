@@ -67,9 +67,9 @@ La primera vez tarda varios minutos (descarga imágenes y compila el backend y e
 | Backend | http://localhost:8080/api/health | `{"estado":"ok"}` |
 | PostgreSQL | `localhost:5432` | (para clientes de base de datos) |
 
-Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). Con el menú del rol, cada opción muestra una pantalla "pendiente de implementar".
+Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). El alta de pacientes (CU-31) y el alta de usuarios internos (CU-34) ya tienen pantalla; las demás opciones muestran una pantalla "pendiente de implementar".
 
-Los endpoints del backend existen pero todavía no están implementados: responden `501 Funcionalidad pendiente de implementar`. Es lo esperado.
+La mayoría de los endpoints del backend todavía responde `501 Funcionalidad pendiente de implementar`; CU-1, CU-2, CU-7, CU-28, CU-31 y CU-34 están implementados. Para que CU-34 envíe credenciales, configure las variables `MAIL_*` del archivo `.env`.
 
 ### Comandos útiles
 
