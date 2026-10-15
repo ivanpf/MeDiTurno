@@ -75,6 +75,15 @@ textarea {
   border-radius: 8px;
 }
 
+/* Campo deshabilitado: se ve en gris y no se puede editar */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  color: var(--gris);
+  background: var(--fondo);
+  cursor: not-allowed;
+}
+
 input:focus,
 select:focus,
 textarea:focus {

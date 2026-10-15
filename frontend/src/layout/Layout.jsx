@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { ETIQUETA_ROL } from '../auth/roles'
+import Campanita from './Campanita'
 import Confirmacion from '../components/Confirmacion'
 import Logo from '../components/Logo'
 import { RUTAS } from '../routes'
@@ -58,26 +59,29 @@ export default function Layout() {
     <div>
       <header className={estilos.encabezado}>
         <Logo variante="claro" />
-        {/* En pantallas grandes: usuario, rol y cerrar sesión en el encabezado */}
-        <div className={estilos.usuario}>
-          {nombre && (
-            <span className={estilos.persona}>
-              <span className={estilos.avatar}>{iniciales(nombre)}</span>
-              {nombre}
-            </span>
-          )}
-          <span className={estilos.rol}>{ETIQUETA_ROL[rol]}</span>
-          <button onClick={pedirConfirmacion}>Cerrar sesión</button>
+        <div className={estilos.derecha}>
+          {rol === 'paciente' && <Campanita />}
+          {/* En pantallas grandes: usuario, rol y cerrar sesión en el encabezado */}
+          <div className={estilos.usuario}>
+            {nombre && (
+              <span className={estilos.persona}>
+                <span className={estilos.avatar}>{iniciales(nombre)}</span>
+                {nombre}
+              </span>
+            )}
+            <span className={estilos.rol}>{ETIQUETA_ROL[rol]}</span>
+            <button onClick={pedirConfirmacion}>Cerrar sesión</button>
+          </div>
+          {/* En pantallas chicas: un botón que abre y cierra el menú */}
+          <button
+            className={estilos.botonMenu}
+            aria-expanded={menuAbierto}
+            aria-controls="menu-principal"
+            onClick={() => setMenuAbierto(!menuAbierto)}
+          >
+            {menuAbierto ? 'Cerrar menú' : 'Menú'}
+          </button>
         </div>
-        {/* En pantallas chicas: un botón que abre y cierra el menú */}
-        <button
-          className={estilos.botonMenu}
-          aria-expanded={menuAbierto}
-          aria-controls="menu-principal"
-          onClick={() => setMenuAbierto(!menuAbierto)}
-        >
-          {menuAbierto ? 'Cerrar menú' : 'Menú'}
-        </button>
       </header>
       <div className={estilos.cuerpo}>
         <nav id="menu-principal" className={menuAbierto ? `${estilos.menu} ${estilos.abierto}` : estilos.menu}>

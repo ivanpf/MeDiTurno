@@ -20,7 +20,9 @@ import com.mediturno.backend.turnos.model.EstadoOcurrenciaTurno;
 import com.mediturno.backend.turnos.model.EstadoTurnoSemanal;
 import com.mediturno.backend.turnos.model.OcurrenciaTurno;
 import com.mediturno.backend.turnos.model.TurnoSemanal;
+import com.mediturno.backend.turnos.model.SuspensionTurno;
 import com.mediturno.backend.turnos.repository.OcurrenciaTurnoRepository;
+import com.mediturno.backend.turnos.repository.SuspensionTurnoRepository;
 import com.mediturno.backend.turnos.repository.TurnoSemanalRepository;
 
 /**
@@ -38,14 +40,17 @@ public class GeneradorOcurrenciasService {
 
     private final TurnoSemanalRepository turnoSemanalRepository;
     private final OcurrenciaTurnoRepository ocurrenciaTurnoRepository;
+    private final SuspensionTurnoRepository suspensionTurnoRepository;
     private final DisponibilidadService disponibilidadService;
     private final TransactionTemplate transaccion;
 
     public GeneradorOcurrenciasService(TurnoSemanalRepository turnoSemanalRepository,
-            OcurrenciaTurnoRepository ocurrenciaTurnoRepository, DisponibilidadService disponibilidadService,
+            OcurrenciaTurnoRepository ocurrenciaTurnoRepository, SuspensionTurnoRepository suspensionTurnoRepository,
+            DisponibilidadService disponibilidadService,
             PlatformTransactionManager administradorDeTransacciones) {
         this.turnoSemanalRepository = turnoSemanalRepository;
         this.ocurrenciaTurnoRepository = ocurrenciaTurnoRepository;
+        this.suspensionTurnoRepository = suspensionTurnoRepository;
         this.disponibilidadService = disponibilidadService;
         this.transaccion = new TransactionTemplate(administradorDeTransacciones);
     }
@@ -59,7 +64,7 @@ public class GeneradorOcurrenciasService {
         LocalDate hoy = ahora.toLocalDate();
         LocalDate hasta = hoy.plusDays(diasHaciaAdelante);
         int creadas = 0;
-        for (Long idTurno : turnoSemanalRepository.idsConVigenciaEntre(EstadoTurnoSemanal.ACTIVO, hoy, hasta)) {
+        for (Long idTurno : turnoSemanalRepository.idsConVigenciaEntre(List.of(EstadoTurnoSemanal.ACTIVO, EstadoTurnoSemanal.SUSPENDIDO), hoy, hasta)) {
             try {
                 Integer delTurno = transaccion.execute(estado -> generarDeUnTurnoActivo(idTurno, ahora, diasHaciaAdelante));
                 creadas += delTurno == null ? 0 : delTurno;
@@ -82,10 +87,12 @@ public class GeneradorOcurrenciasService {
         LocalDate limite = turno.getVigenteHasta() != null && turno.getVigenteHasta().isBefore(hasta) ? turno.getVigenteHasta() : hasta;
 
         Set<LocalDate> existentes = new HashSet<>(ocurrenciaTurnoRepository.fechasExistentes(turno.getIdTurnoSemanal(), desde, limite));
+        List<SuspensionTurno> suspensiones = suspensionTurnoRepository.buscarSinRehabilitarDelTurno(turno.getIdTurnoSemanal());
         List<OcurrenciaTurno> nuevas = new ArrayList<>();
         LocalDate fecha = desde.with(TemporalAdjusters.nextOrSame(turno.getDia().aDayOfWeek()));
         for (; !fecha.isAfter(limite); fecha = fecha.plusWeeks(1)) {
-            if (!existentes.contains(fecha) && disponibilidadService.turnoTodaviaNoEmpezo(turno, fecha, ahora)) {
+            if (!existentes.contains(fecha) && !estaSuspendida(suspensiones, fecha)
+                    && disponibilidadService.turnoTodaviaNoEmpezo(turno, fecha, ahora)) {
                 nuevas.add(nuevaOcurrencia(turno, fecha));
             }
         }
@@ -95,10 +102,13 @@ public class GeneradorOcurrenciasService {
 
     private int generarDeUnTurnoActivo(Long idTurno, LocalDateTime ahora, int diasHaciaAdelante) {
         TurnoSemanal turno = turnoSemanalRepository.findById(idTurno).orElse(null);
-        if (turno == null || turno.getEstado() != EstadoTurnoSemanal.ACTIVO) {
-            return 0; // cambió desde que se listó (por ejemplo, lo suspendieron)
-        }
-        return generarOcurrenciasDe(turno, ahora, diasHaciaAdelante);
+        return turno == null ? 0 : generarOcurrenciasDe(turno, ahora, diasHaciaAdelante);
+    }
+
+    /** La fecha cae dentro de una suspensión del turno que todavía no se rehabilitó: no se genera. */
+    private static boolean estaSuspendida(List<SuspensionTurno> suspensiones, LocalDate fecha) {
+        return suspensiones.stream().anyMatch(s -> !fecha.isBefore(s.getFechaInicio())
+            && (s.getFechaFin() == null || !fecha.isAfter(s.getFechaFin())));
     }
 
     /** La ocurrencia guarda una copia del cupo y del horario del turno: si el turno cambia, las ya creadas no se modifican. */

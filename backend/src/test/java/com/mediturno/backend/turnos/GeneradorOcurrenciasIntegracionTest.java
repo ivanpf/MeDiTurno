@@ -157,8 +157,32 @@ class GeneradorOcurrenciasIntegracionTest extends PostgresIntegracionTest {
     }
 
     @Test
-    void ignoraLosTurnosSuspendidosYLosQueYaTerminaron() {
+    void noGeneraLasFechasDeUnTurnoConSuspensionPermanente() {
         TurnoSemanal suspendido = lunes(HOY.minusDays(30), null, EstadoTurnoSemanal.SUSPENDIDO);
+        suspension(suspendido, funcionario("9301"), com.mediturno.backend.turnos.model.TipoSuspension.PERMANENTE, HOY.minusDays(1), null);
+
+        assertEquals(0, generador.generarOcurrencias(HOY.atStartOfDay(), 28));
+        assertTrue(deTurno(suspendido).isEmpty());
+    }
+
+    @Test
+    void unaSuspensionTemporalSoloSaltaSuPeriodoYSeguiaDespues() {
+        TurnoSemanal turno = lunes(HOY.minusDays(30), null, EstadoTurnoSemanal.SUSPENDIDO);
+        LocalDate desde = HOY.minusDays(1);
+        LocalDate hasta = HOY.plusDays(10);
+        suspension(turno, funcionario("9302"), com.mediturno.backend.turnos.model.TipoSuspension.TEMPORAL, desde, hasta);
+
+        generador.generarOcurrencias(HOY.atStartOfDay(), 42);
+
+        List<OcurrenciaTurno> generadas = deTurno(turno);
+        assertFalse(generadas.isEmpty());
+        assertTrue(generadas.stream().noneMatch(o -> !o.getFecha().isBefore(desde) && !o.getFecha().isAfter(hasta)));
+        assertTrue(generadas.stream().anyMatch(o -> o.getFecha().isAfter(hasta)));
+    }
+
+    @Test
+    void ignoraLosTurnosQueYaTerminaron() {
+        TurnoSemanal suspendido = lunes(HOY.minusDays(30), HOY.minusDays(5), EstadoTurnoSemanal.SUSPENDIDO);
         TurnoSemanal terminado = turno(med, esp, cons, DiaSemana.MARTES, "09:00", "12:00", HOY.minusDays(60), HOY.minusDays(1),
             EstadoTurnoSemanal.ACTIVO);
 

@@ -1,0 +1,107 @@
+.campanita {
+  position: relative;
+}
+
+.campanita .boton {
+  /* «.encabezado button» de Layout pone padding de 14 px y achicaría el ícono; este selector lo gana */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.contador {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  color: var(--azul-oscuro);
+  background: var(--mostaza);
+  border-radius: 999px;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 20;
+  width: 360px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 16px;
+  color: var(--texto);
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.vacio {
+  margin: 0;
+  color: var(--gris);
+}
+
+.lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* El selector doble gana a «.encabezado button» de Layout, que pinta de blanco los botones del encabezado */
+.panel .item {
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--texto);
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-left: 4px solid transparent;
+  border-radius: 8px;
+}
+
+.panel .item:hover {
+  background: var(--fondo);
+}
+
+.panel .nueva {
+  background: var(--azul-claro);
+  border-left-color: var(--mostaza);
+}
+
+.mensaje {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.fecha {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+@media (max-width: 800px) {
+  /* En celular el panel ocupa el ancho de la pantalla, debajo del encabezado */
+  .panel {
+    position: fixed;
+    top: 72px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}

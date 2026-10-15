@@ -18,8 +18,13 @@ import com.mediturno.backend.especialidades.model.Especialidad;
 import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
 import com.mediturno.backend.turnos.model.DiaSemana;
 import com.mediturno.backend.turnos.model.EstadoTurnoSemanal;
+import com.mediturno.backend.turnos.model.SuspensionTurno;
+import com.mediturno.backend.turnos.model.TipoSuspension;
 import com.mediturno.backend.turnos.model.TurnoSemanal;
+import com.mediturno.backend.turnos.repository.SuspensionTurnoRepository;
 import com.mediturno.backend.turnos.repository.TurnoSemanalRepository;
+import com.mediturno.backend.usuarios.model.Funcionario;
+import com.mediturno.backend.usuarios.repository.FuncionarioRepository;
 import com.mediturno.backend.usuarios.model.Medico;
 import com.mediturno.backend.usuarios.repository.MedicoRepository;
 
@@ -41,6 +46,8 @@ public abstract class PostgresIntegracionTest extends BasePostgresEmbebida {
     @Autowired protected MedicoRepository medicos;
     @Autowired protected ConsultorioRepository consultorios;
     @Autowired protected EspecialidadRepository especialidades;
+    @Autowired protected FuncionarioRepository funcionarios;
+    @Autowired protected SuspensionTurnoRepository suspensiones;
 
     /** «Hoy» en la zona de la aplicación (la misma del Clock). */
     protected static final LocalDate HOY = LocalDate.now(FechaConfig.ZONA);
@@ -93,5 +100,29 @@ public abstract class PostgresIntegracionTest extends BasePostgresEmbebida {
         t.setVigenteHasta(hasta);
         t.setEstado(estado);
         return turnos.saveAndFlush(t);
+    }
+
+    protected Funcionario funcionario(String id) {
+        Funcionario f = new Funcionario();
+        f.setCorreo(id + "@ejemplo.com");
+        f.setEstado(EstadoActivacion.ACTIVO);
+        f.setFechaCreacion(LocalDateTime.now());
+        f.setCedula(id);
+        f.setNombre("Funcionario" + id);
+        f.setApellido("Apellido" + id);
+        f.setFechaNacimiento(LocalDate.of(1985, 1, 1));
+        return funcionarios.save(f);
+    }
+
+    protected SuspensionTurno suspension(TurnoSemanal turno, Funcionario funcionario, TipoSuspension tipo, LocalDate desde, LocalDate hasta) {
+        SuspensionTurno s = new SuspensionTurno();
+        s.setTurnoSemanal(turno);
+        s.setFuncionario(funcionario);
+        s.setSuspensionTipo(tipo);
+        s.setFechaInicio(desde);
+        s.setFechaFin(hasta);
+        s.setPeriodo("de prueba");
+        s.setFechaRegistro(LocalDateTime.now());
+        return suspensiones.saveAndFlush(s);
     }
 }

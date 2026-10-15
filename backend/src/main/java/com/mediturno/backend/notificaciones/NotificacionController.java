@@ -12,12 +12,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.pacientes.model.Paciente;
 
 /**
  * Endpoints de: CU-6.
  * Las rutas son las de los diagramas de secuencia; donde el diagrama no la indica, es una propuesta.
  */
-@RolesPermitidos
+@RolesPermitidos(Paciente.class)
 @RestController
 @RequestMapping("/api/notificaciones")
 public class NotificacionController {
@@ -38,6 +39,6 @@ public class NotificacionController {
     @PostMapping("/{idNotificacion}/lectura")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void marcarLeida(@PathVariable Long idNotificacion) {
-        notificacionService.marcarLeida(idNotificacion);
+        notificacionService.marcarLeida(idNotificacion, usuarioActual.obtenerIdUsuarioAutenticado());
     }
 }

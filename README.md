@@ -66,6 +66,7 @@ La primera vez tarda varios minutos (descarga imágenes y compila el backend y e
 | Frontend | http://localhost:3000 | la pantalla de inicio de sesión |
 | Backend | http://localhost:8080/api/health | `{"estado":"ok"}` |
 | PostgreSQL | `localhost:5432` | (para clientes de base de datos) |
+| Correos de desarrollo (Mailpit) | http://localhost:8025 | los correos que manda el backend (por ejemplo, los avisos de suspensión de un turno) |
 
 Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). Con el menú del rol, cada opción muestra una pantalla "pendiente de implementar".
 
@@ -175,6 +176,12 @@ Donde el Documento de diseño une casos de uso en una sola pantalla (CU-13 con C
 | `DB_HOST` | `postgres` (nombre del contenedor) | backend; usar `localhost` si corre fuera de contenedores |
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | las del proyecto de Firebase de MeDiTurno | frontend (datos públicos de Firebase); se leen del `.env` de la raíz |
 | `FIREBASE_CREDENCIALES` | `../secrets/firebase-clave.json` (en contenedores, `/secrets/firebase-clave.json`) | backend; ruta de la clave de servicio |
+
+### Correo (avisos a los pacientes)
+
+Por defecto el backend manda los correos a **Mailpit** (http://localhost:8025): se leen ahí y no salen a ningún destinatario, así que no hace falta configurar nada para desarrollar.
+
+Para que los correos lleguen de verdad (por ejemplo, a una dirección de Gmail), hay que **sumar las variables `MAIL_*` al `.env`** de la raíz. Los valores reales **no están en el repositorio**: pedirlos por privado, igual que la clave de Firebase. Los nombres de las variables están en `.env.example`.
 
 Los valores de `.env.example` sirven **únicamente para desarrollo local**. `.env` está ignorado por Git: no subir credenciales reales ni usar estas en producción.
 

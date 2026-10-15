@@ -28,6 +28,19 @@ public interface OcurrenciaTurnoRepository extends JpaRepository<OcurrenciaTurno
     @Query("select o.fecha from OcurrenciaTurno o where o.turnoSemanal.idTurnoSemanal = :idTurno and o.fecha between :desde and :hasta")
     List<LocalDate> fechasExistentes(@Param("idTurno") Long idTurno, @Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
 
+    /**
+     * Las ocurrencias del turno entre dos fechas (inclusive), bloqueadas hasta el fin de la transacción (SELECT ... FOR UPDATE),
+     * en orden de id: así no se mezclan con quien está reservando una de ellas. Se usa al suspender el turno.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select o from OcurrenciaTurno o
+        where o.turnoSemanal.idTurnoSemanal = :idTurno and o.fecha between :desde and :hasta
+        order by o.idOcurrenciaTurno
+        """)
+    List<OcurrenciaTurno> buscarDelTurnoEntreFechasConLock(
+            @Param("idTurno") Long idTurno, @Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
+
     /** Busca la ocurrencia y la bloquea hasta el fin de la transacción (SELECT ... FOR UPDATE): las reservas de una misma ocurrencia se hacen de a una. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from OcurrenciaTurno o where o.idOcurrenciaTurno = :id")

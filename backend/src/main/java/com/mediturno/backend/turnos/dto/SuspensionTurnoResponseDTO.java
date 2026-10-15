@@ -1,7 +1,24 @@
 package com.mediturno.backend.turnos.dto;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+import com.mediturno.backend.turnos.model.EstadoTurnoSemanal;
+import com.mediturno.backend.turnos.model.TipoSuspension;
+
 /**
- * TODO: definir los campos al implementar el caso de uso.
+ * Suspensión registrada. {@code estadoTurno} es el del turno en este momento: sigue ACTIVO hasta que llega
+ * {@code fechaDesde}, y ese día pasa a SUSPENDIDO.
  */
-public record SuspensionTurnoResponseDTO() {
+public record SuspensionTurnoResponseDTO(
+        Long idSuspensionTurno,
+        Long idTurnoSemanal,
+        TipoSuspension modalidad,
+        LocalDate fechaDesde,
+        LocalDate fechaHasta,
+        String motivo,
+        LocalDateTime fechaRegistro,
+        int fechasSuspendidas,
+        int reservasAnuladas,
+        EstadoTurnoSemanal estadoTurno) {
 }
