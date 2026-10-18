@@ -8,6 +8,16 @@ import org.springframework.data.repository.query.Param;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
+    /** CU-21: excluye reservas canceladas, anuladas, vencidas y atendidas. */
+    @Query("""
+        select r from Reserva r join fetch r.paciente
+        where r.ocurrenciaTurno.idOcurrenciaTurno = :idOcurrencia
+          and r.reservaEstado in (com.mediturno.backend.reservas.model.EstadoReserva.VIGENTE,
+                                  com.mediturno.backend.reservas.model.EstadoReserva.ORDEN_EMITIDA)
+        order by r.numero, r.idReserva
+        """)
+    List<Reserva> buscarPacientesPorOcurrencia(@Param("idOcurrencia") Long idOcurrencia);
+
     /**
      * Reservas del turno que todavía no se atendieron (vigentes o con orden emitida) cuya fecha de atención está entre dos
      * fechas (inclusive), por fecha y número. Son las que alcanza una suspensión.

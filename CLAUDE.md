@@ -7,10 +7,10 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-28, CU-31, CU-34**. El resto responde `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-21, CU-28, CU-31, CU-34**. El resto responde `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
-- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-28, CU-31 y CU-34; el resto conserva `PaginaPendiente`.
+- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-21, CU-28, CU-31 y CU-34; el resto conserva `PaginaPendiente`.
 - **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos
@@ -107,6 +107,13 @@ INSERT INTO usuario (correo, estado, proveedor_acceso, fecha_creacion, cedula, n
 VALUES ('admin@ejemplo.com', 'ACTIVO', 'PASSWORD', LOCALTIMESTAMP, '1.111.111-1', 'Nombre', 'Apellido', '1980-01-01', 'PEGAR_AQUI_EL_UID');
 INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE correo = 'admin@ejemplo.com';
 ```
+
+### Pacientes por turno (CU-21)
+
+- La pantalla del médico `features/consultas/PacientesPorTurnoPage.jsx` permite elegir una fecha (hoy en Montevideo al abrir), seleccionar un turno propio y ordenar los pacientes por número, nombre u horario, ascendente o descendente.
+- `GET /api/turnos/mios?fecha=AAAA-MM-DD` devuelve las ocurrencias del médico autenticado para esa fecha. Sin fecha usa el `Clock` del backend. Incluye turnos sin pacientes y conserva el estado de cada ocurrencia.
+- `GET /api/turnos/{idOcurrenciaTurno}/pacientes` conserva la ruta del diseño: devuelve solo reservas `VIGENTE` u `ORDEN_EMITIDA`, por número, con nombre, hora estimada, estado y número de orden si existe. Un turno ajeno o inexistente responde 404. No se aplica la ventana de reserva de CU-8 ni se ocultan números cuya hora ya pasó.
+- Se mantiene `ConsultaService.consultarPacientesPorTurno` y se amplía `ReservaResponseDTO`, conservando su constructor de CU-8. No requiere migraciones ni dependencias nuevas. `PacientesPorTurnoIntegracionTest` verifica datos, estados, fecha y autorización con PostgreSQL embebido.
 
 ### Tareas programadas
 
