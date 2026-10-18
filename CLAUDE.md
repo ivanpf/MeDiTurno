@@ -7,7 +7,7 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-21, CU-28, CU-31, CU-34, CU-37**. El resto responde `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-21, CU-28, CU-31, CU-34, CU-37**. CU-14 está implementado en el backend; su pantalla web sigue pendiente. Los demás casos pendientes responden `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
 - **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-20, CU-21, CU-28, CU-31, CU-34 y CU-37; el resto conserva `PaginaPendiente`.
@@ -107,6 +107,12 @@ INSERT INTO usuario (correo, estado, proveedor_acceso, fecha_creacion, cedula, n
 VALUES ('admin@ejemplo.com', 'ACTIVO', 'PASSWORD', LOCALTIMESTAMP, '1.111.111-1', 'Nombre', 'Apellido', '1980-01-01', 'PEGAR_AQUI_EL_UID');
 INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE correo = 'admin@ejemplo.com';
 ```
+
+### Rehabilitación de turnos (CU-14)
+
+- Integrado desde `feature/CU-14Rehabilitacion-de-un-turno`: el backend rehabilita una suspensión vigente, valida horario, cupos, médico, especialidad, consultorio y superposiciones, reactiva las ocurrencias futuras compatibles y genera las fechas faltantes.
+- `POST /api/turnos-semanales/{idTurnoSemanal}/rehabilitacion` acepta cambios opcionales de día, horario, consultorio y cupo. Un cuerpo `{}` conserva la configuración del turno.
+- Las pruebas de rehabilitación están en `SuspensionTurnoIntegracionTest`. La pantalla `TurnosSuspendidosPage.jsx` todavía muestra `PaginaPendiente`.
 
 ### Pacientes por turno (CU-21)
 
