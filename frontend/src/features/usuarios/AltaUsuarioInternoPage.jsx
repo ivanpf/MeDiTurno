@@ -4,7 +4,9 @@ import { api, ApiError } from '../../services/api'
 import estilos from './AltaUsuarioInternoPage.module.css'
 
 const FORMULARIO_VACIO = { cedula: '', correo: '', nombre: '', apellido: '', fechaNacimiento: '', matricula: '', rol: ROLES.FUNCIONARIO, especialidades: [] }
+// El enum del DTO del alta es distinto de los roles usados por la navegación.
 const ROL_API = { [ROLES.FUNCIONARIO]: 'FUNCIONARIO', [ROLES.MEDICO]: 'MEDICO', [ROLES.ADMIN]: 'ADMINISTRADOR' }
+const fechaHoy = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Montevideo' }).format(new Date())
 const ultimaFechaNacimiento = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Montevideo' }).format(new Date(Date.now() - 86400000))
 const soloMensaje = (detalle) => detalle.split(': ').slice(1).join(': ') || detalle
 
@@ -40,7 +42,7 @@ export default function AltaUsuarioInternoPage() {
       setErrorEspecialidades(null)
       setEspecialidades([])
     }
-    setDatos((actuales) => ({ ...actuales, [name]: value, ...(name === 'rol' && { especialidades: [] }) }))
+    setDatos((actuales) => ({ ...actuales, [name]: value, ...(name === 'rol' && { especialidades: [], matricula: '' }) }))
     setRegistrado(false)
   }
 
@@ -71,13 +73,21 @@ export default function AltaUsuarioInternoPage() {
       setError(new ApiError(400, 'Seleccione al menos una especialidad médica.'))
       return
     }
-    if ([datos.cedula, datos.correo, datos.nombre, datos.apellido, datos.fechaNacimiento].some((valor) => !valor.trim())
-        || (esMedico && !datos.matricula.trim())) {
+    if ([datos.cedula, datos.correo, datos.nombre, datos.apellido, datos.fechaNacimiento].some((valor) => !valor.trim())) {
       setError(new ApiError(400, 'Complete los campos obligatorios.'))
+      return
+    }
+    if (!datos.fechaNacimiento || datos.fechaNacimiento >= fechaHoy()) {
+      setError(new ApiError(400, 'Ingrese una fecha de nacimiento anterior a hoy.'))
+      return
+    }
+    if (esMedico && !datos.matricula.trim()) {
+      setError(new ApiError(400, 'La matrícula es obligatoria para los médicos.'))
       return
     }
     setEnviando(true)
     try {
+      // Campos y roles según AltaUsuarioInternoDTO.
       await api.post('/usuarios-internos', {
         cedula: datos.cedula.trim(), correo: datos.correo.trim(),
         nombre: datos.nombre.trim(), apellido: datos.apellido.trim(),
@@ -116,7 +126,9 @@ export default function AltaUsuarioInternoPage() {
             <label>Nombre *<input name="nombre" value={datos.nombre} onChange={cambiar} maxLength={100} required /></label>
             <label>Apellido *<input name="apellido" value={datos.apellido} onChange={cambiar} maxLength={100} required /></label>
           </div>
-          <label>Fecha de nacimiento *<input type="date" name="fechaNacimiento" value={datos.fechaNacimiento} onChange={cambiar} max={ultimaFechaNacimiento()} required /></label>
+          <label>Fecha de nacimiento *
+            <input type="date" name="fechaNacimiento" value={datos.fechaNacimiento} onChange={cambiar} max={ultimaFechaNacimiento()} required />
+          </label>
           <label>Rol *
             <select name="rol" value={datos.rol} onChange={cambiar} required>
               <option value={ROLES.FUNCIONARIO}>Funcionario</option>
@@ -125,11 +137,11 @@ export default function AltaUsuarioInternoPage() {
             </select>
           </label>
           {esMedico && (
-            <label>Matrícula médica *<input name="matricula" value={datos.matricula} onChange={cambiar} maxLength={30} required /></label>
-          )}
-          {esMedico && (
             <fieldset className={estilos.especialidades}>
-              <legend>Especialidades médicas *</legend>
+              <legend>Datos del médico</legend>
+              <label>Matrícula médica *
+                <input name="matricula" value={datos.matricula} onChange={cambiar} maxLength={30} required />
+              </label>
               <p className={estilos.ayuda}>Seleccione al menos una especialidad activa.</p>
               {cargando ? <p role="status">Cargando especialidades…</p> : errorEspecialidades ? (
                 <div className="mensaje-error" role="alert">
