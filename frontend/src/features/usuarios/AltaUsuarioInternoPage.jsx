@@ -3,10 +3,12 @@ import { ROLES } from '../../auth/roles'
 import { api, ApiError } from '../../services/api'
 import estilos from './AltaUsuarioInternoPage.module.css'
 
-const FORMULARIO_VACIO = { cedula: '', correo: '', nombre: '', apellido: '', rol: ROLES.FUNCIONARIO, especialidades: [] }
+const FORMULARIO_VACIO = { cedula: '', correo: '', nombre: '', apellido: '', fechaNacimiento: '', matricula: '', rol: ROLES.FUNCIONARIO, especialidades: [] }
+const ROL_API = { [ROLES.FUNCIONARIO]: 'FUNCIONARIO', [ROLES.MEDICO]: 'MEDICO', [ROLES.ADMIN]: 'ADMINISTRADOR' }
+const ultimaFechaNacimiento = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Montevideo' }).format(new Date(Date.now() - 86400000))
 const soloMensaje = (detalle) => detalle.split(': ').slice(1).join(': ') || detalle
 
-// CU-34. Campos según el mock; el backend crea la cuenta activa.
+// CU-34. Contrato AltaUsuarioInternoDTO; el backend crea la cuenta activa.
 export default function AltaUsuarioInternoPage() {
   const [datos, setDatos] = useState(FORMULARIO_VACIO)
   const [error, setError] = useState(null)
@@ -69,17 +71,18 @@ export default function AltaUsuarioInternoPage() {
       setError(new ApiError(400, 'Seleccione al menos una especialidad médica.'))
       return
     }
-    if ([datos.cedula, datos.correo, datos.nombre, datos.apellido].some((valor) => !valor.trim())) {
+    if ([datos.cedula, datos.correo, datos.nombre, datos.apellido, datos.fechaNacimiento].some((valor) => !valor.trim())
+        || (esMedico && !datos.matricula.trim())) {
       setError(new ApiError(400, 'Complete los campos obligatorios.'))
       return
     }
     setEnviando(true)
     try {
-      // Contrato propuesto: AltaUsuarioInternoDTO todavía no define sus campos.
       await api.post('/usuarios-internos', {
         cedula: datos.cedula.trim(), correo: datos.correo.trim(),
-        nombre: datos.nombre.trim(), apellido: datos.apellido.trim(), rol: datos.rol,
-        ...(esMedico && { especialidades: datos.especialidades }),
+        nombre: datos.nombre.trim(), apellido: datos.apellido.trim(),
+        fechaNacimiento: datos.fechaNacimiento, rol: ROL_API[datos.rol],
+        ...(esMedico && { matricula: datos.matricula.trim(), especialidadIds: datos.especialidades }),
       })
       setDatos(FORMULARIO_VACIO)
       setRegistrado(true)
@@ -113,6 +116,7 @@ export default function AltaUsuarioInternoPage() {
             <label>Nombre *<input name="nombre" value={datos.nombre} onChange={cambiar} maxLength={100} required /></label>
             <label>Apellido *<input name="apellido" value={datos.apellido} onChange={cambiar} maxLength={100} required /></label>
           </div>
+          <label>Fecha de nacimiento *<input type="date" name="fechaNacimiento" value={datos.fechaNacimiento} onChange={cambiar} max={ultimaFechaNacimiento()} required /></label>
           <label>Rol *
             <select name="rol" value={datos.rol} onChange={cambiar} required>
               <option value={ROLES.FUNCIONARIO}>Funcionario</option>
@@ -120,6 +124,9 @@ export default function AltaUsuarioInternoPage() {
               <option value={ROLES.ADMIN}>Administrador</option>
             </select>
           </label>
+          {esMedico && (
+            <label>Matrícula médica *<input name="matricula" value={datos.matricula} onChange={cambiar} maxLength={30} required /></label>
+          )}
           {esMedico && (
             <fieldset className={estilos.especialidades}>
               <legend>Especialidades médicas *</legend>
