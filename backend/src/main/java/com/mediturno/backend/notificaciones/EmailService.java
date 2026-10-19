@@ -1,15 +1,20 @@
 package com.mediturno.backend.notificaciones;
 
+import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -81,9 +86,26 @@ public class EmailService {
         throw new NoImplementadoException();
     }
 
-    /** CU-16. */
+    /**
+     * CU-16. Manda por correo el PDF de la orden de consulta (adjunto, recibido en base64). Si no se puede enviar, responde 503 y
+     * no se guarda nada. Devuelve el asunto.
+     */
     public String enviarOrdenPDF(String pdfBase64, String destino) {
-        throw new NoImplementadoException();
+        String asunto = "MeDiTurno: su orden de consulta";
+        try {
+            MimeMessage mensaje = enviadorDeCorreo.createMimeMessage();
+            MimeMessageHelper ayudante = new MimeMessageHelper(mensaje, true, "UTF-8");
+            ayudante.setFrom(remitente);
+            ayudante.setTo(destino);
+            ayudante.setSubject(asunto);
+            ayudante.setText("Adjuntamos su orden de consulta. Preséntela en el consultorio.\n\nMeDiTurno");
+            ayudante.addAttachment("orden-de-consulta.pdf", new ByteArrayResource(Base64.getDecoder().decode(pdfBase64)), "application/pdf");
+            enviadorDeCorreo.send(mensaje);
+            return asunto;
+        } catch (MessagingException | MailException e) {
+            log.warn("No se pudo enviar la orden por correo: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "No se pudo enviar el correo. Intente nuevamente más tarde");
+        }
     }
 
     private String enviar(String destino, String asunto, String texto) {

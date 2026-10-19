@@ -1,0 +1,26 @@
+/* Campo y botón de búsqueda en una fila; en pantallas chicas, uno debajo del otro */
+.busqueda {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.busqueda label {
+  flex: 1;
+  min-width: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (max-width: 800px) {
+  .busqueda {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

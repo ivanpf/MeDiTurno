@@ -1,6 +1,7 @@
 package com.mediturno.backend.ordenes;
 
 import com.mediturno.backend.common.seguridad.UsuarioActual;
+import com.mediturno.backend.ordenes.dto.EnvioOrdenResponseDTO;
 import com.mediturno.backend.ordenes.dto.OrdenResponseDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -37,9 +38,18 @@ public class OrdenController {
         return ordenService.emitirOrden(idReserva, usuarioActual.obtenerIdFuncionarioAutenticado());
     }
 
+    /** Paso 6 (opcional): manda el PDF de la orden al correo del paciente. */
+    @PostMapping("/ordenes/{numeroOrden}/correo")
+    public EnvioOrdenResponseDTO enviarOrdenPorCorreo(@PathVariable Long numeroOrden) {
+        return ordenService.enviarOrdenPorCorreo(numeroOrden);
+    }
+
     @GetMapping("/ordenes/{numeroOrden}/pdf")
     public ResponseEntity<byte[]> generarOrdenPDF(@PathVariable Long numeroOrden) {
         byte[] pdf = ordenService.generarOrdenPDF(numeroOrden);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).body(pdf);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "inline; filename=\"orden-" + numeroOrden + ".pdf\"")
+                .body(pdf);
     }
 }
