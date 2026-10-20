@@ -45,9 +45,15 @@ public class EmailService {
         throw new NoImplementadoException();
     }
 
-    /** CU-23. */
+    /**
+     * CU-23. Avisa al paciente que se incorporó nueva información a su historia clínica. El correo no lleva contenido clínico.
+     * Si no se puede enviar, lanza una excepción: quien lo llama decide qué hacer. Devuelve el asunto.
+     */
     public String enviarAvisoHistoriaClinica(String destino) {
-        throw new NoImplementadoException();
+        String asunto = "MeDiTurno: hay nueva información en su historia clínica";
+        String texto = "Estimado/a paciente:\n\nSe incorporó nueva información a su historia clínica. "
+            + "Puede consultarla ingresando a MeDiTurno.\n\nMeDiTurno";
+        return enviar(destino, asunto, texto);
     }
 
     /**

@@ -1,7 +1,8 @@
 .pagina > * + * { margin-top: 20px; }
 .controles { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; margin-bottom: 20px; }
-.controles label { display: grid; gap: 8px; }
-.controles .inversa { display: flex; align-items: center; align-self: center; white-space: nowrap; }
+/* margin: 0 anula el margen global del label; si no, los campos quedan más arriba que los botones */
+.controles label { display: grid; gap: 8px; margin: 0; }
+.controles .inversa { display: flex; align-items: center; align-self: end; gap: 8px; min-height: 42px; white-space: nowrap; }
 .inversa input { width: auto; margin: 0; }
 .turnos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .turnos button { display: grid; gap: 8px; padding: 16px; text-align: left; white-space: normal; }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api, ApiError } from '../../services/api'
 import estilos from './PacientesPorTurnoPage.module.css'
 
@@ -133,12 +134,13 @@ export default function PacientesPorTurnoPage() {
               <div className="tabla-scroll">
                 <table className="tabla">
                   <caption className={estilos.leyenda}>Reservas vigentes y órdenes emitidas · {fecha.split('-').reverse().join('/')}</caption>
-                  <thead><tr><th scope="col">Número</th><th scope="col">Paciente</th><th scope="col">Hora estimada</th><th scope="col">Estado de la orden</th><th scope="col">Orden</th></tr></thead>
+                  <thead><tr><th scope="col">Número</th><th scope="col">Paciente</th><th scope="col">Hora estimada</th><th scope="col">Estado de la orden</th><th scope="col">Orden</th><th scope="col">Consulta</th></tr></thead>
                   <tbody>{listado.map((paciente) => (
                     <tr key={paciente.idReserva}>
                       <td>{paciente.numero}</td><td>{paciente.nombrePaciente}</td><td>~{hora(paciente.horaEstimada)}</td>
                       <td><span className={paciente.estado === 'ORDEN_EMITIDA' ? estilos.emitida : estilos.sinEmitir}>{estadoOrden(paciente)}</span></td>
                       <td>{paciente.numeroOrden ?? '—'}</td>
+                      <td>{paciente.estadoOrden === 'EMITIDA' ? <Link to="/medico/consulta" state={paciente}>Registrar consulta</Link> : '—'}</td>
                     </tr>
                   ))}</tbody>
                 </table>

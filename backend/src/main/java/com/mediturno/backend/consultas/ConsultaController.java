@@ -2,6 +2,7 @@ package com.mediturno.backend.consultas;
 
 import java.util.List;
 import java.time.LocalDate;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.mediturno.backend.consultas.dto.TurnoAtencionDTO;
 
@@ -42,7 +43,7 @@ public class ConsultaController {
 
     @PostMapping("/consultas/{numeroOrden}")
     @ResponseStatus(HttpStatus.CREATED)
-    public ConsultaResponseDTO registrarConsulta(@PathVariable Long numeroOrden, @RequestBody RegistrarConsultaDTO datos) {
+    public ConsultaResponseDTO registrarConsulta(@PathVariable Long numeroOrden, @Valid @RequestBody RegistrarConsultaDTO datos) {
         return consultaService.registrarConsulta(usuarioActual.obtenerIdMedicoAutenticado(), numeroOrden, datos);
     }
 
