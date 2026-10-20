@@ -133,6 +133,11 @@ public abstract class Usuario {
         this.apellido = apellido;
     }
 
+    /** «Apellido, Nombre»: así se muestran las personas en las pantallas, los listados y los documentos. */
+    public String nombreCompleto() {
+        return apellido + ", " + nombre;
+    }
+
     public LocalDate getFechaNacimiento() {
         return fechaNacimiento;
     }

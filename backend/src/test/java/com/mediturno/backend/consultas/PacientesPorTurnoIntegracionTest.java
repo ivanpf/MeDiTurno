@@ -110,7 +110,7 @@ class PacientesPorTurnoIntegracionTest extends BasePostgresEmbebida {
         var lista = consultas.consultarPacientesPorTurno(medico, ocurrencia);
         assertEquals(List.of(sinOrden, conOrden), lista.stream().map(r -> r.idReserva()).toList());
         assertEquals(paciente, lista.get(0).idPaciente());
-        assertEquals("Ana Apellido", lista.get(0).nombrePaciente());
+        assertEquals("Apellido, Ana", lista.get(0).nombrePaciente());
         assertEquals(LocalTime.of(9, 0), lista.get(0).horaEstimada());
         assertEquals(EstadoReserva.VIGENTE, lista.get(0).estado());
         assertNull(lista.get(0).estadoOrden());

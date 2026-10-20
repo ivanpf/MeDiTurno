@@ -33,8 +33,8 @@ import com.mediturno.backend.usuarios.repository.FuncionarioRepository;
 @Service
 public class OrdenService {
 
-    /** La orden se emite hasta este tiempo antes de la hora estimada de atención (regla de CU-16). */
-    private static final int MINUTOS_DE_ANTICIPACION = 15;
+    /** La orden se puede emitir desde este tiempo antes de que empiece el turno (regla de CU-16). */
+    private static final int MINUTOS_DE_ANTICIPACION = 60;
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -126,22 +126,18 @@ public class OrdenService {
     }
 
     /**
-     * Paso 2: la orden se emite el día de la consulta y hasta 15 minutos antes de la hora estimada de atención del número. Antes
-     * de ese día o pasado el límite, no.
+     * Paso 2: la orden se emite el día del turno, desde {@code MINUTOS_DE_ANTICIPACION} minutos antes de que empiece hasta la hora
+     * en que termina (los dos extremos incluidos). Antes o después de esa ventana, no.
      */
     private void validarHorarioEmision(Reserva reserva, LocalDateTime ahora) {
         OcurrenciaTurno ocurrencia = reserva.getOcurrenciaTurno();
         LocalDate fecha = ocurrencia.getFecha();
-        if (ahora.toLocalDate().isBefore(fecha)) {
+        LocalDateTime desde = fecha.atTime(ocurrencia.getHoraInicio()).minusMinutes(MINUTOS_DE_ANTICIPACION);
+        LocalDateTime hasta = fecha.atTime(ocurrencia.getHoraFin());
+        if (ahora.isBefore(desde) || ahora.isAfter(hasta)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La orden no puede emitirse en este momento: se emite el día de la consulta (" + fecha.format(FECHA) + ")");
-        }
-        LocalDateTime limite = fecha.atTime(disponibilidadService.horaEstimada(ocurrencia, reserva.getNumero()))
-                .minusMinutes(MINUTOS_DE_ANTICIPACION);
-        if (ahora.isAfter(limite)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La orden no puede emitirse en este momento: se emite hasta " + MINUTOS_DE_ANTICIPACION
-                    + " minutos antes de la hora estimada de atención (hasta las " + limite.format(HORA) + ")");
+                    "La orden no puede emitirse en este momento: se emite el " + fecha.format(FECHA) + " desde las " + desde.format(HORA)
+                    + " (una hora antes de que empiece el turno) hasta las " + hasta.format(HORA) + ", cuando termina");
         }
     }
 

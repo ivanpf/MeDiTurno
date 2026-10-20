@@ -68,9 +68,9 @@ export default function ConsultaReservaPage() {
     setEnviando(true)
     setError(null)
     try {
-      const orden = await api.post(`/reservas/${reserva.idReserva}/orden`)
+      await api.post(`/reservas/${reserva.idReserva}/orden`)
       setConfirmando(false)
-      setAviso(`Orden ${orden.numeroOrden} emitida correctamente. Ya puede imprimirla o generar el PDF.`)
+      setAviso('Orden emitida correctamente. Ya puede imprimirla o generar el PDF.')
       await cargar(reserva.idReserva)
     } catch (err) {
       setConfirmando(false)
@@ -155,7 +155,7 @@ export default function ConsultaReservaPage() {
             </table>
           </div>
 
-          {reserva.estado !== 'VIGENTE' && <p className="pendiente">{MOTIVO_SIN_EMISION[reserva.estado]}</p>}
+          {reserva.estado !== 'VIGENTE' && <p className={`pendiente ${estilos.aviso}`}>{MOTIVO_SIN_EMISION[reserva.estado]}</p>}
 
           <div className={estilos.acciones}>
             {reserva.estado === 'VIGENTE' && (
@@ -164,7 +164,7 @@ export default function ConsultaReservaPage() {
             {reserva.numeroOrden && (
               <>
                 <button onClick={abrirPdf} disabled={abriendo}>
-                  {abriendo ? 'Generando…' : `Imprimir o generar PDF (orden ${reserva.numeroOrden})`}
+                  {abriendo ? 'Generando…' : 'Imprimir o generar PDF'}
                 </button>
                 <button onClick={enviarPorCorreo} disabled={mandando}>
                   {mandando ? 'Enviando…' : 'Enviar por correo al paciente'}
@@ -185,7 +185,7 @@ export default function ConsultaReservaPage() {
         >
           <p>
             Se emitirá la orden del número {reserva.numero} de {reserva.nombrePaciente} ({fecha(reserva.fecha)}, hora estimada{' '}
-            ~{hora(reserva.horaEstimada)}). Solo se puede emitir hasta 15 minutos antes de la hora estimada.
+            ~{hora(reserva.horaEstimada)}). Solo se puede emitir el día del turno, desde una hora antes de que empiece hasta que termina.
           </p>
         </Confirmacion>
       )}

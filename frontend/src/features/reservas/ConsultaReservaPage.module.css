@@ -9,6 +9,11 @@
 .busqueda label {
   flex: 1;
   min-width: 0;
+  margin: 0; /* el margen global del label dejaría el campo más arriba que el botón */
+}
+
+.aviso {
+  margin-top: 16px;
 }
 
 .acciones {

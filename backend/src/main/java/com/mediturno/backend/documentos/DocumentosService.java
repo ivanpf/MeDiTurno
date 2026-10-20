@@ -41,9 +41,9 @@ public class DocumentosService {
         List<String[]> lineas = new ArrayList<>();
         lineas.add(new String[] {"Número de orden", String.valueOf(orden.getNumeroOrden())});
         lineas.add(new String[] {"Emitida", orden.getFechaEmision().format(FECHA_HORA)});
-        lineas.add(new String[] {"Paciente", orden.getPaciente().getApellido() + ", " + orden.getPaciente().getNombre()});
+        lineas.add(new String[] {"Paciente", orden.getPaciente().nombreCompleto()});
         lineas.add(new String[] {"Cédula", orden.getPaciente().getCedula()});
-        lineas.add(new String[] {"Médico", turno.getMedico().getApellido() + ", " + turno.getMedico().getNombre()});
+        lineas.add(new String[] {"Médico", turno.getMedico().nombreCompleto()});
         lineas.add(new String[] {"Especialidad", turno.getEspecialidad().getNombre()});
         lineas.add(new String[] {"Fecha", ocurrencia.getFecha().format(FECHA)});
         lineas.add(new String[] {"Horario del turno", ocurrencia.getHoraInicio().format(HORA) + " a " + ocurrencia.getHoraFin().format(HORA)});

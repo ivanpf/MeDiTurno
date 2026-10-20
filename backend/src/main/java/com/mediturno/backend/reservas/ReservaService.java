@@ -16,7 +16,6 @@ import com.mediturno.backend.reservas.repository.ReservaRepository;
 import com.mediturno.backend.turnos.DisponibilidadService;
 import com.mediturno.backend.turnos.model.OcurrenciaTurno;
 import com.mediturno.backend.turnos.model.TurnoSemanal;
-import com.mediturno.backend.usuarios.model.Usuario;
 import com.mediturno.backend.turnos.repository.OcurrenciaTurnoRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -128,13 +127,9 @@ public class ReservaService {
         Paciente paciente = reserva.getPaciente();
         return new ReservaResponseDTO(reserva.getIdReserva(), reserva.getNumero(),
                 disponibilidadService.horaEstimada(ocurrencia, reserva.getNumero()), reserva.getReservaEstado(),
-                nombreCompleto(paciente), paciente.getCedula(), nombreCompleto(turno.getMedico()),
+                paciente.nombreCompleto(), paciente.getCedula(), turno.getMedico().nombreCompleto(),
                 turno.getEspecialidad().getNombre(), ocurrencia.getFecha(), ocurrencia.getHoraInicio(), ocurrencia.getHoraFin(),
                 turno.getConsultorio().getNombre(), numeroOrden);
-    }
-
-    private static String nombreCompleto(Usuario persona) {
-        return persona.getApellido() + ", " + persona.getNombre();
     }
 
     /** CU-19. */

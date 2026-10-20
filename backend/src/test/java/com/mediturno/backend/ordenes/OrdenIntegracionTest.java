@@ -165,7 +165,7 @@ class OrdenIntegracionTest extends BasePostgresEmbebida {
 
     @Test
     void consultaIncluyeElNumeroDeOrdenSiYaSeEmitio() {
-        Long idReserva = reserva(HOY, "14:00", "17:00", 1, "VIGENTE");
+        Long idReserva = reserva(HOY, "09:30", "12:30", 1, "VIGENTE");
         OrdenResponseDTO orden = ordenes.emitirOrden(idReserva, funcionario);
 
         assertEquals(orden.numeroOrden(), reservas.buscarReservaPorId(idReserva).numeroOrden());
@@ -176,7 +176,7 @@ class OrdenIntegracionTest extends BasePostgresEmbebida {
 
     @Test
     void emiteLaOrdenYCambiaElEstadoDeLaReserva() {
-        Long idReserva = reserva(HOY, "14:00", "17:00", 1, "VIGENTE"); // hora estimada 14:00: se puede hasta las 13:45
+        Long idReserva = reserva(HOY, "09:30", "12:30", 1, "VIGENTE"); // turno 09:30-12:30: se puede emitir de 08:30 a 12:30
 
         OrdenResponseDTO orden = ordenes.emitirOrden(idReserva, funcionario);
 
@@ -190,15 +190,39 @@ class OrdenIntegracionTest extends BasePostgresEmbebida {
     }
 
     @Test
-    void puedeEmitirseJustoQuinceMinutosAntes() {
-        Long idReserva = reserva(HOY, "09:15", "12:15", 1, "VIGENTE"); // estimada 09:15; el límite es 09:00 y «ahora» es 09:00
+    void puedeEmitirseJustoUnaHoraAntesDeQueEmpieceElTurno() {
+        Long idReserva = reserva(HOY, "10:00", "13:00", 1, "VIGENTE"); // la ventana abre a las 09:00 y «ahora» es 09:00
 
         assertNotNull(ordenes.emitirOrden(idReserva, funcionario).numeroOrden());
     }
 
     @Test
-    void fueraDeHorarioNoGuardaLaOrdenNiCambiaLaReserva() {
-        Long idReserva = reserva(HOY, "09:10", "12:10", 1, "VIGENTE"); // estimada 09:10; el límite era 08:55
+    void puedeEmitirseJustoCuandoTerminaElTurno() {
+        Long idReserva = reserva(HOY, "06:00", "09:00", 1, "VIGENTE"); // termina a las 09:00 y «ahora» es 09:00
+
+        assertNotNull(ordenes.emitirOrden(idReserva, funcionario).numeroOrden());
+    }
+
+    @Test
+    void puedeEmitirseEnCualquierNumeroDelTurnoAunqueSuHoraEstimadaYaPaso() {
+        Long idReserva = reserva(HOY, "08:00", "11:00", 1, "VIGENTE"); // el número 1 era para las 08:00, pero el turno sigue
+
+        assertNotNull(ordenes.emitirOrden(idReserva, funcionario).numeroOrden());
+    }
+
+    @Test
+    void antesDeLaVentanaNoGuardaLaOrdenNiCambiaLaReserva() {
+        Long idReserva = reserva(HOY, "10:10", "13:10", 1, "VIGENTE"); // la ventana abre a las 09:10
+
+        conflicto(() -> ordenes.emitirOrden(idReserva, funcionario));
+
+        assertEquals("VIGENTE", estadoDeReserva(idReserva));
+        assertEquals(0, cantidadDeOrdenes(idReserva));
+    }
+
+    @Test
+    void despuesDeQueTerminoElTurnoNoSeEmite() {
+        Long idReserva = reserva(HOY, "07:00", "08:59", 1, "VIGENTE");
 
         conflicto(() -> ordenes.emitirOrden(idReserva, funcionario));
 
@@ -218,7 +242,7 @@ class OrdenIntegracionTest extends BasePostgresEmbebida {
     @Test
     void noSeEmiteSiLaReservaNoEstaVigente() {
         for (String estado : new String[] {"CANCELADA", "ANULADA", "VENCIDA", "ATENDIDA", "ORDEN_EMITIDA"}) {
-            Long idReserva = reserva(HOY, "14:00", "17:00", 1, estado);
+            Long idReserva = reserva(HOY, "09:30", "12:30", 1, estado);
             conflicto(() -> ordenes.emitirOrden(idReserva, funcionario));
             assertEquals(0, cantidadDeOrdenes(idReserva));
             jdbc.update("delete from reserva where id_reserva=?", idReserva);
@@ -228,7 +252,7 @@ class OrdenIntegracionTest extends BasePostgresEmbebida {
 
     @Test
     void noSeEmiteDosVecesLaMismaOrden() {
-        Long idReserva = reserva(HOY, "14:00", "17:00", 1, "VIGENTE");
+        Long idReserva = reserva(HOY, "09:30", "12:30", 1, "VIGENTE");
         ordenes.emitirOrden(idReserva, funcionario);
 
         conflicto(() -> ordenes.emitirOrden(idReserva, funcionario));
@@ -243,7 +267,7 @@ class OrdenIntegracionTest extends BasePostgresEmbebida {
 
     @Test
     void generaElPdfDeLaOrdenEmitida() {
-        Long idReserva = reserva(HOY, "14:00", "17:00", 1, "VIGENTE");
+        Long idReserva = reserva(HOY, "09:30", "12:30", 1, "VIGENTE");
         OrdenResponseDTO orden = ordenes.emitirOrden(idReserva, funcionario);
 
         byte[] pdf = ordenes.generarOrdenPDF(orden.numeroOrden());
@@ -255,7 +279,7 @@ class OrdenIntegracionTest extends BasePostgresEmbebida {
 
     @Test
     void enviaElPdfDeLaOrdenPorCorreoAlPaciente() throws Exception {
-        Long idReserva = reserva(HOY, "14:00", "17:00", 1, "VIGENTE");
+        Long idReserva = reserva(HOY, "09:30", "12:30", 1, "VIGENTE");
         OrdenResponseDTO orden = ordenes.emitirOrden(idReserva, funcionario);
 
         EnvioOrdenResponseDTO envio = ordenes.enviarOrdenPorCorreo(orden.numeroOrden());
@@ -270,7 +294,7 @@ class OrdenIntegracionTest extends BasePostgresEmbebida {
 
     @Test
     void siElCorreoFallaResponde503() {
-        Long idReserva = reserva(HOY, "14:00", "17:00", 1, "VIGENTE");
+        Long idReserva = reserva(HOY, "09:30", "12:30", 1, "VIGENTE");
         OrdenResponseDTO orden = ordenes.emitirOrden(idReserva, funcionario);
         doThrow(new MailSendException("sin servidor")).when(correo).send(any(MimeMessage.class));
 
