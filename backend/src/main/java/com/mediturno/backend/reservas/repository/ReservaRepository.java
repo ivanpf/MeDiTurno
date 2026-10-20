@@ -1,12 +1,20 @@
 package com.mediturno.backend.reservas.repository;
 
 import com.mediturno.backend.reservas.model.Reserva;
+import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
+
+    /** Busca la reserva y la bloquea hasta el fin de la transacción (SELECT ... FOR UPDATE): dos emisiones de orden no se pisan. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from Reserva r where r.idReserva = :id")
+    Optional<Reserva> buscarConLock(@Param("id") Long id);
 
     /** CU-21: excluye reservas canceladas, anuladas, vencidas y atendidas. */
     @Query("""

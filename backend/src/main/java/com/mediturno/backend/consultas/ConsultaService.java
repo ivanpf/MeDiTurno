@@ -77,7 +77,7 @@ public class ConsultaService {
             var paciente = r.getPaciente();
             var orden = ordenesPorReserva.get(r.getIdReserva());
             return new ReservaResponseDTO(r.getIdReserva(), r.getNumero(), disponibilidad.horaEstimada(ocurrencia, r.getNumero()),
-                paciente.getIdUsuario(), paciente.getNombre() + " " + paciente.getApellido(), r.getReservaEstado(),
+                paciente.getIdUsuario(), paciente.nombreCompleto(), r.getReservaEstado(),
                 orden == null ? null : orden.getNumeroOrden(), orden == null ? null : orden.getOrdenEstado());
         }).toList();
     }

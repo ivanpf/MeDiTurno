@@ -8,7 +8,7 @@ const comoError = (err) => err instanceof ApiError ? err : new ApiError(0, 'No f
 const estados = { HABILITADA: 'Habilitado', SUSPENDIDA: 'Suspendido', FINALIZADA: 'Finalizado' }
 const estadoOrden = (paciente) => paciente.estadoOrden === 'UTILIZADA' ? 'Orden utilizada'
   : paciente.estadoOrden === 'EMITIDA' ? 'Orden emitida'
-    : paciente.estadoReserva === 'ORDEN_EMITIDA' ? 'Orden emitida' : 'Sin emitir'
+    : paciente.estado === 'ORDEN_EMITIDA' ? 'Orden emitida' : 'Sin emitir'
 
 // CU-21: el backend limita los turnos y los pacientes al médico de la sesión.
 export default function PacientesPorTurnoPage() {
@@ -137,7 +137,7 @@ export default function PacientesPorTurnoPage() {
                   <tbody>{listado.map((paciente) => (
                     <tr key={paciente.idReserva}>
                       <td>{paciente.numero}</td><td>{paciente.nombrePaciente}</td><td>~{hora(paciente.horaEstimada)}</td>
-                      <td><span className={paciente.estadoReserva === 'ORDEN_EMITIDA' ? estilos.emitida : estilos.sinEmitir}>{estadoOrden(paciente)}</span></td>
+                      <td><span className={paciente.estado === 'ORDEN_EMITIDA' ? estilos.emitida : estilos.sinEmitir}>{estadoOrden(paciente)}</span></td>
                       <td>{paciente.numeroOrden ?? '—'}</td>
                     </tr>
                   ))}</tbody>

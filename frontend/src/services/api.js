@@ -46,7 +46,19 @@ async function request(metodo, ruta, cuerpo) {
   return datos
 }
 
+// Para los archivos (por ejemplo, un PDF): igual que una petición común, pero devuelve el archivo (un Blob) en lugar de JSON.
+async function descargar(ruta) {
+  const token = await obtenerToken()
+  const respuesta = await fetch(BASE + ruta, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  if (!respuesta.ok) {
+    const datos = await respuesta.json().catch(() => null)
+    throw new ApiError(respuesta.status, datos?.mensaje ?? 'Ocurrió un error', datos?.detalles ?? [])
+  }
+  return respuesta.blob()
+}
+
 export const api = {
+  descargar,
   get: (ruta) => request('GET', ruta),
   post: (ruta, cuerpo) => request('POST', ruta, cuerpo ?? {}),
   put: (ruta, cuerpo) => request('PUT', ruta, cuerpo ?? {}),
