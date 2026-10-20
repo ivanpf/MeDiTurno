@@ -7,9 +7,10 @@ const FORMULARIO_VACIO = { cedula: '', correo: '', nombre: '', apellido: '', fec
 // El enum del DTO del alta es distinto de los roles usados por la navegación.
 const ROL_API = { [ROLES.FUNCIONARIO]: 'FUNCIONARIO', [ROLES.MEDICO]: 'MEDICO', [ROLES.ADMIN]: 'ADMINISTRADOR' }
 const fechaHoy = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Montevideo' }).format(new Date())
+const ultimaFechaNacimiento = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Montevideo' }).format(new Date(Date.now() - 86400000))
 const soloMensaje = (detalle) => detalle.split(': ').slice(1).join(': ') || detalle
 
-// CU-34. Campos según el mock; el backend crea la cuenta activa.
+// CU-34. Contrato AltaUsuarioInternoDTO; el backend crea la cuenta activa.
 export default function AltaUsuarioInternoPage() {
   const [datos, setDatos] = useState(FORMULARIO_VACIO)
   const [error, setError] = useState(null)
@@ -72,7 +73,7 @@ export default function AltaUsuarioInternoPage() {
       setError(new ApiError(400, 'Seleccione al menos una especialidad médica.'))
       return
     }
-    if ([datos.cedula, datos.correo, datos.nombre, datos.apellido].some((valor) => !valor.trim())) {
+    if ([datos.cedula, datos.correo, datos.nombre, datos.apellido, datos.fechaNacimiento].some((valor) => !valor.trim())) {
       setError(new ApiError(400, 'Complete los campos obligatorios.'))
       return
     }
@@ -126,7 +127,7 @@ export default function AltaUsuarioInternoPage() {
             <label>Apellido *<input name="apellido" value={datos.apellido} onChange={cambiar} maxLength={100} required /></label>
           </div>
           <label>Fecha de nacimiento *
-            <input type="date" name="fechaNacimiento" value={datos.fechaNacimiento} onChange={cambiar} max={fechaHoy()} required />
+            <input type="date" name="fechaNacimiento" value={datos.fechaNacimiento} onChange={cambiar} max={ultimaFechaNacimiento()} required />
           </label>
           <label>Rol *
             <select name="rol" value={datos.rol} onChange={cambiar} required>
@@ -138,7 +139,7 @@ export default function AltaUsuarioInternoPage() {
           {esMedico && (
             <fieldset className={estilos.especialidades}>
               <legend>Datos del médico</legend>
-              <label>Matrícula *
+              <label>Matrícula médica *
                 <input name="matricula" value={datos.matricula} onChange={cambiar} maxLength={30} required />
               </label>
               <p className={estilos.ayuda}>Seleccione al menos una especialidad activa.</p>

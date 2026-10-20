@@ -1,6 +1,9 @@
 package com.mediturno.backend.consultas;
 
 import java.util.List;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
+import com.mediturno.backend.consultas.dto.TurnoAtencionDTO;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.seguridad.UsuarioActual;
@@ -52,6 +55,13 @@ public class ConsultaController {
     @GetMapping("/consultas/historia-clinica")
     public List<ConsultaResponseDTO> consultarHistoriaClinicaDuranteAtencion(@RequestParam Long idPaciente) {
         return consultaService.consultarHistoriaClinicaDuranteAtencion(usuarioActual.obtenerIdMedicoAutenticado(), idPaciente);
+    }
+
+    /** Consulta de apoyo para elegir un turno propio en CU-21. */
+    @GetMapping("/turnos/mios")
+    public List<TurnoAtencionDTO> consultarTurnosDeAtencion(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return consultaService.consultarTurnosDeAtencion(usuarioActual.obtenerIdMedicoAutenticado(), fecha);
     }
 
     @GetMapping("/turnos/{idOcurrenciaTurno}/pacientes")
