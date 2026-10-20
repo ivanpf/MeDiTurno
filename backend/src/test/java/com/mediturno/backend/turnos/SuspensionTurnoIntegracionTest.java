@@ -41,6 +41,7 @@ import com.mediturno.backend.pacientes.repository.PacienteRepository;
 import com.mediturno.backend.reservas.model.EstadoReserva;
 import com.mediturno.backend.reservas.model.Reserva;
 import com.mediturno.backend.reservas.repository.ReservaRepository;
+import com.mediturno.backend.turnos.dto.RehabilitacionTurnoDTO;
 import com.mediturno.backend.turnos.dto.SuspensionTurnoDTO;
 import com.mediturno.backend.turnos.dto.SuspensionTurnoResponseDTO;
 import com.mediturno.backend.turnos.dto.VistaPreviaSuspensionDTO;
@@ -409,6 +410,77 @@ class SuspensionTurnoIntegracionTest extends PostgresIntegracionTest {
     void laVistaPreviaValidaLoMismoQueLaSuspension() {
         assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class, () -> servicio.vistaPreviaSuspension(
             turno.getIdTurnoSemanal(), new SuspensionTurnoDTO(TipoSuspension.TEMPORAL, lunes2, null, null))).getStatusCode());
+    }
+
+    // ------------------------------------------------------------------ rehabilitación (CU-14)
+
+    @Test
+    void rehabilitaElTurnoYLasOcurrenciasFuturasSinRestaurarLasReservasAnuladas() {
+        suspender(TipoSuspension.PERMANENTE, HOY, null);
+
+        var respuesta = servicio.rehabilitarTurno(turno.getIdTurnoSemanal(), new RehabilitacionTurnoDTO(null, null, null, null, null));
+
+        assertEquals(EstadoTurnoSemanal.ACTIVO, respuesta.estado());
+        assertEquals(EstadoTurnoSemanal.ACTIVO, turnoActual().getEstado());
+        assertFalse(suspensiones.buscarSinRehabilitarDelTurno(turno.getIdTurnoSemanal()).stream()
+            .anyMatch(s -> s.getFechaRehabilitacion() == null));
+        for (LocalDate fecha : List.of(lunes1, lunes2, lunes3, lunes4)) {
+            assertEquals(EstadoOcurrenciaTurno.HABILITADA, estadoDe(fecha));
+        }
+        assertEquals(EstadoReserva.ANULADA, estadoDe(reserva1));
+        assertEquals(EstadoReserva.ANULADA, estadoDe(reserva2));
+    }
+
+    @Test
+    void permiteCambiarConfiguracionYGeneraOcurrenciasConElNuevoDia() {
+        suspender(TipoSuspension.PERMANENTE, HOY, null);
+        consultorio("S2", EstadoActivacion.ACTIVO);
+
+        var respuesta = servicio.rehabilitarTurno(turno.getIdTurnoSemanal(),
+            new RehabilitacionTurnoDTO(DiaSemana.MARTES, LocalTime.of(13, 0), LocalTime.of(15, 0), "S2", 8));
+
+        assertEquals(DiaSemana.MARTES, respuesta.dia());
+        assertEquals(LocalTime.of(13, 0), respuesta.horaInicio());
+        assertEquals(LocalTime.of(15, 0), respuesta.horaFin());
+        assertEquals("S2", respuesta.codigoConsultorio());
+        assertEquals(8, respuesta.cupoMaximo());
+        assertEquals(EstadoOcurrenciaTurno.SUSPENDIDA, estadoDe(lunes1));
+        assertTrue(ocurrencias.findAll().stream().anyMatch(o ->
+            o.getTurnoSemanal().getIdTurnoSemanal().equals(turno.getIdTurnoSemanal())
+                && o.getFecha().getDayOfWeek() == DayOfWeek.TUESDAY
+                && o.getFecha().isAfter(HOY)
+                && o.getOcurrenciaTurnoEstado() == EstadoOcurrenciaTurno.HABILITADA
+                && o.getCupos() == 8
+                && o.getHoraInicio().equals(LocalTime.of(13, 0))));
+    }
+
+    @Test
+    void rechazaLaRehabilitacionConHorarioInvalidoSinCambiarElTurnoNiLaSuspension() {
+        suspender(TipoSuspension.PERMANENTE, HOY, null);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> servicio.rehabilitarTurno(
+            turno.getIdTurnoSemanal(), new RehabilitacionTurnoDTO(null, LocalTime.of(12, 0), LocalTime.of(10, 0), null, null)));
+
+        assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
+        assertEquals(EstadoTurnoSemanal.SUSPENDIDO, turnoActual().getEstado());
+        assertTrue(suspensiones.buscarSinRehabilitarDelTurno(turno.getIdTurnoSemanal()).stream()
+            .anyMatch(s -> s.getFechaRehabilitacion() == null));
+        assertEquals(EstadoOcurrenciaTurno.SUSPENDIDA, estadoDe(lunes1));
+    }
+
+    @Test
+    void rechazaUnaSuperposicionConOtroTurnoSinAplicarLaRehabilitacion() {
+        turno(turno.getMedico(), turno.getEspecialidad(), consultorio("S2", EstadoActivacion.ACTIVO), DiaSemana.LUNES,
+            "10:00", "11:00", HOY.minusDays(1), null, EstadoTurnoSemanal.ACTIVO);
+        suspender(TipoSuspension.PERMANENTE, HOY, null);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> servicio.rehabilitarTurno(
+            turno.getIdTurnoSemanal(), new RehabilitacionTurnoDTO(null, null, null, null, null)));
+
+        assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
+        assertEquals(EstadoTurnoSemanal.SUSPENDIDO, turnoActual().getEstado());
+        assertTrue(suspensiones.buscarSinRehabilitarDelTurno(turno.getIdTurnoSemanal()).stream()
+            .anyMatch(s -> s.getFechaRehabilitacion() == null));
     }
 
     // ------------------------------------------------------------------ el estado del turno sigue a las fechas

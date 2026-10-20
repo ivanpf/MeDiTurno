@@ -61,7 +61,7 @@ public class TurnoSemanalController {
     }
 
     @PostMapping("/{idTurnoSemanal}/rehabilitacion")
-    public TurnoSemanalResponseDTO rehabilitarTurno(@PathVariable Long idTurnoSemanal, @RequestBody RehabilitacionTurnoDTO datos) {
+    public TurnoSemanalResponseDTO rehabilitarTurno(@PathVariable Long idTurnoSemanal, @Valid @RequestBody RehabilitacionTurnoDTO datos) {
         return turnoSemanalService.rehabilitarTurno(idTurnoSemanal, datos);
     }
 
