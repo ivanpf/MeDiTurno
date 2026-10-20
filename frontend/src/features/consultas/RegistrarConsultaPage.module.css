@@ -1,0 +1,40 @@
+/* Datos del paciente elegido, arriba del formulario */
+.paciente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 16px 0 24px;
+}
+
+.paciente dt {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris);
+}
+
+.paciente dd {
+  margin: 4px 0 0;
+}
+
+.formulario {
+  margin-top: 16px;
+  max-width: 720px;
+}
+
+.formulario textarea {
+  resize: vertical;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 800px) {
+  .paciente {
+    flex-direction: column;
+  }
+}
