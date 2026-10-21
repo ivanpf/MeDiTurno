@@ -4,6 +4,7 @@ import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.especialidades.model.Especialidad;
+import com.mediturno.backend.ordenes.repository.OrdenRepository;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.pacientes.repository.PacienteRepository;
 import com.mediturno.backend.pases.PaseService;
@@ -14,6 +15,7 @@ import com.mediturno.backend.reservas.model.Reserva;
 import com.mediturno.backend.reservas.repository.ReservaRepository;
 import com.mediturno.backend.turnos.DisponibilidadService;
 import com.mediturno.backend.turnos.model.OcurrenciaTurno;
+import com.mediturno.backend.turnos.model.TurnoSemanal;
 import com.mediturno.backend.turnos.repository.OcurrenciaTurnoRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -26,13 +28,14 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-8, CU-9, CU-10, CU-15, CU-19.
- * CU-8 implementado. Los demás casos de uso conservan su respuesta 501.
+ * CU-8 y CU-15 implementados. Los demás casos de uso conservan su respuesta 501.
  */
 @Service
 public class ReservaService {
     private final OcurrenciaTurnoRepository ocurrenciaTurnoRepository;
     private final ReservaRepository reservaRepository;
     private final PacienteRepository pacienteRepository;
+    private final OrdenRepository ordenRepository;
     private final PaseService paseService;
     private final DisponibilidadService disponibilidadService;
     private final Clock reloj;
@@ -40,11 +43,13 @@ public class ReservaService {
     public ReservaService(OcurrenciaTurnoRepository ocurrenciaTurnoRepository,
             ReservaRepository reservaRepository,
             PacienteRepository pacienteRepository,
+            OrdenRepository ordenRepository,
             PaseService paseService,
             DisponibilidadService disponibilidadService, Clock reloj) {
         this.ocurrenciaTurnoRepository = ocurrenciaTurnoRepository;
         this.reservaRepository = reservaRepository;
         this.pacienteRepository = pacienteRepository;
+        this.ordenRepository = ordenRepository;
         this.paseService = paseService;
         this.disponibilidadService = disponibilidadService;
         this.reloj = reloj;
@@ -87,7 +92,7 @@ public class ReservaService {
             // Segunda barrera: la restricción parcial de PostgreSQL protege el mismo número.
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No fue posible reservar el número seleccionado");
         }
-        return new ReservaResponseDTO(reserva.getIdReserva(), reserva.getNumero(), disponibilidadService.horaEstimada(ocurrencia, reserva.getNumero()));
+        return convertirAReservaResponseDTO(reserva, null);
     }
 
     /** CU-9. */
@@ -95,9 +100,36 @@ public class ReservaService {
         throw new NoImplementadoException();
     }
 
-    /** CU-15. */
+    /**
+     * CU-15. Muestra los datos de la reserva con cualquier estado: una cancelada, anulada o ya atendida se muestra igual, y la
+     * pantalla no deja emitir la orden. Con un identificador que no es válido (vacío, cero o negativo) responde 400 sin consultar
+     * la base; si no existe, 404.
+     */
+    @Transactional(readOnly = true)
     public ReservaResponseDTO buscarReservaPorId(Long idReserva) {
-        throw new NoImplementadoException();
+        validarFormatoIdentificador(idReserva);
+        Reserva reserva = reservaRepository.findById(idReserva).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "El identificador ingresado no existe"));
+        Long numeroOrden = ordenRepository.findByReservaIdReserva(idReserva).map(o -> o.getNumeroOrden()).orElse(null);
+        return convertirAReservaResponseDTO(reserva, numeroOrden);
+    }
+
+    /** Flujo 2.A: el identificador tiene que ser un número entero positivo. */
+    private static void validarFormatoIdentificador(Long idReserva) {
+        if (idReserva == null || idReserva < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El identificador ingresado no es válido");
+        }
+    }
+
+    private ReservaResponseDTO convertirAReservaResponseDTO(Reserva reserva, Long numeroOrden) {
+        OcurrenciaTurno ocurrencia = reserva.getOcurrenciaTurno();
+        TurnoSemanal turno = ocurrencia.getTurnoSemanal();
+        Paciente paciente = reserva.getPaciente();
+        return new ReservaResponseDTO(reserva.getIdReserva(), reserva.getNumero(),
+                disponibilidadService.horaEstimada(ocurrencia, reserva.getNumero()), reserva.getReservaEstado(),
+                paciente.nombreCompleto(), paciente.getCedula(), turno.getMedico().nombreCompleto(),
+                turno.getEspecialidad().getNombre(), ocurrencia.getFecha(), ocurrencia.getHoraInicio(), ocurrencia.getHoraFin(),
+                turno.getConsultorio().getNombre(), numeroOrden);
     }
 
     /** CU-19. */

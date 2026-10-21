@@ -11,6 +11,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
 import tools.jackson.databind.exc.MismatchedInputException;
@@ -46,6 +47,16 @@ public class GlobalExceptionHandler {
         }
         return ResponseEntity.badRequest()
             .body(new ApiError(400, "Hay datos inválidos", List.of(detalle), Instant.now()));
+    }
+
+    /**
+     * Un valor de la ruta o de la consulta que no es del tipo esperado (un identificador que no es un número, una fecha mal
+     * escrita). Es un error de quien llama, no del servidor.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> parametroInvalido(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.badRequest()
+            .body(new ApiError(400, "Hay datos inválidos", List.of("El valor del parámetro «" + ex.getName() + "» no es válido"), Instant.now()));
     }
 
     /** Errores HTTP (ruta inexistente, método no permitido, ResponseStatusException) y errores inesperados. */

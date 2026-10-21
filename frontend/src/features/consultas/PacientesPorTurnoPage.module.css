@@ -1,0 +1,13 @@
+.pagina > * + * { margin-top: 20px; }
+.controles { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; margin-bottom: 20px; }
+/* margin: 0 anula el margen global del label; si no, los campos quedan más arriba que los botones */
+.controles label { display: grid; gap: 8px; margin: 0; }
+.controles .inversa { display: flex; align-items: center; align-self: end; gap: 8px; min-height: 42px; white-space: nowrap; }
+.inversa input { width: auto; margin: 0; }
+.turnos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.turnos button { display: grid; gap: 8px; padding: 16px; text-align: left; white-space: normal; }
+.turnos .seleccionado { border-color: var(--azul); background: var(--azul-claro); box-shadow: inset 0 0 0 1px var(--azul); }
+.leyenda { text-align: left; color: var(--gris); padding: 0 12px 12px; }
+.emitida, .sinEmitir { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 13px; }
+.emitida { color: var(--exito); background: var(--exito-claro); }
+.sinEmitir { color: var(--mostaza-oscuro); background: var(--mostaza-claro); }

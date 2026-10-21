@@ -14,6 +14,23 @@ import com.mediturno.backend.turnos.model.OcurrenciaTurno;
 
 public interface OcurrenciaTurnoRepository extends JpaRepository<OcurrenciaTurno, Long> {
 
+    /** CU-21: solo los turnos del médico en la fecha solicitada; no se aplica la ventana de reserva de CU-8. */
+    @Query("""
+        select o from OcurrenciaTurno o
+        join fetch o.turnoSemanal t
+        join fetch t.especialidad
+        join fetch t.consultorio
+        where t.medico.idUsuario = :idMedico and o.fecha = :fecha
+        order by o.horaInicio, o.idOcurrenciaTurno
+        """)
+    List<OcurrenciaTurno> buscarDelMedicoEnFecha(@Param("idMedico") Long idMedico, @Param("fecha") LocalDate fecha);
+
+    @Query("""
+        select o from OcurrenciaTurno o
+        where o.idOcurrenciaTurno = :id and o.turnoSemanal.medico.idUsuario = :idMedico
+        """)
+    Optional<OcurrenciaTurno> buscarDelMedico(@Param("id") Long id, @Param("idMedico") Long idMedico);
+
     /** Las ocurrencias de los turnos de una especialidad entre dos fechas (inclusive), ordenadas por fecha y hora de inicio. */
     @Query("""
         select o from OcurrenciaTurno o

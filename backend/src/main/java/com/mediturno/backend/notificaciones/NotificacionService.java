@@ -17,6 +17,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.mediturno.backend.common.exception.NoImplementadoException;
+import com.mediturno.backend.consultas.model.Consulta;
+import com.mediturno.backend.consultas.repository.ConsultaRepository;
 import com.mediturno.backend.notificaciones.dto.NotificacionResponseDTO;
 import com.mediturno.backend.notificaciones.model.CanalNotificacion;
 import com.mediturno.backend.notificaciones.model.EstadoNotificacion;
@@ -32,7 +34,7 @@ import com.mediturno.backend.turnos.repository.SuspensionTurnoRepository;
 
 /**
  * Lógica de negocio de: CU-6, CU-8, CU-13, CU-23.
- * Implementado: el aviso de suspensión de un turno (CU-13), en la aplicación y por correo. El aviso push y los demás métodos
+ * Implementados: el aviso de suspensión de un turno (CU-13) y el de consulta registrada (CU-23), en la aplicación y por correo. El aviso push y los demás métodos
  * todavía lanzan NoImplementadoException.
  */
 @Service
@@ -45,16 +47,18 @@ public class NotificacionService {
     private final NotificacionRepository notificacionRepository;
     private final SuspensionTurnoRepository suspensionTurnoRepository;
     private final ReservaRepository reservaRepository;
+    private final ConsultaRepository consultaRepository;
     private final EmailService emailService;
     private final TransactionTemplate transaccion;
     private final Clock reloj;
 
     public NotificacionService(NotificacionRepository notificacionRepository, SuspensionTurnoRepository suspensionTurnoRepository,
-            ReservaRepository reservaRepository, EmailService emailService, PlatformTransactionManager administradorDeTransacciones,
+            ReservaRepository reservaRepository, ConsultaRepository consultaRepository, EmailService emailService, PlatformTransactionManager administradorDeTransacciones,
             Clock reloj) {
         this.notificacionRepository = notificacionRepository;
         this.suspensionTurnoRepository = suspensionTurnoRepository;
         this.reservaRepository = reservaRepository;
+        this.consultaRepository = consultaRepository;
         this.emailService = emailService;
         this.transaccion = new TransactionTemplate(administradorDeTransacciones);
         this.reloj = reloj;
@@ -131,7 +135,11 @@ public class NotificacionService {
     private void enviarCorreo(Long idNotificacion) {
         try {
             CorreoPendiente correo = transaccion.execute(estado -> prepararCorreo(idNotificacion));
-            emailService.enviarAvisoSuspensionTurno(correo.destino(), correo.datos());
+            if (correo.tipo() == TipoNotificacion.CONSULTA_REGISTRADA) {
+                emailService.enviarAvisoHistoriaClinica(correo.destino());
+            } else {
+                emailService.enviarAvisoSuspensionTurno(correo.destino(), correo.datos());
+            }
             marcar(idNotificacion, EstadoNotificacion.ENVIADA);
         } catch (RuntimeException e) {
             log.warn("No se pudo enviar el correo de la notificación {}: {}", idNotificacion, e.getMessage());
@@ -143,13 +151,13 @@ public class NotificacionService {
         }
     }
 
-    private record CorreoPendiente(String destino, Map<String, Object> datos) {
+    private record CorreoPendiente(TipoNotificacion tipo, String destino, Map<String, Object> datos) {
     }
 
     private CorreoPendiente prepararCorreo(Long idNotificacion) {
         Notificacion notificacion = notificacionRepository.findById(idNotificacion).orElseThrow();
         var paciente = notificacion.getUsuario();
-        return new CorreoPendiente(paciente.getCorreo(),
+        return new CorreoPendiente(notificacion.getTipo(), paciente.getCorreo(),
             Map.of("paciente", paciente.getNombre() + " " + paciente.getApellido(), "mensaje", notificacion.getMensaje()));
     }
 
@@ -163,9 +171,43 @@ public class NotificacionService {
         });
     }
 
-    /** CU-23. Uso interno. */
+    /**
+     * CU-23. Uso interno. Avisa al paciente que se incorporó nueva información a su historia clínica, sin exponer contenido
+     * clínico: una notificación en la aplicación y un correo. El correo se manda fuera de la transacción y, si falla, la
+     * notificación queda FALLIDA. El aviso push lo hará otro caso de uso (necesita la aplicación móvil).
+     */
     public void notificarConsultaRegistrada(Long idConsulta) {
-        throw new NoImplementadoException();
+        Long idCorreo = transaccion.execute(estado -> {
+            Consulta consulta = consultaRepository.findById(idConsulta)
+                .orElseThrow(() -> new IllegalArgumentException("No existe la consulta " + idConsulta));
+            LocalDateTime ahora = LocalDateTime.now(reloj);
+            String mensaje = "Se incorporó nueva información a su historia clínica a partir de su consulta del "
+                + consulta.getFecha().format(FECHA) + ". Puede consultarla desde MeDiTurno.";
+
+            Notificacion enLaAplicacion = nuevaDeConsulta(consulta, CanalNotificacion.APLICACION, mensaje, ahora);
+            enLaAplicacion.setEstado(EstadoNotificacion.ENVIADA);
+            enLaAplicacion.setFechaEnvio(ahora);
+            notificacionRepository.save(enLaAplicacion);
+
+            return notificacionRepository.save(nuevaDeConsulta(consulta, CanalNotificacion.EMAIL, mensaje, ahora)).getIdNotificacion();
+        });
+        if (idCorreo != null) {
+            enviarCorreo(idCorreo);
+        }
+    }
+
+    private static Notificacion nuevaDeConsulta(Consulta consulta, CanalNotificacion canal, String mensaje, LocalDateTime ahora) {
+        Notificacion notificacion = new Notificacion();
+        notificacion.setUsuario(consulta.getPaciente());
+        notificacion.setReserva(consulta.getReserva());
+        notificacion.setConsulta(consulta);
+        notificacion.setOrden(consulta.getOrden());
+        notificacion.setTipo(TipoNotificacion.CONSULTA_REGISTRADA);
+        notificacion.setCanal(canal);
+        notificacion.setMensaje(mensaje);
+        notificacion.setFecha(ahora);
+        notificacion.setEstado(EstadoNotificacion.PENDIENTE);
+        return notificacion;
     }
 
     /** CU-6. Las notificaciones de la aplicación de la persona (las últimas 50), la más nueva primero. */

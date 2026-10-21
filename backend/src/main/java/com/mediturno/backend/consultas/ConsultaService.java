@@ -1,6 +1,31 @@
 package com.mediturno.backend.consultas;
 
 import java.util.List;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.stream.Collectors;
+import com.mediturno.backend.consultas.dto.TurnoAtencionDTO;
+import com.mediturno.backend.consultas.model.Consulta;
+import com.mediturno.backend.consultas.model.HistoriaClinica;
+import com.mediturno.backend.consultas.repository.ConsultaRepository;
+import com.mediturno.backend.consultas.repository.HistoriaClinicaRepository;
+import com.mediturno.backend.notificaciones.NotificacionService;
+import com.mediturno.backend.ordenes.model.EstadoOrden;
+import com.mediturno.backend.pacientes.model.Paciente;
+import com.mediturno.backend.reservas.model.EstadoReserva;
+import com.mediturno.backend.reservas.model.Reserva;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import com.mediturno.backend.ordenes.repository.OrdenRepository;
+import com.mediturno.backend.reservas.repository.ReservaRepository;
+import com.mediturno.backend.turnos.repository.OcurrenciaTurnoRepository;
+import com.mediturno.backend.turnos.DisponibilidadService;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
@@ -11,14 +36,118 @@ import org.springframework.stereotype.Service;
 
 /**
  * Lógica de negocio de: CU-11, CU-21, CU-22, CU-23, CU-26.
- * Los métodos todavía no están implementados: lanzan NoImplementadoException (respuesta 501).
+ * Implementados: CU-21 y CU-23. Los demás casos conservan su respuesta 501.
  */
 @Service
 public class ConsultaService {
+    private static final Logger log = LoggerFactory.getLogger(ConsultaService.class);
 
-    /** CU-23. */
+    private final OcurrenciaTurnoRepository ocurrencias;
+    private final ReservaRepository reservas;
+    private final OrdenRepository ordenes;
+    private final DisponibilidadService disponibilidad;
+    private final ConsultaRepository consultas;
+    private final HistoriaClinicaRepository historias;
+    private final NotificacionService notificaciones;
+    private final TransactionTemplate transaccion;
+    private final Clock reloj;
+
+    public ConsultaService(OcurrenciaTurnoRepository ocurrencias, ReservaRepository reservas,
+            OrdenRepository ordenes, DisponibilidadService disponibilidad, ConsultaRepository consultas,
+            HistoriaClinicaRepository historias, NotificacionService notificaciones,
+            PlatformTransactionManager administradorDeTransacciones, Clock reloj) {
+        this.ocurrencias = ocurrencias;
+        this.reservas = reservas;
+        this.ordenes = ordenes;
+        this.disponibilidad = disponibilidad;
+        this.consultas = consultas;
+        this.historias = historias;
+        this.notificaciones = notificaciones;
+        this.transaccion = new TransactionTemplate(administradorDeTransacciones);
+        this.reloj = reloj;
+    }
+
+    /** CU-21: al abrir la pantalla se muestran los turnos de hoy, según el reloj de la aplicación. */
+    @Transactional(readOnly = true)
+    public List<TurnoAtencionDTO> consultarTurnosDeAtencion(Long idMedico, LocalDate fecha) {
+        return ocurrencias.buscarDelMedicoEnFecha(idMedico, fecha == null ? LocalDate.now(reloj) : fecha).stream()
+            .map(o -> new TurnoAtencionDTO(o.getIdOcurrenciaTurno(), o.getFecha(), o.getHoraInicio(), o.getHoraFin(),
+                o.getTurnoSemanal().getEspecialidad().getNombre(), o.getTurnoSemanal().getConsultorio().getNombre(),
+                o.getOcurrenciaTurnoEstado()))
+            .toList();
+    }
+
+    /**
+     * CU-23. Registra la consulta realizada con la orden indicada, en una sola transacción: guarda la consulta en la historia
+     * clínica del paciente (la abre si todavía no tenía), pasa la reserva a ATENDIDA y la orden a UTILIZADA. La reserva se
+     * bloquea: dos registros simultáneos de la misma orden no generan dos consultas. La orden tiene que existir, ser de un
+     * turno del médico y estar emitida (si no, 422; el mismo mensaje en todos los casos, para no revelar órdenes ajenas), y la
+     * consulta no puede estar ya registrada (409). Los campos obligatorios se validan en el DTO (400).
+     * El aviso al paciente se manda después de confirmar el registro: si falla, no lo revierte.
+     */
     public ConsultaResponseDTO registrarConsulta(Long idMedico, Long numeroOrden, RegistrarConsultaDTO datos) {
-        throw new NoImplementadoException();
+        ConsultaResponseDTO registrada = transaccion.execute(estado -> guardarConsulta(idMedico, numeroOrden, datos));
+        try {
+            notificaciones.notificarConsultaRegistrada(registrada.idConsulta());
+        } catch (RuntimeException e) {
+            log.error("La consulta {} se registró, pero no se pudo avisar al paciente: {}", registrada.idConsulta(), e.getMessage());
+        }
+        return registrada;
+    }
+
+    private ConsultaResponseDTO guardarConsulta(Long idMedico, Long numeroOrden, RegistrarConsultaDTO datos) {
+        var orden = ordenes.findById(numeroOrden)
+            .filter(o -> o.getReserva().getOcurrenciaTurno().getTurnoSemanal().getMedico().getIdUsuario().equals(idMedico))
+            .orElseThrow(ConsultaService::ordenNoValida);
+        Reserva reserva = reservas.buscarConLock(orden.getReserva().getIdReserva()).orElseThrow(ConsultaService::ordenNoValida);
+        if (consultas.existsByOrdenNumeroOrden(numeroOrden)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La consulta de esta orden ya fue registrada.");
+        }
+        if (reserva.getReservaEstado() != EstadoReserva.ORDEN_EMITIDA || orden.getOrdenEstado() != EstadoOrden.EMITIDA) {
+            throw ordenNoValida();
+        }
+
+        LocalDateTime ahora = LocalDateTime.now(reloj);
+        Paciente paciente = reserva.getPaciente();
+        HistoriaClinica historia = historias.findFirstByPacienteIdUsuarioOrderByIdHistoriaClinicaAsc(paciente.getIdUsuario())
+            .orElseGet(() -> abrirHistoriaClinica(paciente, ahora));
+        historia.setFechaActualizacion(ahora);
+
+        var turno = reserva.getOcurrenciaTurno().getTurnoSemanal();
+        Consulta consulta = new Consulta();
+        consulta.setPaciente(paciente);
+        consulta.setMedico(turno.getMedico());
+        consulta.setHistoriaClinica(historia);
+        consulta.setReserva(reserva);
+        consulta.setOrden(orden);
+        consulta.setFecha(ahora);
+        consulta.setMotivo(datos.motivo().trim());
+        consulta.setObservaciones(datos.observaciones().trim());
+        consulta.setIndicaciones(datos.indicaciones() == null || datos.indicaciones().isBlank() ? null : datos.indicaciones().trim());
+        consulta.setFechaRegistro(ahora);
+        consultas.saveAndFlush(consulta);
+
+        reserva.setReservaEstado(EstadoReserva.ATENDIDA);
+        orden.setOrdenEstado(EstadoOrden.UTILIZADA);
+        return convertirAConsultaResponseDTO(consulta, turno.getEspecialidad().getNombre());
+    }
+
+    private HistoriaClinica abrirHistoriaClinica(Paciente paciente, LocalDateTime ahora) {
+        HistoriaClinica historia = new HistoriaClinica();
+        historia.setPaciente(paciente);
+        historia.setFechaApertura(ahora);
+        return historias.save(historia);
+    }
+
+    private static ResponseStatusException ordenNoValida() {
+        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "La atención no cuenta con una orden válida para continuar.");
+    }
+
+    private ConsultaResponseDTO convertirAConsultaResponseDTO(Consulta c, String especialidad) {
+        return new ConsultaResponseDTO(c.getIdConsulta(), c.getOrden().getNumeroOrden(), c.getReserva().getIdReserva(),
+            c.getPaciente().getIdUsuario(), c.getPaciente().nombreCompleto(), c.getMedico().getIdUsuario(),
+            c.getMedico().nombreCompleto(), especialidad, c.getFecha(), c.getMotivo(), c.getObservaciones(),
+            c.getIndicaciones(), c.getFechaRegistro());
     }
 
     /** CU-11. */
@@ -32,8 +161,19 @@ public class ConsultaService {
     }
 
     /** CU-21. */
+    @Transactional(readOnly = true)
     public List<ReservaResponseDTO> consultarPacientesPorTurno(Long idMedico, Long idOcurrenciaTurno) {
-        throw new NoImplementadoException();
+        var ocurrencia = ocurrencias.buscarDelMedico(idOcurrenciaTurno, idMedico)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró el turno solicitado."));
+        var ordenesPorReserva = ordenes.buscarPorOcurrencia(idOcurrenciaTurno).stream()
+            .collect(Collectors.toMap(o -> o.getReserva().getIdReserva(), o -> o));
+        return reservas.buscarPacientesPorOcurrencia(idOcurrenciaTurno).stream().map(r -> {
+            var paciente = r.getPaciente();
+            var orden = ordenesPorReserva.get(r.getIdReserva());
+            return new ReservaResponseDTO(r.getIdReserva(), r.getNumero(), disponibilidad.horaEstimada(ocurrencia, r.getNumero()),
+                paciente.getIdUsuario(), paciente.nombreCompleto(), r.getReservaEstado(),
+                orden == null ? null : orden.getNumeroOrden(), orden == null ? null : orden.getOrdenEstado());
+        }).toList();
     }
 
     /** CU-26. */

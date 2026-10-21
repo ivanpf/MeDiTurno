@@ -39,7 +39,7 @@ services:
       MAIL_STARTTLS: ${MAIL_STARTTLS:-false}
       MAIL_REMITENTE: "${MAIL_REMITENTE:-MeDiTurno <no-responder@mediturno.local>}"
     volumes:
-      - ./secrets:/secrets:ro # clave de servicio de Firebase (no se sube a Git)
+      - ./secrets:/secrets:ro,Z # clave de Firebase; Z permite leerla con SELinux (Fedora)
     ports:
       - "8080:8080"
     depends_on:

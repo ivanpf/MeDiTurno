@@ -3,6 +3,7 @@ package com.mediturno.backend.turnos;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -11,9 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.consultorios.model.Consultorio;
 import com.mediturno.backend.consultorios.repository.ConsultorioRepository;
@@ -58,7 +59,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-8, CU-12, CU-13, CU-14, CU-20.
- * Están implementados CU-8 (consulta de ocurrencias disponibles), CU-12, CU-13 y CU-20. CU-14 conserva su respuesta 501.
+ * Están implementados CU-8 (consulta de ocurrencias disponibles), CU-12, CU-13, CU-14 y CU-20.
  */
 @Service
 public class TurnoSemanalService {
@@ -190,7 +191,7 @@ public class TurnoSemanalService {
     }
 
     private static String describir(TurnoSemanal t) {
-        return nombreDe(t.getMedico()) + " · " + nombreDelDia(t.getDia()) + " " + t.getHoraInicio().format(HORA) + "-"
+        return t.getMedico().nombreCompleto() + " · " + nombreDelDia(t.getDia()) + " " + t.getHoraInicio().format(HORA) + "-"
             + t.getHoraFin().format(HORA) + " · " + t.getConsultorio().getNombre() + " (turno #" + t.getIdTurnoSemanal() + ")";
     }
 
@@ -206,14 +207,10 @@ public class TurnoSemanalService {
         };
     }
 
-    private static String nombreDe(Medico medico) {
-        return medico.getApellido() + ", " + medico.getNombre();
-    }
-
     private static TurnoSemanalResponseDTO convertirATurnoSemanalResponseDTO(TurnoSemanal t, SuspensionTurno suspension) {
         TurnoSemanalResponseDTO.SuspensionResumen resumen = suspension == null ? null
             : new TurnoSemanalResponseDTO.SuspensionResumen(suspension.getSuspensionTipo(), suspension.getFechaInicio(), suspension.getFechaFin());
-        return new TurnoSemanalResponseDTO(t.getIdTurnoSemanal(), t.getMedico().getIdUsuario(), nombreDe(t.getMedico()),
+        return new TurnoSemanalResponseDTO(t.getIdTurnoSemanal(), t.getMedico().getIdUsuario(), t.getMedico().nombreCompleto(),
             t.getEspecialidad().getCodigo(), t.getEspecialidad().getNombre(), t.getConsultorio().getCodigo(),
             t.getConsultorio().getNombre(), t.getDia(), t.getHoraInicio(), t.getHoraFin(), t.getCupoMaximo(),
             t.getVigenteDesde(), t.getVigenteHasta(), t.getEstado(), resumen);
@@ -320,7 +317,7 @@ public class TurnoSemanalService {
             .stream()
             .map(r -> new VistaPreviaSuspensionDTO.ReservaAfectada(r.getIdReserva(), r.getOcurrenciaTurno().getFecha(),
                 r.getOcurrenciaTurno().getHoraInicio(), r.getNumero(),
-                r.getPaciente().getApellido() + ", " + r.getPaciente().getNombre(), r.getPaciente().getCedula(),
+                r.getPaciente().nombreCompleto(), r.getPaciente().getCedula(),
                 r.getReservaEstado() == EstadoReserva.ORDEN_EMITIDA))
             .toList();
         int fechas = ocurrenciaTurnoRepository.fechasExistentes(idTurnoSemanal, datos.fechaDesde(), hasta).size();
@@ -366,9 +363,120 @@ public class TurnoSemanalService {
             : "Permanente desde el " + datos.fechaDesde().format(FECHA);
     }
 
-    /** CU-14. */
+    /**
+     * CU-14. Rehabilita el turno y cierra su suspensión dentro de una única transacción. Las ocurrencias existentes
+     * conservan la configuración con la que fueron creadas; solo se reactivan las futuras que coinciden con el día
+     * resultante. La generación completa las fechas que falten según la nueva configuración.
+     */
+    @Transactional
     public TurnoSemanalResponseDTO rehabilitarTurno(Long idTurnoSemanal, RehabilitacionTurnoDTO datos) {
-        throw new NoImplementadoException();
+        LocalDateTime ahora = LocalDateTime.now(reloj);
+        LocalDate hoy = ahora.toLocalDate();
+        TurnoSemanal turno = turnoSemanalRepository.buscarConLock(idTurnoSemanal)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El turno seleccionado no existe."));
+        if (turno.getEstado() != EstadoTurnoSemanal.SUSPENDIDO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "El turno ya no está suspendido (estado actual: " + turno.getEstado().name().toLowerCase() + ").");
+        }
+        SuspensionTurno suspension = suspensionTurnoRepository.buscarSinRehabilitarDelTurno(idTurnoSemanal).stream()
+            .filter(s -> !s.getFechaInicio().isAfter(hoy)
+                && (s.getFechaFin() == null || !s.getFechaFin().isBefore(hoy)))
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                "El turno está suspendido, pero no tiene una suspensión vigente para rehabilitar."));
+
+        Medico medico = medicoRepository.buscarConLock(turno.getMedico().getIdUsuario())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El médico del turno no existe."));
+        String codigoConsultorio = datos.codigoConsultorio() == null ? turno.getConsultorio().getCodigo() : datos.codigoConsultorio().trim();
+        if (codigoConsultorio.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seleccione el consultorio.");
+        }
+        Consultorio consultorio = consultorioRepository.buscarConLock(codigoConsultorio)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El consultorio seleccionado no existe."));
+
+        DiaSemana dia = datos.dia() == null ? turno.getDia() : datos.dia();
+        var horaInicio = datos.horaInicio() == null ? turno.getHoraInicio() : datos.horaInicio();
+        var horaFin = datos.horaFin() == null ? turno.getHoraFin() : datos.horaFin();
+        Integer cupoMaximo = datos.cupoMaximo() == null ? turno.getCupoMaximo() : datos.cupoMaximo();
+        validarConfiguracionRehabilitacion(turno, medico, consultorio, dia, horaInicio, horaFin, cupoMaximo, hoy);
+
+        LocalDate vigenteDesde = turno.getVigenteDesde().isAfter(hoy) ? turno.getVigenteDesde() : hoy;
+        List<TurnoSemanal> conflictos = turnoSemanalRepository.buscarSuperposiciones(dia,
+                medico.getIdUsuario(), consultorio.getCodigo(), horaInicio, horaFin, vigenteDesde)
+            .stream()
+            .filter(otro -> !otro.getIdTurnoSemanal().equals(turno.getIdTurnoSemanal()))
+            .filter(otro -> turno.getVigenteHasta() == null || !otro.getVigenteDesde().isAfter(turno.getVigenteHasta()))
+            .toList();
+        if (!conflictos.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Superposición con: " + conflictos.stream().map(TurnoSemanalService::describir).collect(Collectors.joining("; ")) + ".");
+        }
+
+        turno.setDia(dia);
+        turno.setHoraInicio(horaInicio);
+        turno.setHoraFin(horaFin);
+        turno.setConsultorio(consultorio);
+        turno.setCupoMaximo(cupoMaximo);
+        turno.setEstado(EstadoTurnoSemanal.ACTIVO);
+        suspension.setFechaRehabilitacion(ahora);
+
+        reactivarOcurrenciasFuturas(turno, suspension, ahora);
+        generadorOcurrenciasService.generarOcurrenciasDe(turno, ahora, disponibilidadService.diasDeReserva());
+
+        return convertirATurnoSemanalResponseDTO(turno, null);
+    }
+
+    private static void validarConfiguracionRehabilitacion(TurnoSemanal turno, Medico medico, Consultorio consultorio,
+            DiaSemana dia, LocalTime horaInicio, LocalTime horaFin, Integer cupoMaximo, LocalDate hoy) {
+        if (horaInicio == null || horaFin == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora de inicio y de fin son obligatorias.");
+        }
+        if (!horaFin.isAfter(horaInicio)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora de fin debe ser posterior a la hora de inicio.");
+        }
+        if (cupoMaximo == null || cupoMaximo < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El máximo de pacientes debe ser al menos 1.");
+        }
+        if (turno.getVigenteHasta() != null && turno.getVigenteHasta().isBefore(hoy)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La vigencia del turno ya terminó.");
+        }
+        if (medico.getEstado() != EstadoActivacion.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El médico del turno está inactivo.");
+        }
+        if (turno.getEspecialidad().getEstado() != EstadoActivacion.ACTIVO
+                || medico.getEspecialidades().stream().noneMatch(e -> e.getCodigo().equals(turno.getEspecialidad().getCodigo()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "El médico no tiene habilitada la especialidad del turno.");
+        }
+        if (consultorio.getEstado() != EstadoActivacion.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El consultorio seleccionado está inactivo.");
+        }
+        if (dia == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seleccione el día de la semana.");
+        }
+    }
+
+    private void reactivarOcurrenciasFuturas(TurnoSemanal turno, SuspensionTurno suspension, LocalDateTime ahora) {
+        LocalDate hoy = ahora.toLocalDate();
+        LocalDate desde = suspension.getFechaInicio().isAfter(hoy) ? suspension.getFechaInicio() : hoy;
+        LocalDate hasta = disponibilidadService.ultimaFechaReservable(hoy);
+        if (suspension.getFechaFin() != null && suspension.getFechaFin().isBefore(hasta)) {
+            hasta = suspension.getFechaFin();
+        }
+        if (turno.getVigenteHasta() != null && turno.getVigenteHasta().isBefore(hasta)) {
+            hasta = turno.getVigenteHasta();
+        }
+        if (desde.isAfter(hasta)) {
+            return;
+        }
+        for (OcurrenciaTurno ocurrencia : ocurrenciaTurnoRepository.buscarDelTurnoEntreFechasConLock(
+                turno.getIdTurnoSemanal(), desde, hasta)) {
+            if (ocurrencia.getOcurrenciaTurnoEstado() == EstadoOcurrenciaTurno.SUSPENDIDA
+                    && ocurrencia.getFecha().getDayOfWeek() == turno.getDia().aDayOfWeek()
+                    && LocalDateTime.of(ocurrencia.getFecha(), ocurrencia.getHoraInicio()).isAfter(ahora)) {
+                ocurrencia.setOcurrenciaTurnoEstado(EstadoOcurrenciaTurno.HABILITADA);
+            }
+        }
     }
 
     /**
@@ -476,7 +584,7 @@ public class TurnoSemanalService {
         TurnoSemanal turno = ocurrencia.getTurnoSemanal();
         Medico medico = turno.getMedico();
         return new OcurrenciaTurnoDTO(ocurrencia.getIdOcurrenciaTurno(), medico.getIdUsuario(),
-                medico.getNombre() + " " + medico.getApellido(), ocurrencia.getFecha(), ocurrencia.getHoraInicio(),
+                medico.nombreCompleto(), ocurrencia.getFecha(), ocurrencia.getHoraInicio(),
                 ocurrencia.getHoraFin(), turno.getConsultorio().getCodigo(), ocurrencia.getCupos(),
                 List.copyOf(numerosNoDisponibles(ocurrencia)));
     }
