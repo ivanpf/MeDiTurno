@@ -38,6 +38,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.mediturno.backend.BasePostgresEmbebida;
+import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.consultas.dto.ConsultaResponseDTO;
 import com.mediturno.backend.consultas.dto.RegistrarConsultaDTO;
 
@@ -71,6 +72,7 @@ class RegistroConsultaIntegracionTest extends BasePostgresEmbebida {
     Long paciente;
     Long funcionario;
     Long turno;
+    String codigoEspecialidad;
     int dias;
 
     Long id(String sql, Object... args) {
@@ -91,9 +93,10 @@ class RegistroConsultaIntegracionTest extends BasePostgresEmbebida {
 
     @BeforeEach
     void preparar() {
-        String especialidad = "E" + UUID.randomUUID().toString().substring(0, 15);
+        codigoEspecialidad = "E" + UUID.randomUUID().toString().substring(0, 15);
         String consultorio = "C" + UUID.randomUUID().toString().substring(0, 15);
-        jdbc.update("insert into especialidad(codigo,nombre,requiere_pase,estado) values (?,?,false,'ACTIVO')", especialidad, "Cardiología " + especialidad);
+        jdbc.update("insert into especialidad(codigo,nombre,requiere_pase,estado) values (?,?,false,'ACTIVO')",
+            codigoEspecialidad, "Cardiología " + codigoEspecialidad);
         jdbc.update("insert into consultorio(codigo,nombre,ubicacion,estado) values (?,'Consultorio 1','Piso 1','ACTIVO')", consultorio);
         medico = medico();
         otroMedico = medico();
@@ -102,7 +105,8 @@ class RegistroConsultaIntegracionTest extends BasePostgresEmbebida {
         funcionario = usuario("Fede", "Ruiz");
         jdbc.update("insert into funcionario(id_usuario) values (?)", funcionario);
         turno = id("insert into turno_semanal(id_medico,codigo_especialidad,codigo_consultorio,dia,hora_inicio,hora_fin,cupo_maximo,vigente_desde,estado) "
-            + "values (?,?,?,'MIERCOLES','09:00','12:00',6,?,'ACTIVO') returning id_turno_semanal", medico, especialidad, consultorio, HOY.minusDays(30));
+            + "values (?,?,?,'MIERCOLES','09:00','12:00',6,?,'ACTIVO') returning id_turno_semanal",
+            medico, codigoEspecialidad, consultorio, HOY.minusDays(30));
         dias = 0;
     }
 
@@ -264,5 +268,39 @@ class RegistroConsultaIntegracionTest extends BasePostgresEmbebida {
         var errores = validador.validate(new RegistrarConsultaDTO(" ", null, "x".repeat(5001))).stream()
             .map(v -> v.getPropertyPath().toString()).collect(Collectors.toSet());
         assertEquals(java.util.Set.of("motivo", "observaciones", "indicaciones"), errores);
+    }
+
+    @Test
+    void elPacienteConsultaSuHistoriaConFiltrosOrdenYDetallePropios() {
+        assertTrue(consultas.consultarHistoriaClinicaPropia(paciente, CriteriosBusquedaDTO.vacio()).isEmpty());
+
+        ConsultaResponseDTO primera = consultas.registrarConsulta(medico, ordenEmitida(), DATOS);
+        jdbc.update("update consulta set fecha=? where id_consulta=?", HOY.minusDays(2).atTime(10, 0), primera.idConsulta());
+        ConsultaResponseDTO segunda = consultas.registrarConsulta(medico, ordenEmitida(), DATOS);
+
+        List<ConsultaResponseDTO> descendente =
+            consultas.consultarHistoriaClinicaPropia(paciente, CriteriosBusquedaDTO.vacio());
+        assertEquals(List.of(segunda.idConsulta(), primera.idConsulta()),
+            descendente.stream().map(ConsultaResponseDTO::idConsulta).toList());
+
+        CriteriosBusquedaDTO filtros = new CriteriosBusquedaDTO(medico, codigoEspecialidad, null, null, null,
+            "fecha", false, HOY.minusDays(2), HOY);
+        List<ConsultaResponseDTO> ascendente = consultas.consultarHistoriaClinicaPropia(paciente, filtros);
+        assertEquals(List.of(primera.idConsulta(), segunda.idConsulta()),
+            ascendente.stream().map(ConsultaResponseDTO::idConsulta).toList());
+
+        CriteriosBusquedaDTO filtroOtroMedico = new CriteriosBusquedaDTO(
+            this.otroMedico, null, null, null, null, null, null, null, null);
+        assertTrue(consultas.consultarHistoriaClinicaPropia(paciente, filtroOtroMedico).isEmpty());
+        CriteriosBusquedaDTO fueraDelPeriodo = new CriteriosBusquedaDTO(
+            null, null, null, null, null, null, null, HOY, HOY);
+        assertEquals(List.of(segunda.idConsulta()), consultas.consultarHistoriaClinicaPropia(paciente, fueraDelPeriodo)
+            .stream().map(ConsultaResponseDTO::idConsulta).toList());
+
+        assertEquals(primera.idConsulta(),
+            consultas.consultarDetalleHistoriaClinicaPropia(paciente, primera.idConsulta()).idConsulta());
+        ResponseStatusException ajena = assertThrows(ResponseStatusException.class,
+            () -> consultas.consultarDetalleHistoriaClinicaPropia(this.otroMedico, primera.idConsulta()));
+        assertEquals(404, ajena.getStatusCode().value());
     }
 }

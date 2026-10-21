@@ -53,6 +53,13 @@ public class ConsultaController {
         return consultaService.consultarHistoriaClinicaPropia(usuarioActual.obtenerIdPacienteAutenticado(), criterios);
     }
 
+    @RolesPermitidos(Paciente.class)
+    @GetMapping("/pacientes/me/historia-clinica/{idConsulta}")
+    public ConsultaResponseDTO consultarDetalleHistoriaClinicaPropia(@PathVariable Long idConsulta) {
+        return consultaService.consultarDetalleHistoriaClinicaPropia(
+            usuarioActual.obtenerIdPacienteAutenticado(), idConsulta);
+    }
+
     @GetMapping("/consultas/historia-clinica")
     public List<ConsultaResponseDTO> consultarHistoriaClinicaDuranteAtencion(@RequestParam Long idPaciente) {
         return consultaService.consultarHistoriaClinicaDuranteAtencion(usuarioActual.obtenerIdMedicoAutenticado(), idPaciente);
