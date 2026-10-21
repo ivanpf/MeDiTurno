@@ -22,11 +22,14 @@ const estilos = StyleSheet.create({
   carga: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   semana: { gap: 10 },
   tarjeta: { borderWidth: 1, borderColor: COLORS.borde, borderRadius: 8, padding: 14, gap: 6 },
-  elegida: { borderColor: COLORS.azul, backgroundColor: COLORS.azulClaro, borderWidth: 2 },
+  elegida: { borderColor: COLORS.azul, backgroundColor: COLORS.azulClaro },
   deshabilitada: { opacity: 0.5 },
-  numeros: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  numero: { minWidth: 100, flexGrow: 1, alignItems: 'center', padding: 12,
-    borderWidth: 1, borderColor: COLORS.borde, borderRadius: 8, gap: 5 },
+  numeros: { gap: 10 },
+  numero: { flexDirection: 'row', alignItems: 'center', minHeight: 72, padding: 12,
+    borderWidth: 1, borderColor: COLORS.borde, borderRadius: 8, gap: 8 },
+  numeroEtiqueta: { flex: 1 },
+  numeroHora: { flex: 1, textAlign: 'center' },
+  numeroEstado: { flex: 1, textAlign: 'right' },
   resumen: { backgroundColor: COLORS.mostazaClaro, borderRadius: 8, padding: 16, gap: 8 },
   exito: { backgroundColor: COLORS.exitoClaro, borderRadius: 8, padding: 16, gap: 10 },
   tituloExito: { fontSize: 20, fontWeight: '700', color: COLORS.exito },
@@ -141,7 +144,7 @@ export default function ReservarScreen() {
                           <Text style={estilos.fuerte}>{fechaVisible(item.fecha)}</Text>
                           <Text style={estilos.texto}>{item.horaInicio.slice(0, 5)}–{item.horaFin.slice(0, 5)}</Text>
                           <Text style={estilos.texto}>Consultorio: {item.consultorio}</Text>
-                          <Text style={estilos.texto}>{libres} cupos libres{seleccionado ? ' · Seleccionado' : ''}</Text>
+                          <Text style={estilos.texto}>{libres} cupos libres</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -164,9 +167,9 @@ export default function ReservarScreen() {
                         accessibilityState={{ selected: seleccionado, disabled: deshabilitado }}
                         disabled={deshabilitado} onPress={() => flujo.seleccionarNumero(item.numero)}
                         style={[estilos.numero, seleccionado && estilos.elegida, deshabilitado && estilos.deshabilitada]}>
-                        <Text style={estilos.fuerte}>N.º {item.numero}</Text>
-                        <Text style={estilos.texto}>~{item.hora}</Text>
-                        <Text style={estilos.texto}>{!item.disponible ? 'No disponible' : seleccionado ? 'Seleccionado' : 'Libre'}</Text>
+                        <Text style={[estilos.fuerte, estilos.numeroEtiqueta]}>N.º {item.numero}</Text>
+                        <Text style={[estilos.texto, estilos.numeroHora]}>~{item.hora}</Text>
+                        <Text style={[estilos.texto, estilos.numeroEstado]}>{!item.disponible ? 'No disponible' : 'Libre'}</Text>
                       </TouchableOpacity>
                     );
                   })}
