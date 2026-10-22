@@ -40,7 +40,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Lógica de negocio de: CU-11, CU-21, CU-22, CU-23, CU-26.
- * Implementados: CU-11, CU-21 y CU-23. Los demás casos conservan su respuesta 501.
+ * Implementados: CU-11, CU-21, CU-22 y CU-23. Los demás casos conservan su respuesta 501.
  */
 @Service
 public class ConsultaService {
@@ -209,9 +209,34 @@ public class ConsultaService {
             .getTurnoSemanal().getEspecialidad().getNombre());
     }
 
-    /** CU-22. */
+    /** CU-22. Solo lectura: requiere una reserva u orden válida del paciente con el médico para el día de atención. */
+    @Transactional(readOnly = true)
     public List<ConsultaResponseDTO> consultarHistoriaClinicaDuranteAtencion(Long idMedico, Long idPaciente) {
-        throw new NoImplementadoException();
+        validarContextoDeAtencion(idMedico, idPaciente);
+        return consultas.buscarAntecedentesDePaciente(idPaciente, LocalDateTime.now(reloj)).stream()
+            .map(c -> convertirAConsultaResponseDTO(c, c.getReserva().getOcurrenciaTurno()
+                .getTurnoSemanal().getEspecialidad().getNombre()))
+            .toList();
+    }
+
+    /** CU-22. Revalida el acceso al abrir cada detalle; no admite consultas de otro paciente. */
+    @Transactional(readOnly = true)
+    public ConsultaResponseDTO consultarDetalleDuranteAtencion(Long idMedico, Long idPaciente, Long idConsulta) {
+        validarContextoDeAtencion(idMedico, idPaciente);
+        Consulta consulta = consultas.buscarAtencionFinalizadaDePaciente(idPaciente, idConsulta, EstadoReserva.ATENDIDA)
+            .filter(c -> !c.getFecha().isAfter(LocalDateTime.now(reloj)))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró la atención solicitada."));
+        return convertirAConsultaResponseDTO(consulta, consulta.getReserva().getOcurrenciaTurno()
+            .getTurnoSemanal().getEspecialidad().getNombre());
+    }
+
+    private void validarContextoDeAtencion(Long idMedico, Long idPaciente) {
+        if (idPaciente == null || idPaciente < 1
+                || !reservas.existeAtencionAutorizada(idMedico, idPaciente, LocalDate.now(reloj))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "No existe una atención autorizada para consultar la historia clínica de este paciente. "
+                + "Seleccione una reserva vigente u orden emitida válida de un turno propio del día de hoy.");
+        }
     }
 
     /** CU-21. */
