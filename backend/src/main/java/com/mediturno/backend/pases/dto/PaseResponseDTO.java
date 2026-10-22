@@ -1,7 +1,14 @@
 package com.mediturno.backend.pases.dto;
 
-/**
- * TODO: definir los campos al implementar el caso de uso.
- */
-public record PaseResponseDTO() {
-}
+import com.mediturno.backend.pases.model.EstadoPase;
+import java.time.LocalDateTime;
+
+public record PaseResponseDTO(
+    Long idPase,
+    Long idConsulta,
+    String especialidadOrigen,
+    String especialidadDestino,
+    LocalDateTime fechaEmision,
+    LocalDateTime fechaVigenciaCalculada, 
+    EstadoPase paseEstado
+) {}

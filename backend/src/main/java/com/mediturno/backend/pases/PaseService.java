@@ -9,6 +9,10 @@ import com.mediturno.backend.pases.model.EstadoPase;
 import com.mediturno.backend.pases.model.Pase;
 import com.mediturno.backend.pases.model.VigenciaPase;
 import com.mediturno.backend.pases.repository.PaseRepository;
+import com.mediturno.backend.consultas.model.Consulta;
+import com.mediturno.backend.especialidades.model.Especialidad;
+import com.mediturno.backend.consultas.repository.ConsultaRepository;
+import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,17 +28,72 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public class PaseService {
+    
     private final PaseRepository paseRepository;
     private final Clock reloj;
+    
+    // Agregamos los repositorios necesarios para el CU-24
+    private final ConsultaRepository consultaRepository;
+    private final EspecialidadRepository especialidadRepository;
 
-    public PaseService(PaseRepository paseRepository, Clock reloj) {
+    // Actualizamos el constructor para inyectarlos (Spring lo hará automáticamente)
+    public PaseService(PaseRepository paseRepository, Clock reloj, 
+                       ConsultaRepository consultaRepository, 
+                       EspecialidadRepository especialidadRepository) {
         this.paseRepository = paseRepository;
         this.reloj = reloj;
+        this.consultaRepository = consultaRepository;
+        this.especialidadRepository = especialidadRepository;
     }
 
     /** CU-24. */
+    @Transactional
     public PaseResponseDTO emitirPase(Long idMedico, Long idConsulta, EmitirPaseDTO datos) {
-        throw new NoImplementadoException();
+        // 1. Buscar la consulta de origen
+        Consulta consulta = consultaRepository.findById(idConsulta)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La consulta no existe"));
+
+        // 2. Validar que el médico que intenta emitir el pase sea el mismo que realizó la consulta
+        if (!consulta.getMedico().getIdUsuario().equals(idMedico)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene autorización para operar sobre esta consulta");
+        }
+
+        // 3. Validar que la especialidad de destino exista y esté activa
+        Especialidad destino = especialidadRepository.findById(datos.especialidadDestino())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Especialidad de destino no encontrada"));
+        
+        // Asumo que el estado viene como "ACTIVO" en String o Enum. Uso toString() por seguridad para evitar conflictos.
+        if (!"ACTIVO".equals(destino.getEstado().toString())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La especialidad de destino no está disponible");
+        }
+
+        // 4. Determinar especialidad de origen navegando el modelo
+        String especialidadOrigen = consulta.getReserva().getOcurrenciaTurno().getTurnoSemanal().getEspecialidad().getCodigo();
+
+        // 5. Crear el Pase utilizando el 'reloj' del equipo para la fecha
+        LocalDateTime ahora = LocalDateTime.now(reloj);
+        Pase pase = new Pase();
+        pase.setPaciente(consulta.getPaciente());
+        pase.setConsulta(consulta);
+        pase.setEspecialidadOrigen(destino);
+        pase.setEspecialidadDestino(destino);
+        pase.setFechaEmision(ahora);
+        pase.setPaseEstado(EstadoPase.VIGENTE);
+
+        Pase paseGuardado = paseRepository.save(pase);
+
+        // 6. Calcular la vigencia con la utilidad que ya crearon tus compañeros
+        LocalDateTime vigenciaCalculada = VigenciaPase.MAXIMA.vencimiento(paseGuardado.getFechaEmision());
+        // 7. Retornar DTO
+        return new PaseResponseDTO(
+                paseGuardado.getIdPase(),
+                paseGuardado.getConsulta().getIdConsulta(),
+                paseGuardado.getEspecialidadOrigen().getCodigo(),   // <-- Agrega .getCodigo()
+                paseGuardado.getEspecialidadDestino().getCodigo(),  // <-- Agrega .getCodigo()
+                paseGuardado.getFechaEmision(),
+                vigenciaCalculada,
+                paseGuardado.getPaseEstado()
+        );
     }
 
     /** CU-25. */
