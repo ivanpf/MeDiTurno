@@ -7,6 +7,7 @@ import com.mediturno.backend.common.seguridad.UsuarioActual;
 import com.mediturno.backend.pases.dto.EmitirPaseDTO;
 import com.mediturno.backend.pases.dto.PaseResponseDTO;
 import com.mediturno.backend.pases.dto.ReconsultaDTO;
+import jakarta.validation.Valid; // <-- Agregamos el import de la validación
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,7 +38,10 @@ public class PaseController {
 
     @PostMapping("/consultas/{idConsulta}/pases")
     @ResponseStatus(HttpStatus.CREATED)
-    public PaseResponseDTO emitirPase(@PathVariable Long idConsulta, @RequestBody EmitirPaseDTO datos) {
+    public PaseResponseDTO emitirPase(
+            @PathVariable Long idConsulta, 
+            @Valid @RequestBody EmitirPaseDTO datos) { // <-- Agregamos @Valid aquí
+        
         return paseService.emitirPase(usuarioActual.obtenerIdMedicoAutenticado(), idConsulta, datos);
     }
 

@@ -1,7 +1,8 @@
 package com.mediturno.backend.pases.dto;
 
-/**
- * CU-24: especialidad de destino y fecha de vigencia (hasta 60 días). TODO: definir los campos al implementar el caso de uso.
- */
-public record EmitirPaseDTO() {
-}
+import jakarta.validation.constraints.NotBlank;
+
+public record EmitirPaseDTO(
+    @NotBlank(message = "La especialidad de destino es obligatoria")
+    String especialidadDestino
+) {}
