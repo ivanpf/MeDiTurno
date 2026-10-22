@@ -191,7 +191,7 @@ public class TurnoSemanalService {
     }
 
     private static String describir(TurnoSemanal t) {
-        return nombreDe(t.getMedico()) + " · " + nombreDelDia(t.getDia()) + " " + t.getHoraInicio().format(HORA) + "-"
+        return t.getMedico().nombreCompleto() + " · " + nombreDelDia(t.getDia()) + " " + t.getHoraInicio().format(HORA) + "-"
             + t.getHoraFin().format(HORA) + " · " + t.getConsultorio().getNombre() + " (turno #" + t.getIdTurnoSemanal() + ")";
     }
 
@@ -207,14 +207,10 @@ public class TurnoSemanalService {
         };
     }
 
-    private static String nombreDe(Medico medico) {
-        return medico.getApellido() + ", " + medico.getNombre();
-    }
-
     private static TurnoSemanalResponseDTO convertirATurnoSemanalResponseDTO(TurnoSemanal t, SuspensionTurno suspension) {
         TurnoSemanalResponseDTO.SuspensionResumen resumen = suspension == null ? null
             : new TurnoSemanalResponseDTO.SuspensionResumen(suspension.getSuspensionTipo(), suspension.getFechaInicio(), suspension.getFechaFin());
-        return new TurnoSemanalResponseDTO(t.getIdTurnoSemanal(), t.getMedico().getIdUsuario(), nombreDe(t.getMedico()),
+        return new TurnoSemanalResponseDTO(t.getIdTurnoSemanal(), t.getMedico().getIdUsuario(), t.getMedico().nombreCompleto(),
             t.getEspecialidad().getCodigo(), t.getEspecialidad().getNombre(), t.getConsultorio().getCodigo(),
             t.getConsultorio().getNombre(), t.getDia(), t.getHoraInicio(), t.getHoraFin(), t.getCupoMaximo(),
             t.getVigenteDesde(), t.getVigenteHasta(), t.getEstado(), resumen);
@@ -321,7 +317,7 @@ public class TurnoSemanalService {
             .stream()
             .map(r -> new VistaPreviaSuspensionDTO.ReservaAfectada(r.getIdReserva(), r.getOcurrenciaTurno().getFecha(),
                 r.getOcurrenciaTurno().getHoraInicio(), r.getNumero(),
-                r.getPaciente().getApellido() + ", " + r.getPaciente().getNombre(), r.getPaciente().getCedula(),
+                r.getPaciente().nombreCompleto(), r.getPaciente().getCedula(),
                 r.getReservaEstado() == EstadoReserva.ORDEN_EMITIDA))
             .toList();
         int fechas = ocurrenciaTurnoRepository.fechasExistentes(idTurnoSemanal, datos.fechaDesde(), hasta).size();
@@ -588,7 +584,7 @@ public class TurnoSemanalService {
         TurnoSemanal turno = ocurrencia.getTurnoSemanal();
         Medico medico = turno.getMedico();
         return new OcurrenciaTurnoDTO(ocurrencia.getIdOcurrenciaTurno(), medico.getIdUsuario(),
-                medico.getNombre() + " " + medico.getApellido(), ocurrencia.getFecha(), ocurrencia.getHoraInicio(),
+                medico.nombreCompleto(), ocurrencia.getFecha(), ocurrencia.getHoraInicio(),
                 ocurrencia.getHoraFin(), turno.getConsultorio().getCodigo(), ocurrencia.getCupos(),
                 List.copyOf(numerosNoDisponibles(ocurrencia)));
     }
