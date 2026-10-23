@@ -1,105 +1,122 @@
-/**
- * Hook para gestionar reservas (CU-8, CU-9, CU-10).
- */
+// Reservas de mobile: CU-8 (crear) y CU-9 (cancelar), separados en los bloques siguientes.
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { reservarOrden, cancelarReserva, listarMisReservas } from '../api/endpoints';
+import { motivoNoCancelable } from '../../../src/features/reservas/cancelacionReserva';
 
-import { useState, useCallback } from 'react';
-import {
-  reservarOrden,
-  cancelarReserva,
-  listarMisReservas,
-} from '../api/endpoints';
-import { isApiError } from '../api/client';
-import { sePuedeCancelar } from '../utils/date';
+function describirError(error, accion) {
+  if (error?.estado === 501) return {
+    estado: 501, detalles: [],
+    mensaje: accion === 'listar'
+      ? 'La consulta de sus reservas todavía no está disponible. Intente nuevamente más tarde.'
+      : 'La cancelación de reservas todavía no está disponible. Su reserva no se modificó.',
+  };
+  return { estado: error?.estado, detalles: error?.detalles || [],
+    mensaje: error?.mensaje || (accion === 'listar' ? 'No se pudieron cargar sus reservas. Intente nuevamente.'
+      : 'No se pudo confirmar el resultado de la cancelación. Actualice sus reservas antes de intentarlo nuevamente.') };
+}
 
-/**
- * @returns {Object}
- */
 export function useReservas() {
   const [reservas, setReservas] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
+  const [errorCancelacion, setErrorCancelacion] = useState(null);
+  const [cancelando, setCancelando] = useState(null);
+  const [requiereActualizar, setRequiereActualizar] = useState(false);
+  const activo = useRef(true);
+  const consulta = useRef(0);
+  const listaActual = useRef([]);
+  const envio = useRef(null);
+  const consultando = useRef(false);
+  const listaVigente = useRef(false);
 
-  /**
-   * Carga el historial de reservas del paciente.
-   * @param {Object} [criterios]
-   */
+  useEffect(() => {
+    activo.current = true;
+    return () => { activo.current = false; consulta.current++; };
+  }, []);
+
+  // Listado de apoyo del CU-9 mediante el endpoint existente del CU-10.
   const cargarReservas = useCallback(async (criterios = {}) => {
+    if (envio.current !== null) return false;
+    const solicitud = ++consulta.current;
+    consultando.current = true;
+    listaVigente.current = false;
     setCargando(true);
     setError(null);
+    setErrorCancelacion(null);
     try {
-      const data = await listarMisReservas(criterios);
-      setReservas(data || []);
-    } catch (err) {
-      setError(isApiError(err) ? err : new Error('No se pudieron cargar las reservas'));
+      const datos = await listarMisReservas(criterios);
+      if (!Array.isArray(datos)) throw new Error('Respuesta de reservas inválida');
+      if (!activo.current || solicitud !== consulta.current) return false;
+      listaActual.current = datos;
+      listaVigente.current = true;
+      setReservas(datos);
+      setRequiereActualizar(false);
+      return true;
+    } catch (fallo) {
+      if (activo.current && solicitud === consulta.current) setError(describirError(fallo, 'listar'));
+      return false;
     } finally {
-      setCargando(false);
+      if (activo.current && solicitud === consulta.current) {
+        consultando.current = false;
+        setCargando(false);
+      }
     }
   }, []);
 
-  /**
-   * Crea una nueva reserva (CU-8).
-   * @param {Object} data - { idOcurrenciaTurno, numero }
-   * @returns {Promise<Object|null>} Reserva creada o null si error
-   */
-  const crearReserva = useCallback(async (data) => {
+  // ---------------- CU-8: creación de una reserva ----------------
+  // La pantalla reservar.js usa su propio useReservaConsulta; se conserva esta función compartida.
+  const crearReserva = useCallback(async (datos) => {
     setError(null);
     try {
-      const reserva = await reservarOrden(data);
-      // Agregar a la lista local
-      setReservas((prev) => [reserva, ...prev]);
+      const reserva = await reservarOrden(datos);
+      if (activo.current) {
+        listaActual.current = [reserva, ...listaActual.current];
+        setReservas(listaActual.current);
+      }
       return reserva;
-    } catch (err) {
-      const apiError = isApiError(err) ? err : new Error('No se pudo crear la reserva');
-      setError(apiError);
-      throw apiError;
+    } catch (fallo) {
+      if (activo.current) setError(fallo);
+      throw fallo;
     }
   }, []);
 
-  /**
-   * Cancela una reserva (CU-9).
-   * @param {number} idReserva
-   * @param {Object} reserva - Objeto reserva completo para validar >48h
-   * @returns {Promise<boolean>}
-   */
-  const cancelar = useCallback(async (idReserva, reserva) => {
-    if (reserva && !sePuedeCancelar(reserva.fechaOcurrencia?.split('T')[0], reserva.horaInicio)) {
-      const err = new Error('No se puede cancelar: faltan menos de 48 horas');
-      err.estado = 422;
-      setError(err);
-      throw err;
+  // ---------------- CU-9: cancelación de una reserva ----------------
+  const cancelar = useCallback(async (idReserva) => {
+    // Bloqueo inmediato: protege frente al doble toque y callbacks de un render anterior.
+    if (!activo.current || envio.current !== null || consultando.current || !listaVigente.current) return false;
+    const reserva = listaActual.current.find((item) => item.idReserva === idReserva);
+    const motivo = motivoNoCancelable(reserva);
+    if (motivo) {
+      setErrorCancelacion({ mensaje: motivo, detalles: [] });
+      return false;
     }
-    setError(null);
+    envio.current = idReserva;
+    setCancelando(idReserva);
+    setErrorCancelacion(null);
     try {
       await cancelarReserva(idReserva);
-      // Actualizar estado local
-      setReservas((prev) =>
-        prev.map((r) => (r.id === idReserva ? { ...r, estado: 'CANCELADA' } : r))
-      );
+      if (!activo.current) return false;
+      // Se actualiza únicamente después de la confirmación del servidor (204).
+      listaActual.current = listaActual.current.map((item) => item.idReserva === idReserva
+        ? { ...item, estado: 'CANCELADA' } : item);
+      setReservas(listaActual.current);
       return true;
-    } catch (err) {
-      const apiError = isApiError(err) ? err : new Error('No se pudo cancelar la reserva');
-      setError(apiError);
-      throw apiError;
+    } catch (fallo) {
+      if (activo.current) {
+        setErrorCancelacion(describirError(fallo, 'cancelar'));
+        // Tras un rechazo o una respuesta incierta se exige consultar otra vez; nunca se repite el POST solo.
+        listaVigente.current = false;
+        setRequiereActualizar(true);
+      }
+      return false;
+    } finally {
+      envio.current = null;
+      if (activo.current) setCancelando(null);
     }
   }, []);
 
-  /**
-   * Verifica si una reserva se puede cancelar.
-   * @param {Object} reserva
-   * @returns {boolean}
-   */
-  const puedeCancelar = useCallback((reserva) => {
-    return reserva.estado === 'VIGENTE' && sePuedeCancelar(reserva.fechaOcurrencia?.split('T')[0], reserva.horaInicio);
-  }, []);
-
-  return {
-    reservas,
-    cargando,
-    error,
-    cargarReservas,
-    crearReserva,
-    cancelar,
-    puedeCancelar,
-    setError,
-  };
+  const puedeCancelar = useCallback((reserva) => !motivoNoCancelable(reserva), []);
+  const limpiarErrorCancelacion = useCallback(() => setErrorCancelacion(null), []);
+  return { reservas, cargando, error, cargarReservas, crearReserva, cancelar, puedeCancelar,
+    cancelando, errorCancelacion, requiereActualizar, limpiarErrorCancelacion, setError };
 }

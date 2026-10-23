@@ -69,3 +69,22 @@ no es una migración y no modifica registros ajenos a los códigos `CU8_DEMO` y 
 
 Las reservas se crean solo al presionar **Confirmar reserva**. «Cambiar fecha» cambia la selección
 local, y no llama a la cancelación de reservas (CU-9).
+
+
+## CU-9: cancelación de una reserva desde mobile
+
+- `app/(app)/reservas.js`: listado, selección, datos de la consulta y confirmación explícita.
+  Reutiliza colores y componentes del CU-8 (`reservar.js`), identificado por separado en comentarios.
+- `shared/src/hooks/useReservas.js`: separa los bloques CU-8 (crear) y CU-9 (cancelar).
+  Emplea `idReserva`, `fecha`, `horaEstimada`, `especialidad`, `nombreMedico` y `consultorio` del DTO real.
+- `src/features/reservas/cancelacionReserva.js`: estado vigente y comprobación orientativa de las 48 horas
+  desde la hora estimada de consulta (o el inicio del turno si no hay hora estimada), en America/Montevideo.
+  La autorización y la validación definitiva corresponden al backend.
+- `GET /api/reservas/mias`: listado de apoyo para seleccionar una reserva. Los filtros de CU-10 quedan fuera de este cambio.
+- `POST /api/reservas/{idReserva}/cancelacion`: solo al confirmar. Se conserva el historial y se muestra
+  el estado cancelado únicamente después de una respuesta exitosa. No se envía el id del paciente.
+
+Al implementar esta interfaz, ambos métodos del servicio backend siguen pendientes (501).
+Se muestra un aviso de función pendiente, sin simular datos ni una cancelación exitosa.
+Tras un rechazo o una pérdida de conexión, se conserva el estado y se exige actualizar la lista antes de
+otro intento. No se repite el POST automáticamente. Un bloqueo inmediato evita duplicados por doble toque.

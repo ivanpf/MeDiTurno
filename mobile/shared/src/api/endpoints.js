@@ -111,7 +111,7 @@ export async function listarMisReservas(criterios = {}) {
     if (v !== undefined && v !== null) params.append(k, v);
   });
   const query = params.toString() ? `?${params}` : '';
-  return api.get(`/reservas/mis${query}`);
+  return api.get(`/reservas/mias${query}`);
 }
 
 /**
