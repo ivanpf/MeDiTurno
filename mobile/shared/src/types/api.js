@@ -94,22 +94,21 @@
  */
 
 /**
+ * Consulta registrada (CU-23); la devuelven también CU-11, CU-22 y CU-26.
  * @typedef {Object} ConsultaResponseDTO
- * @property {number} id
+ * @property {number} idConsulta
+ * @property {number} numeroOrden
+ * @property {number} idReserva
+ * @property {number} idPaciente
+ * @property {string} nombrePaciente - «Apellido, Nombre»
+ * @property {number} idMedico
+ * @property {string} nombreMedico - «Apellido, Nombre»
+ * @property {string} especialidad - nombre de la especialidad
  * @property {string} fecha - ISO datetime
- * @property {Object} especialidad
- * @property {string} especialidad.codigo
- * @property {string} especialidad.nombre
- * @property {Object} medico
- * @property {number} medico.id
- * @property {string} medico.nombre
- * @property {string} medico.apellido
  * @property {string} motivo
- * @property {string} antecedentes
- * @property {string} diagnostico
- * @property {string} indicaciones
- * @property {string} tratamiento
  * @property {string} observaciones
+ * @property {string|null} indicaciones
+ * @property {string} fechaRegistro - ISO datetime
  */
 
 /**

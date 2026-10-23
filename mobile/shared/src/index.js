@@ -6,7 +6,6 @@ export * from './auth/useAuth';
 export * from './auth/firebase';
 export * from './hooks/useReservas';
 export * from './hooks/useTurnos';
-export * from './hooks/useHistoriaClinica';
 export * from './hooks/useCartelera';
 export * from './hooks/usePerfil';
 export * from './types/api';
