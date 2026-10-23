@@ -68,14 +68,14 @@ public class PaseService {
         }
 
         // 4. Determinar especialidad de origen navegando el modelo
-        String especialidadOrigen = consulta.getReserva().getOcurrenciaTurno().getTurnoSemanal().getEspecialidad().getCodigo();
+        Especialidad especialidadOrigen = consulta.getReserva().getOcurrenciaTurno().getTurnoSemanal().getEspecialidad();
 
         // 5. Crear el Pase utilizando el 'reloj' del equipo para la fecha
         LocalDateTime ahora = LocalDateTime.now(reloj);
         Pase pase = new Pase();
         pase.setPaciente(consulta.getPaciente());
         pase.setConsulta(consulta);
-        pase.setEspecialidadOrigen(destino);
+        pase.setEspecialidadOrigen(especialidadOrigen);
         pase.setEspecialidadDestino(destino);
         pase.setFechaEmision(ahora);
         pase.setPaseEstado(EstadoPase.VIGENTE);

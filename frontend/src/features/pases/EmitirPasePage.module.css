@@ -1,0 +1,19 @@
+.pagina { min-width: 0; }
+
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 32px;
+  margin: 16px 0 24px;
+}
+
+.resumen dt { font-size: 13px; font-weight: 600; color: var(--gris); }
+.resumen dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.formulario { max-width: 720px; margin-top: 24px; }
+.acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 24px; }
+.aviso { margin: 16px 0; }
+.aviso button { margin-top: 12px; }
+
+@media (max-width: 800px) {
+  .resumen { grid-template-columns: minmax(0, 1fr); }
+}
