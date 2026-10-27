@@ -7,10 +7,10 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-15, CU-16, CU-20, CU-21, CU-23, CU-28, CU-31, CU-34 y CU-37**. CU-14 está implementado en el backend; su pantalla web sigue pendiente. Los demás casos pendientes responden `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-20, CU-21, CU-22, CU-23, CU-28, CU-31, CU-34 y CU-37**. CU-11 y CU-14 están implementados en el backend; sus pantallas web siguen pendientes. Los demás casos pendientes responden `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
-- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-7, CU-8, CU-12, CU-13, CU-15, CU-16, CU-20, CU-21, CU-23, CU-28, CU-31, CU-34 y CU-37; el resto conserva `PaginaPendiente`.
+- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-20, CU-21, CU-22, CU-23, CU-28, CU-31, CU-34 y CU-37; el resto conserva `PaginaPendiente`.
 - **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos
@@ -122,13 +122,30 @@ INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE corr
 - `GET /api/turnos/{idOcurrenciaTurno}/pacientes` conserva la ruta del diseño: devuelve solo reservas `VIGENTE` u `ORDEN_EMITIDA`, por número, con nombre, hora estimada, estado y número de orden si existe. Un turno ajeno o inexistente responde 404. No se aplica la ventana de reserva de CU-8 ni se ocultan números cuya hora ya pasó.
 - Se mantiene `ConsultaService.consultarPacientesPorTurno` y se usa `ReservaResponseDTO`, compartido con CU-8 y CU-15: un solo record con el estado de la reserva en `estado` y constructores para cada caso (los campos que no corresponden quedan en nulo). No requiere migraciones ni dependencias nuevas. `PacientesPorTurnoIntegracionTest` verifica datos, estados, fecha y autorización con PostgreSQL embebido.
 
+### Cancelación de una reserva (CU-9)
+
+- En la web, `MisReservasPage.jsx` muestra las reservas propias de hoy y de fechas próximas, incluidas las canceladas. Es un listado de apoyo para CU-9; la búsqueda del historial completo de CU-10 sigue pendiente.
+- `GET /api/reservas/mias/proximas` devuelve los datos de la reserva, si puede cancelarse, el motivo si no puede y la fecha de cancelación si existe. Solo devuelve reservas del paciente autenticado.
+- Antes de mostrar la confirmación, `GET /api/reservas/{id}/cancelacion/vista-previa` valida propiedad, estado y plazo. `POST /api/reservas/{id}/cancelacion` vuelve a comprobarlos y responde 204 al cancelar.
+- Solo se cancela una reserva `VIGENTE` si faltan **48 horas o más desde ahora hasta el inicio de la ocurrencia del turno**, no hasta la hora estimada del número. Exactamente 48 horas se permite. El reloj es el de Montevideo de la aplicación.
+- La operación bloquea primero la ocurrencia y luego la reserva, conserva la fila, registra estado `CANCELADA`, fecha y motivo, y libera el número para CU-8. Reserva ajena o inexistente: 404; estado o plazo inválidos: 409. La vista previa no modifica nada.
+- `CancelacionReservaIntegracionTest` cubre el límite, propiedad, estados, registro, reutilización del cupo y concurrencia con PostgreSQL embebido. No requiere migraciones ni nuevas dependencias.
+
+### Historia clínica durante la atención (CU-22)
+
+- Desde `Mis pacientes` se abre `HistoriaClinicaAtencionPage.jsx` con el paciente seleccionado. El menú de historia clínica orienta a elegirlo allí. También se puede abrir antes de registrar una consulta en CU-23.
+- `GET /api/consultas/historia-clinica?idPaciente=...` devuelve las consultas previas finalizadas del paciente, incluidas las de otros médicos, por fecha descendente. `GET /api/consultas/historia-clinica/{idConsulta}?idPaciente=...` permite abrir un detalle y vuelve a validar el acceso.
+- Regla temporal acordada: el médico solo puede consultar durante **el día del turno en Montevideo**, con una reserva propia del paciente `VIGENTE` o `ORDEN_EMITIDA` respaldada por una orden `EMITIDA`. La ocurrencia debe estar habilitada, dentro de vigencia y sin una suspensión vigente. Una atención pasada, futura, cancelada, anulada, atendida o vencida no habilita el acceso.
+- Sin vínculo autorizado se responde 403 sin exponer antecedentes. El detalle de una consulta ajena o inexistente responde 404. No tener antecedentes devuelve una lista vacía. Ambos endpoints son de solo lectura y requieren rol médico.
+- `HistoriaClinicaAtencionIntegracionTest` verifica autorización, fecha local, estados, turnos suspendidos, datos de otros pacientes, ordenamiento, consultas de otros médicos y revalidación de detalles. No requiere migraciones ni nuevas dependencias.
+
 ### Registro de una consulta (CU-23)
 
 - `POST /api/consultas/{numeroOrden}` (solo médico) registra la consulta realizada con una orden emitida. Cuerpo: `motivo` y `observaciones` (obligatorios, hasta 5000 caracteres) e `indicaciones` (opcional). Responde `201` con `ConsultaResponseDTO`, que también usarán CU-11, CU-22 y CU-26.
 - En una sola transacción (`ConsultaService.registrarConsulta`, con bloqueo de la reserva): guarda la consulta en la historia clínica del paciente (la abre si todavía no tenía una; hay una por paciente, y la historia general es el conjunto de sus consultas), pasa la reserva a `ATENDIDA` y la orden a `UTILIZADA`. Una consulta registrada no se puede modificar.
 - Errores: `422` si la orden no existe, no es de un turno del médico o no está emitida (mismo mensaje en todos los casos, para no revelar órdenes de otros médicos); `409` si la consulta ya fue registrada; `400` por datos obligatorios (anotaciones del DTO).
 - **Aviso al paciente** (`NotificacionService.notificarConsultaRegistrada`), después de confirmar el registro y sin contenido clínico: una notificación en la aplicación (tipo `CONSULTA_REGISTRADA`) y un correo (`EmailService.enviarAvisoHistoriaClinica`). Si el correo falla, queda `FALLIDA` y el registro no se revierte. **El aviso push no está**: el diagrama lo dibuja, pero depende de la aplicación móvil (`PushNotificationService` sin implementar); pendiente de decidir si se usa.
-- Pantalla: el médico elige al paciente en «Mis pacientes» (CU-21), que ofrece «Registrar consulta» solo para los pacientes con orden emitida; abre `RegistrarConsultaPage` con los datos del paciente (por el estado de la navegación; sin ellos, la pantalla pide elegirlo primero), pide confirmación y registra. Para ver las consultas anteriores de un paciente hará falta CU-22 (pendiente).
+- Pantalla: el médico elige al paciente en «Mis pacientes» (CU-21), que ofrece «Registrar consulta» solo para los pacientes con orden emitida; abre `RegistrarConsultaPage` con los datos del paciente (por el estado de la navegación; sin ellos, la pantalla pide elegirlo primero), pide confirmación y registra. Desde «Mis pacientes» y antes de registrar la consulta se puede abrir CU-22 para consultar los antecedentes del paciente durante una atención autorizada.
 - `RegistroConsultaIntegracionTest` verifica el registro, los estados, la historia clínica, los errores y los avisos con PostgreSQL embebido.
 
 ### Tareas programadas
@@ -351,8 +368,8 @@ Paginación y estados de carga. Quien primero los necesite los agrega a `styles/
 
 - **Hora estimada de atención:** duración por consulta = (hora fin − hora inicio) ÷ máximo de pacientes del turno. La hora estimada del número N = hora inicio + (N − 1) × duración. Se muestra siempre como estimada (`~10:20`). *Definida por el equipo; falta incorporarla a los documentos.*
 - **Reserva (CU-8):** el paciente elige el turno y después su número entre los libres. Si otro lo ocupa antes de confirmar, se informa y puede elegir otro.
-- **Cancelación (CU-9):** solo si la reserva está vigente y faltan **48 horas o más**.
-- **Orden (CU-16):** se emite el día del turno, desde **1 hora antes** de que empieza hasta que **termina** (hora de fin del turno). 
+- **Cancelación (CU-9):** solo si la reserva está vigente y faltan **48 horas o más para el inicio del turno**, inclusive.
+- **Orden (CU-16):** se emite el día del turno, desde **1 hora antes** de que empieza hasta que **termina** (hora de fin del turno).
 - **Pase (CU-24) y reconsulta (CU-25):** vigencia máxima de **60 días**.
 - **Registro (CU-7):** el paciente debe estar en el padrón (lo carga el administrador, CU-31) y no tener cuenta.
 - **Inicio de sesión (CU-1):** el mensaje de error es genérico y no revela si la cuenta existe ni su estado.

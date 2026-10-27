@@ -6,6 +6,7 @@ import com.mediturno.backend.common.seguridad.UsuarioActual;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.reservas.dto.ReservaRequestDTO;
 import com.mediturno.backend.reservas.dto.ReservaResponseDTO;
+import com.mediturno.backend.reservas.dto.ReservaCancelacionDTO;
 import com.mediturno.backend.usuarios.model.Funcionario;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -45,6 +46,16 @@ public class ReservaController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancelarReserva(@PathVariable Long idReserva) {
         reservaService.cancelarReserva(idReserva, usuarioActual.obtenerIdPacienteAutenticado());
+    }
+
+    @GetMapping("/{idReserva}/cancelacion/vista-previa")
+    public ReservaCancelacionDTO vistaPreviaCancelacion(@PathVariable Long idReserva) {
+        return reservaService.vistaPreviaCancelacion(idReserva, usuarioActual.obtenerIdPacienteAutenticado());
+    }
+
+    @GetMapping("/mias/proximas")
+    public List<ReservaCancelacionDTO> listarProximasPropias() {
+        return reservaService.listarProximasPropias(usuarioActual.obtenerIdPacienteAutenticado());
     }
 
     @RolesPermitidos(Funcionario.class)

@@ -65,6 +65,11 @@ public class ConsultaController {
         return consultaService.consultarHistoriaClinicaDuranteAtencion(usuarioActual.obtenerIdMedicoAutenticado(), idPaciente);
     }
 
+    @GetMapping("/consultas/historia-clinica/{idConsulta}")
+    public ConsultaResponseDTO consultarDetalleDuranteAtencion(@PathVariable Long idConsulta, @RequestParam Long idPaciente) {
+        return consultaService.consultarDetalleDuranteAtencion(usuarioActual.obtenerIdMedicoAutenticado(), idPaciente, idConsulta);
+    }
+
     /** Consulta de apoyo para elegir un turno propio en CU-21. */
     @GetMapping("/turnos/mios")
     public List<TurnoAtencionDTO> consultarTurnosDeAtencion(

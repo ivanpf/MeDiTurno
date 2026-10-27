@@ -67,6 +67,8 @@ export default function RegistrarConsultaPage() {
         <div><dt>Orden</dt><dd>{paciente.numeroOrden}</dd></div>
       </dl>
 
+      {!registrada && <Link to={`/medico/historia-clinica?${new URLSearchParams({ idPaciente: paciente.idPaciente })}`} state={paciente}>Consultar historia clínica antes de registrar la atención</Link>}
+
       {registrada && (
         <>
           <p className="mensaje-exito" role="status">Consulta registrada correctamente. Se avisó al paciente que se incorporó nueva información a su historia clínica.</p>
