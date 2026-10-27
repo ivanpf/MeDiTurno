@@ -55,7 +55,10 @@
       "firebaseApiKey": "AIzaSyBOnEVcO4U5g79lNqwF21idgrYM8M4ZjJM",
       "firebaseAuthDomain": "mediturno-auth-db915.firebaseapp.com",
       "firebaseProjectId": "mediturno-auth-db915",
-      "firebaseAppId": "1:364481560232:web:80098cbaa6c85a09d28c9d"
+      "firebaseAppId": "1:364481560232:web:80098cbaa6c85a09d28c9d",
+      "eas": {
+        "projectId": "50046a95-963e-475a-ac63-5209e2658977"
+      }
     }
   }
 }

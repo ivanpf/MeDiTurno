@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import { login as apiLogin, logout } from '../api/endpoints';
+import { pedirPermisoYRegistrarToken, eliminarTokenRegistrado } from '../push/notificacionesPush';
 import { ROLES } from '../navigation/rutas';
 
 const AuthContext = createContext(null);
@@ -102,11 +103,16 @@ export function AuthProvider({ children }) {
       throw error;
     }
     await guardarSesion(sesion.rol, sesion.nombre, sesion.idUsuario);
+    // Los permisos de notificaciones se piden apenas termina el login; el registro del
+    // dispositivo corre en paralelo y no frena el ingreso a la app.
+    pedirPermisoYRegistrarToken();
     return sesion;
   };
 
   // CU-2: el backend revoca la sesión en Firebase; la sesión local se cierra igual.
   const cerrarSesion = async () => {
+    // Con la sesión todavía abierta se da de baja el token push del dispositivo.
+    await eliminarTokenRegistrado();
     try {
       await logout();
     } catch {
