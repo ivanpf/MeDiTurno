@@ -1,0 +1,22 @@
+/* CU-3 Cambiar contraseña (con sesión iniciada). */
+
+.formulario {
+  max-width: 480px;
+}
+
+.mensajes {
+  max-width: 480px;
+  margin-bottom: 16px;
+}
+
+.mensajes ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
