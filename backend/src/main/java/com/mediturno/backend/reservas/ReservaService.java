@@ -4,6 +4,7 @@ import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.especialidades.model.Especialidad;
+import com.mediturno.backend.notificaciones.NotificacionService;
 import com.mediturno.backend.ordenes.repository.OrdenRepository;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.pacientes.repository.PacienteRepository;
@@ -21,10 +22,14 @@ import com.mediturno.backend.turnos.repository.OcurrenciaTurnoRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -33,12 +38,16 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public class ReservaService {
+    private static final Logger log = LoggerFactory.getLogger(ReservaService.class);
+
     private final OcurrenciaTurnoRepository ocurrenciaTurnoRepository;
     private final ReservaRepository reservaRepository;
     private final PacienteRepository pacienteRepository;
     private final OrdenRepository ordenRepository;
     private final PaseService paseService;
     private final DisponibilidadService disponibilidadService;
+    private final NotificacionService notificacionService;
+    private final TransactionTemplate transaccion;
     private final Clock reloj;
 
     public ReservaService(OcurrenciaTurnoRepository ocurrenciaTurnoRepository,
@@ -46,19 +55,34 @@ public class ReservaService {
             PacienteRepository pacienteRepository,
             OrdenRepository ordenRepository,
             PaseService paseService,
-            DisponibilidadService disponibilidadService, Clock reloj) {
+            DisponibilidadService disponibilidadService, NotificacionService notificacionService,
+            PlatformTransactionManager administradorDeTransacciones, Clock reloj) {
         this.ocurrenciaTurnoRepository = ocurrenciaTurnoRepository;
         this.reservaRepository = reservaRepository;
         this.pacienteRepository = pacienteRepository;
         this.ordenRepository = ordenRepository;
         this.paseService = paseService;
         this.disponibilidadService = disponibilidadService;
+        this.notificacionService = notificacionService;
+        this.transaccion = new TransactionTemplate(administradorDeTransacciones);
         this.reloj = reloj;
     }
 
     /** CU-8. */
-    @Transactional
     public ReservaResponseDTO reservarOrden(Long idPaciente, ReservaRequestDTO datos) {
+        ReservaResponseDTO respuesta = transaccion.execute(estado -> guardarReserva(idPaciente, datos));
+        if (respuesta != null) {
+            try {
+                notificacionService.notificarReservaConfirmada(respuesta.idReserva());
+            } catch (RuntimeException e) {
+                log.error("La reserva {} quedó confirmada, pero no se pudo generar su aviso: {}",
+                    respuesta.idReserva(), e.getMessage(), e);
+            }
+        }
+        return respuesta;
+    }
+
+    private ReservaResponseDTO guardarReserva(Long idPaciente, ReservaRequestDTO datos) {
         Paciente paciente = pacienteRepository.findById(idPaciente).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "El paciente no existe"));
         if (paciente.getEstado() != EstadoActivacion.ACTIVO) {

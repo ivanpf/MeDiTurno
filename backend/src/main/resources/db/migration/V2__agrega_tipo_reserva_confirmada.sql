@@ -1,0 +1,5 @@
+ALTER TABLE notificacion DROP CONSTRAINT ck_notificacion_tipo;
+
+ALTER TABLE notificacion
+    ADD CONSTRAINT ck_notificacion_tipo
+    CHECK (tipo IN ('RECORDATORIO_CONSULTA', 'SUSPENSION_TURNO', 'CONSULTA_REGISTRADA', 'RESERVA_CONFIRMADA'));

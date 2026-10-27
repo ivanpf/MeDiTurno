@@ -1,16 +1,16 @@
-# Notificaciones push: plan de acción para el equipo de backend
+# Notificaciones push: implementación del backend
 
-Este documento define las tareas del backend para que las notificaciones push de la
-app mobile (CU-8, CU-13 y CU-23) queden operativas.
+La implementación backend para CU-8, CU-13 y CU-23 está lista. Este documento conserva
+el contrato y las notas de operación para el equipo.
 
 **Contexto:** la app mobile ya está lista y no requiere cambios adicionales. Desde el
 último inicio de sesión define los permisos, obtiene el token del dispositivo (Expo Push
 Token) y lo registra en `POST /api/notificaciones/push`; al cerrar sesión lo elimina vía
-`DELETE /api/notificaciones/push`. Mientras los endpoints respondan 501, esas llamadas
-fallan silenciosamente y se reintentan en el próximo inicio de sesión.
+`DELETE /api/notificaciones/push`. Ambos endpoints requieren autenticación Firebase y
+asocian o eliminan tokens únicamente para el usuario autenticado.
 
-**Objetivo:** implementar la lógica de envío en el backend siguiendo el diseño ya
-definido (autenticado y acotado por usuario).
+Los envíos usan Expo Push Service y son best-effort: un error externo se registra en el
+log y no revierte la operación que generó el aviso.
 
 ## 1. Implementar `PushNotificationService.registrar(idUsuario, token)`
 
@@ -77,11 +77,19 @@ Sugerencia: tarea programada en `TareasProgramadas` (junto a las existentes) que
 tokens con más de X meses sin actualizarse, además de la limpieza por
 `DeviceNotRegistered` del punto 3.
 
-## 8. Criterio de despliegue
+## 8. Despliegue
 
-Mientras los endpoints respondan 501, la app funciona igual (las llamadas fallan en
-silencio y se reintentan en el próximo inicio de sesión). Con los puntos 1 a 5
-liberados, los avisos push de los 3 CUs llegan sin ningún cambio adicional en la app.
+En desarrollo no hace falta definir `EXPO_ACCESS_TOKEN`. En producción se configura
+como variable de entorno o secreto del despliegue; no se agrega a Git ni a archivos
+compartidos.
+
+La migración `V2__agrega_tipo_reserva_confirmada.sql` permite guardar el nuevo tipo
+`RESERVA_CONFIRMADA` en la campanita. Las notificaciones push no crean un registro de
+auditoría independiente en la tabla `notificacion`.
+
+La limpieza programada de tokens que no se hayan actualizado durante varios meses queda
+pendiente; por ahora, los tokens desinstalados se eliminan al recibir
+`DeviceNotRegistered` de Expo.
 
 **Importante:** todo lo relacionado a Firebase (autenticación y notificaciones) se
 gestiona sobre el proyecto Firebase ya existente en main (`mediturno-auth-db915`).

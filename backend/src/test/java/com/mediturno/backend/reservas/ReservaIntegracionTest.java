@@ -96,6 +96,12 @@ class ReservaIntegracionTest extends BasePostgresEmbebida {
         assertEquals(LocalTime.of(9, 20), respuesta.horaEstimada());
         assertEquals(paciente, id("select id_paciente from reserva where id_reserva=?", respuesta.idReserva()));
         assertEquals("VIGENTE", jdbc.queryForObject("select reserva_estado from reserva where id_reserva=?", String.class, respuesta.idReserva()));
+        assertEquals("RESERVA_CONFIRMADA:APLICACION", jdbc.queryForObject(
+            "select tipo || ':' || canal from notificacion where id_reserva=?", String.class, respuesta.idReserva()));
+        String aviso = jdbc.queryForObject("select mensaje from notificacion where id_reserva=?", String.class, respuesta.idReserva());
+        assertTrue(aviso.contains("número 2"));
+        assertTrue(aviso.contains("09:20"));
+        assertTrue(aviso.contains(respuesta.idReserva().toString()));
     }
 
     @Test void listaOcupadosYLiberaCanceladosYAnulados() {

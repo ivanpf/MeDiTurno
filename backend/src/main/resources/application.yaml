@@ -33,6 +33,10 @@ spring:
     locations: classpath:db/migration,classpath:db/seed
 
 mediturno:
+  push:
+    # Token de acceso de Expo para producción; en desarrollo puede dejarse vacío.
+    access-token: ${EXPO_ACCESS_TOKEN:}
+    url: https://exp.host/--/api/v2/push/send
   correo:
     remitente: ${MAIL_REMITENTE:MeDiTurno <no-responder@mediturno.local>}
   firebase:
