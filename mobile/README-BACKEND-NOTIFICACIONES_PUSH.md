@@ -83,6 +83,26 @@ Mientras los endpoints respondan 501, la app funciona igual (las llamadas fallan
 silencio y se reintentan en el próximo inicio de sesión). Con los puntos 1 a 5
 liberados, los avisos push de los 3 CUs llegan sin ningún cambio adicional en la app.
 
+**Importante:** todo lo relacionado a Firebase (autenticación y notificaciones) se
+gestiona sobre el proyecto Firebase ya existente en main (`mediturno-auth-db915`).
+No se deben generar credenciales sobre ningún otro proyecto de Firebase ajeno
+al repo.
+
+## Proyecto Firebase para las credenciales de push
+
+- Se usan las credenciales del **mismo proyecto Firebase que ya tiene el main para
+  autenticación** (`mediturno-auth-db915`). Para eso, en Firebase Console se registra la
+  app Android de package `com.mediturno.mobile` en ese proyecto y se descarga su
+  `google-services.json`.
+- Ese archivo se coloca en `mobile/google-services.json`: el `app.json` ya lo referencia
+  (`android.googleServicesFile`) y queda embebido en el binario al compilar. Sin este
+  archivo, la app no inicializa Firebase en Android y el token de push no se puede
+  generar (en desarrollo ni en producción).
+- Este requisito es del lado mobile; el backend no consume ese archivo (su acceso a
+  Firebase es por la clave de servicio de `secrets/`).
+- El identificador de proyecto Expo (`extra.eas.projectId` en `app.json`) es de EAS y es
+  independiente de lo anterior; se mantiene el ya configurado.
+
 ## Notas para las pruebas
 
 - El push solo funciona en un development build (`npx expo run:android`), no en Expo Go.

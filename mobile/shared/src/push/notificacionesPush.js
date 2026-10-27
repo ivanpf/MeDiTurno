@@ -18,8 +18,10 @@ import { Platform } from 'react-native';
 import { registrarPushToken, eliminarPushToken } from '../api/endpoints';
 import { COLORS } from '../theme/colors';
 
-// Identificador del proyecto EAS, requerido por getExpoPushTokenAsync (viene de app.json).
-const PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId;
+// Identificador del proyecto EAS, requerido por getExpoPushTokenAsync.
+// El valor de app.json queda embebido en el binario nativo al compilar; el fallback literal
+// cubre los builds de desarrollo instalados antes de agregar ese valor.
+const PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId || '50046a95-963e-475a-ac63-5209e2658977';
 
 // Mientras la app esté abierta en primer plano, los avisos se muestran como banner y suena el tono por defecto.
 Notifications.setNotificationHandler({
@@ -95,7 +97,7 @@ export function conectarEscuchaDeNotificaciones() {
     // La persona tocó el aviso: por ahora la app abre en la pantalla de inicio.
   });
   return () => {
-    Notifications.removeNotificationSubscription(alRecibir);
-    Notifications.removeNotificationSubscription(alResponder);
+    alRecibir.remove();
+    alResponder.remove();
   };
 }
