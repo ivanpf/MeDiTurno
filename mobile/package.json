@@ -28,7 +28,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test:cu8": "node --test tests/reservaConsulta.test.cjs"
+    "test:cu8": "node --test tests/reservaConsulta.test.cjs",
+    "test:cu11": "node --test tests/historiaClinica.test.cjs"
   },
   "private": true,
   "devDependencies": {

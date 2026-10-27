@@ -15,7 +15,7 @@ export default function RegistrarConsultaPage() {
   const [error, setError] = useState(null)
   const [confirmando, setConfirmando] = useState(false)
   const [enviando, setEnviando] = useState(false)
-  const [registrada, setRegistrada] = useState(false)
+  const [registrada, setRegistrada] = useState(null)
 
   if (!paciente?.numeroOrden) {
     return (
@@ -43,12 +43,12 @@ export default function RegistrarConsultaPage() {
   const registrar = async () => {
     setEnviando(true)
     try {
-      await api.post(`/consultas/${paciente.numeroOrden}`, {
+      const consulta = await api.post(`/consultas/${paciente.numeroOrden}`, {
         motivo: datos.motivo.trim(),
         observaciones: datos.observaciones.trim(),
         indicaciones: datos.indicaciones.trim() || null,
       })
-      setRegistrada(true)
+      setRegistrada(consulta)
     } catch (err) {
       setError(err instanceof ApiError ? err : new ApiError(0, 'No fue posible registrar la consulta. Intente nuevamente.', []))
     } finally {
@@ -72,6 +72,9 @@ export default function RegistrarConsultaPage() {
       {registrada && (
         <>
           <p className="mensaje-exito" role="status">Consulta registrada correctamente. Se avisó al paciente que se incorporó nueva información a su historia clínica.</p>
+          <div className={estilos.acciones}>
+            <Link to="/medico/pase" state={{ consulta: registrada }}>Emitir pase a otra especialidad</Link>
+          </div>
           <Link className="enlace-volver" to="/medico/pacientes">Volver a Mis pacientes</Link>
         </>
       )}
