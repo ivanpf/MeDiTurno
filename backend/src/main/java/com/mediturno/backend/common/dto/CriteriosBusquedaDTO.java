@@ -6,7 +6,12 @@ import java.time.LocalDate;
  * Filtros y ordenamiento de las búsquedas y listados. Todos los campos son opcionales: los que vienen vacíos no filtran.
  * Es un DTO compartido: cada caso de uso agrega los criterios que necesita al final y usa solo los suyos.
  * <ul>
+ *   <li>CU-10 (historial de reservas): {@code idMedico}, {@code codigoEspecialidad}, {@code estado},
+ *       {@code fechaDesde} y {@code fechaHasta}; {@code ordenarPor} puede ser fecha, medico,
+ *       especialidad, estado o numero.</li>
  *   <li>CU-11 (historia clínica): {@code fechaDesde}, {@code fechaHasta}, {@code codigoEspecialidad} e {@code idMedico};
+ *       {@code ordenarPor} puede ser fecha.</li>
+ *   <li>CU-26 (atenciones propias del médico): {@code fechaDesde}, {@code fechaHasta} y {@code codigoEspecialidad};
  *       {@code ordenarPor} puede ser fecha.</li>
  *   <li>CU-20 (turnos semanales): {@code idMedico}, {@code codigoEspecialidad}, {@code dia} (LUNES...DOMINGO),
  *       {@code codigoConsultorio} y {@code estado} (ACTIVO o SUSPENDIDO); {@code ordenarPor} puede ser medico,

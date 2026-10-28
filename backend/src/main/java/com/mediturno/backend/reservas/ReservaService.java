@@ -1,8 +1,9 @@
 package com.mediturno.backend.reservas;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
+import com.mediturno.backend.ordenes.model.EstadoOrden;
+import com.mediturno.backend.ordenes.model.Orden;
 import com.mediturno.backend.especialidades.model.Especialidad;
 import com.mediturno.backend.ordenes.repository.OrdenRepository;
 import com.mediturno.backend.pacientes.model.Paciente;
@@ -20,8 +21,16 @@ import com.mediturno.backend.turnos.model.TurnoSemanal;
 import com.mediturno.backend.turnos.repository.OcurrenciaTurnoRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.List;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +38,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-8, CU-9, CU-10, CU-15, CU-19.
- * CU-8, CU-9 y CU-15 implementados. Los demás casos de uso conservan su respuesta 501.
+ * CU-8, CU-9, CU-10 y CU-15 implementados. CU-19 conserva su respuesta 501.
  */
 @Service
 public class ReservaService {
@@ -199,7 +208,88 @@ public class ReservaService {
     }
 
     /** CU-10. */
+    @Transactional(readOnly = true)
     public List<ReservaResponseDTO> consultarHistorialReservas(Long idPaciente, CriteriosBusquedaDTO criterios) {
-        throw new NoImplementadoException();
+        if (criterios.fechaDesde() != null && criterios.fechaHasta() != null
+                && criterios.fechaDesde().isAfter(criterios.fechaHasta())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El período indicado no es válido.");
+        }
+        EstadoReserva estado = interpretarEstadoReserva(criterios.estado());
+        Comparator<Reserva> orden = comparadorHistorial(criterios.ordenarPor(),
+            !Boolean.FALSE.equals(criterios.descendente()));
+        LocalDate desde = criterios.fechaDesde();
+        LocalDate hasta = criterios.fechaHasta();
+        String codigoEspecialidad = textoOpcional(criterios.codigoEspecialidad());
+
+        Specification<Reserva> filtros = (reserva, consulta, cb) -> {
+            List<Predicate> condiciones = new ArrayList<>();
+            var ocurrencia = reserva.join("ocurrenciaTurno");
+            var turno = ocurrencia.join("turnoSemanal");
+            condiciones.add(cb.equal(reserva.get("paciente").get("idUsuario"), idPaciente));
+            if (desde != null) condiciones.add(cb.greaterThanOrEqualTo(ocurrencia.get("fecha"), desde));
+            if (hasta != null) condiciones.add(cb.lessThanOrEqualTo(ocurrencia.get("fecha"), hasta));
+            if (criterios.idMedico() != null) {
+                condiciones.add(cb.equal(turno.get("medico").get("idUsuario"), criterios.idMedico()));
+            }
+            if (codigoEspecialidad != null) {
+                condiciones.add(cb.equal(turno.get("especialidad").get("codigo"), codigoEspecialidad));
+            }
+            if (estado != null) condiciones.add(cb.equal(reserva.get("reservaEstado"), estado));
+            return cb.and(condiciones.toArray(Predicate[]::new));
+        };
+
+        List<Reserva> resultado = reservaRepository.findAll(filtros);
+        resultado.sort(orden);
+        List<Long> idsReserva = resultado.stream().map(Reserva::getIdReserva).toList();
+        Map<Long, Orden> ordenes = idsReserva.isEmpty() ? Map.of() : ordenRepository.buscarPorReservas(idsReserva)
+            .stream().collect(Collectors.toMap(o -> o.getReserva().getIdReserva(), Function.identity()));
+        return resultado.stream().map(reserva -> convertirAReservaHistorialResponseDTO(reserva, ordenes.get(reserva.getIdReserva())))
+            .toList();
+    }
+
+    private ReservaResponseDTO convertirAReservaHistorialResponseDTO(Reserva reserva, Orden orden) {
+        OcurrenciaTurno ocurrencia = reserva.getOcurrenciaTurno();
+        TurnoSemanal turno = ocurrencia.getTurnoSemanal();
+        Paciente paciente = reserva.getPaciente();
+        return new ReservaResponseDTO(reserva.getIdReserva(), reserva.getNumero(),
+            disponibilidadService.horaEstimada(ocurrencia, reserva.getNumero()), reserva.getReservaEstado(),
+            paciente.getIdUsuario(), paciente.nombreCompleto(), paciente.getCedula(), turno.getMedico().nombreCompleto(),
+            turno.getEspecialidad().getNombre(), ocurrencia.getFecha(), ocurrencia.getHoraInicio(), ocurrencia.getHoraFin(),
+            turno.getConsultorio().getNombre(), orden == null ? null : orden.getNumeroOrden(),
+            orden == null ? null : orden.getOrdenEstado());
+    }
+
+    private static EstadoReserva interpretarEstadoReserva(String texto) {
+        if (texto == null || texto.isBlank()) return null;
+        try {
+            return EstadoReserva.valueOf(texto.trim().toUpperCase());
+        } catch (IllegalArgumentException error) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estado de reserva indicado no es válido.");
+        }
+    }
+
+    private static String textoOpcional(String texto) {
+        return texto == null || texto.isBlank() ? null : texto.trim();
+    }
+
+    private static Comparator<Reserva> comparadorHistorial(String ordenarPor, boolean descendente) {
+        Comparator<Reserva> porFecha = Comparator.comparing((Reserva r) -> r.getOcurrenciaTurno().getFecha())
+            .thenComparing(r -> r.getOcurrenciaTurno().getHoraInicio())
+            .thenComparing(Reserva::getNumero);
+        Comparator<Reserva> elegido;
+        String clave = ordenarPor == null ? "" : ordenarPor.trim().toLowerCase();
+        switch (clave) {
+            case "", "fecha" -> elegido = porFecha;
+            case "medico" -> elegido = Comparator.comparing((Reserva r) -> r.getOcurrenciaTurno().getTurnoSemanal()
+                .getMedico().getApellido(), String.CASE_INSENSITIVE_ORDER).thenComparing(porFecha);
+            case "especialidad" -> elegido = Comparator.comparing((Reserva r) -> r.getOcurrenciaTurno().getTurnoSemanal()
+                .getEspecialidad().getNombre(), String.CASE_INSENSITIVE_ORDER).thenComparing(porFecha);
+            case "estado" -> elegido = Comparator.comparing(Reserva::getReservaEstado).thenComparing(porFecha);
+            case "numero" -> elegido = Comparator.comparing(Reserva::getNumero).thenComparing(porFecha);
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "El orden indicado no es válido (use fecha, medico, especialidad, estado o numero).");
+        }
+        elegido = elegido.thenComparing(Reserva::getIdReserva);
+        return descendente ? elegido.reversed() : elegido;
     }
 }

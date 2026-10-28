@@ -16,4 +16,7 @@ public interface OrdenRepository extends JpaRepository<Orden, Long> {
 
     @Query("select o from Orden o join fetch o.reserva r where r.ocurrenciaTurno.idOcurrenciaTurno = :idOcurrencia")
     List<Orden> buscarPorOcurrencia(@Param("idOcurrencia") Long idOcurrencia);
+
+    @Query("select o from Orden o where o.reserva.idReserva in :idsReserva")
+    List<Orden> buscarPorReservas(@Param("idsReserva") List<Long> idsReserva);
 }

@@ -32,7 +32,6 @@ import org.springframework.web.server.ResponseStatusException;
 import jakarta.persistence.criteria.Predicate;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.consultas.dto.ConsultaResponseDTO;
 import com.mediturno.backend.consultas.dto.RegistrarConsultaDTO;
 import com.mediturno.backend.reservas.dto.ReservaResponseDTO;
@@ -40,7 +39,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Lógica de negocio de: CU-11, CU-21, CU-22, CU-23, CU-26.
- * Implementados: CU-11, CU-21, CU-22 y CU-23. Los demás casos conservan su respuesta 501.
+ * Implementados: CU-11, CU-21, CU-22, CU-23 y CU-26.
  */
 @Service
 public class ConsultaService {
@@ -255,8 +254,41 @@ public class ConsultaService {
         }).toList();
     }
 
-    /** CU-26. */
+    /** CU-26. Devuelve únicamente las atenciones registradas por el médico autenticado. */
+    @Transactional(readOnly = true)
     public List<ConsultaResponseDTO> consultarHistorialAtencionesPropias(Long idMedico, CriteriosBusquedaDTO criterios) {
-        throw new NoImplementadoException();
+        if (criterios.fechaDesde() != null && criterios.fechaHasta() != null
+                && criterios.fechaDesde().isAfter(criterios.fechaHasta())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El período indicado no es válido.");
+        }
+        if (criterios.ordenarPor() != null && !criterios.ordenarPor().isBlank()
+                && !criterios.ordenarPor().trim().equalsIgnoreCase("fecha")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El ordenamiento debe ser por fecha.");
+        }
+
+        LocalDateTime desde = criterios.fechaDesde() == null ? null : criterios.fechaDesde().atStartOfDay();
+        LocalDateTime hasta = criterios.fechaHasta() == null ? null
+            : criterios.fechaHasta().atTime(23, 59, 59, 999_999_999);
+        String codigoEspecialidad = criterios.codigoEspecialidad() == null || criterios.codigoEspecialidad().isBlank()
+            ? null : criterios.codigoEspecialidad().trim();
+        Sort.Direction direccion = Boolean.FALSE.equals(criterios.descendente()) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        Specification<Consulta> filtros = (consulta, query, cb) -> {
+            List<Predicate> condiciones = new ArrayList<>();
+            condiciones.add(cb.equal(consulta.get("medico").get("idUsuario"), idMedico));
+            if (desde != null) condiciones.add(cb.greaterThanOrEqualTo(consulta.get("fecha"), desde));
+            if (hasta != null) condiciones.add(cb.lessThanOrEqualTo(consulta.get("fecha"), hasta));
+            if (codigoEspecialidad != null) {
+                var turno = consulta.join("reserva").join("ocurrenciaTurno").join("turnoSemanal");
+                condiciones.add(cb.equal(turno.get("especialidad").get("codigo"), codigoEspecialidad));
+            }
+            return cb.and(condiciones.toArray(Predicate[]::new));
+        };
+
+        return consultas.findAll(filtros, Sort.by(direccion, "fecha").and(Sort.by(Sort.Direction.DESC, "idConsulta")))
+            .stream()
+            .map(c -> convertirAConsultaResponseDTO(c, c.getReserva().getOcurrenciaTurno()
+                .getTurnoSemanal().getEspecialidad().getNombre()))
+            .toList();
     }
 }

@@ -124,7 +124,8 @@ INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE corr
 
 ### Cancelación de una reserva (CU-9)
 
-- En la web, `MisReservasPage.jsx` muestra las reservas propias de hoy y de fechas próximas, incluidas las canceladas. Es un listado de apoyo para CU-9; la búsqueda del historial completo de CU-10 sigue pendiente.
+- En la web, `MisReservasPage.jsx` muestra las reservas propias de hoy y de fechas próximas, incluidas las canceladas. Es un listado de apoyo para CU-9; CU-10 tiene su búsqueda de historial en el backend, aunque la pantalla todavía está pendiente.
+- `GET /api/reservas/mias` devuelve el historial completo del paciente autenticado, incluyendo todos los estados. Acepta filtros opcionales por médico, especialidad, estado y rango de fechas, y orden por fecha, médico, especialidad, estado o número. Un rango invertido, estado u orden inválidos responde `400`; el resultado incluye la orden asociada, si existe.
 - `GET /api/reservas/mias/proximas` devuelve los datos de la reserva, si puede cancelarse, el motivo si no puede y la fecha de cancelación si existe. Solo devuelve reservas del paciente autenticado.
 - Antes de mostrar la confirmación, `GET /api/reservas/{id}/cancelacion/vista-previa` valida propiedad, estado y plazo. `POST /api/reservas/{id}/cancelacion` vuelve a comprobarlos y responde 204 al cancelar.
 - Solo se cancela una reserva `VIGENTE` si faltan **48 horas o más desde ahora hasta el inicio de la ocurrencia del turno**, no hasta la hora estimada del número. Exactamente 48 horas se permite. El reloj es el de Montevideo de la aplicación.
@@ -147,6 +148,11 @@ INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE corr
 - **Aviso al paciente** (`NotificacionService.notificarConsultaRegistrada`), después de confirmar el registro y sin contenido clínico: una notificación en la aplicación (tipo `CONSULTA_REGISTRADA`) y un correo (`EmailService.enviarAvisoHistoriaClinica`). Si el correo falla, queda `FALLIDA` y el registro no se revierte. **El aviso push no está**: el diagrama lo dibuja, pero depende de la aplicación móvil (`PushNotificationService` sin implementar); pendiente de decidir si se usa.
 - Pantalla: el médico elige al paciente en «Mis pacientes» (CU-21), que ofrece «Registrar consulta» solo para los pacientes con orden emitida; abre `RegistrarConsultaPage` con los datos del paciente (por el estado de la navegación; sin ellos, la pantalla pide elegirlo primero), pide confirmación y registra. Desde «Mis pacientes» y antes de registrar la consulta se puede abrir CU-22 para consultar los antecedentes del paciente durante una atención autorizada.
 - `RegistroConsultaIntegracionTest` verifica el registro, los estados, la historia clínica, los errores y los avisos con PostgreSQL embebido.
+
+### Historial de atenciones propias (CU-26)
+
+- `GET /api/consultas/mias` devuelve las consultas registradas por el médico autenticado, ordenadas por fecha descendente por defecto. Acepta filtros opcionales por rango de fechas y especialidad; también permite ordenar por fecha ascendente. Un rango invertido o un orden distinto de fecha responde `400`.
+- `HistorialesIntegracionTest` verifica filtros, orden, datos asociados y que cada médico solo vea sus propias atenciones.
 
 ### Tareas programadas
 
