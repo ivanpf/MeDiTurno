@@ -25,7 +25,7 @@ const ORDENES = [
 
 const FILTROS_VACIOS = { idMedico: '', codigoEspecialidad: '', dia: '', codigoConsultorio: '', estado: '', ordenarPor: '', descendente: false }
 
-// Fecha de hoy en la zona horaria de quien usa la pantalla (toISOString devolvería la de UTC).
+// Fecha de hoy en la zona horaria de quien usa la pantalla.
 const hoy = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 const suspensionVacia = () => ({ modalidad: 'TEMPORAL', fechaDesde: hoy(), fechaHasta: '', motivo: '' })
 

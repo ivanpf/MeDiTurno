@@ -1,0 +1,49 @@
+.pagina {
+  min-width: 0;
+}
+
+.actualizar {
+  margin: 0 0 16px;
+}
+
+.leyenda {
+  padding: 12px 0;
+  text-align: left;
+  color: var(--gris);
+}
+
+.resumen {
+  font-weight: 600;
+  color: var(--azul-oscuro);
+}
+
+.formulario {
+  margin-top: 24px;
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0 16px;
+}
+
+.campos > * {
+  min-width: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mensaje {
+  margin-top: 16px;
+}
+
+@media (max-width: 800px) {
+  .campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
