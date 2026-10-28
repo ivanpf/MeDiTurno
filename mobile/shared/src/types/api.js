@@ -94,6 +94,15 @@
  */
 
 /**
+ * Listado y vista previa de cancelación (CU-9).
+ * @typedef {Object} ReservaCancelacionDTO
+ * @property {ReservaResponseDTO} reserva
+ * @property {boolean} puedeCancelar - Calculado por el backend desde el inicio del turno.
+ * @property {string|null} motivoNoCancelable
+ * @property {string|null} fechaCancelacion - Fecha y hora locales de la institución, YYYY-MM-DDTHH:mm:ss.
+ */
+
+/**
  * Consulta registrada (CU-23); la devuelven también CU-11, CU-22 y CU-26.
  * @typedef {Object} ConsultaResponseDTO
  * @property {number} idConsulta
