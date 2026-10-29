@@ -7,10 +7,10 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-30, CU-31, CU-34 y CU-37**. CU-11 y CU-14 están implementados en el backend; sus pantallas web siguen pendientes. Los demás casos pendientes responden `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-30, CU-31, CU-34, CU-37 y CU-43**. CU-11 y CU-14 están implementados en el backend; sus pantallas web siguen pendientes. Los demás casos pendientes responden `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
-- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-30, CU-31, CU-34 y CU-37; el resto conserva `PaginaPendiente`.
+- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-30, CU-31, CU-34, CU-37 y CU-43; el resto conserva `PaginaPendiente`.
 - **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos
@@ -165,7 +165,14 @@ INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE corr
 - `GET /api/especialidades` (cualquier rol, porque las listas desplegables lo usan) acepta criterios opcionales que se combinan: `texto` (busca en el código y en el nombre, sin distinguir mayúsculas; `%` y `_` se buscan como texto), `estado` (`ACTIVO` o `INACTIVO`) y `requierePase` (`true` o `false`). Se ordena por `nombre` (por defecto) o `codigo` en `ordenarPor`, y `descendente=true` invierte el sentido. Un estado u orden inválidos responden `400`. Sin parámetros devuelve todas por nombre, como antes. `texto` y `requierePase` son campos nuevos de `CriteriosBusquedaDTO`.
 - `GET /api/especialidades/{codigo}/detalle` (solo administrador, `EspecialidadService.obtenerDetalleEspecialidad`) devuelve los datos de la especialidad, los **médicos activos** que la atienden y sus **turnos semanales vigentes**: los que no terminaron (`vigente_hasta` vacío o de hoy en adelante), activos o suspendidos, con su estado, por día y horario. `GET /{codigo}` sigue devolviendo solo los datos básicos para todos los roles. Inexistente: `404`. Solo lectura.
 - Pantalla `ListadoEspecialidadesPage`: filtros, tabla y botón «Ver detalle», que abre el panel con médicos y turnos arriba de la tabla. Sin paginación. `ListadoEspecialidadesIntegracionTest` lo verifica con PostgreSQL embebido. No requiere migraciones.
-- CU-43 (modificación) debería reutilizar la misma definición de turno vigente para no permitir inactivar una especialidad que tenga turnos vigentes (`TurnoSemanalRepository.listarVigentesDeEspecialidad`).
+
+### Modificación de especialidades (CU-43)
+
+- `PUT /api/especialidades/{codigo}` (solo administrador) cambia `nombre`, `descripcion` (opcional; vacía la borra), `requierePase` y `estado`; se mandan los cuatro y el código no se modifica. `ModificarEspecialidadDTO` valida con `@Valid` (`400`). Como el cambio registra al administrador, `modificarEspecialidad(idAdministrador, codigo, datos)` recibe un parámetro más que en el diseño (sale de `UsuarioActual`).
+- Errores: `404` si no existe; `409` si el nombre es el de **otra** especialidad (sin distinguir mayúsculas; el propio nombre se puede conservar o cambiar de mayúsculas) y `409` si se pasa de `ACTIVO` a `INACTIVO` teniendo turnos semanales **vigentes** (misma definición que CU-30: no terminaron, activos o suspendidos; `TurnoSemanalRepository.listarVigentesDeEspecialidad`). Una especialidad ya inactiva se puede editar sin reactivarla aunque tenga turnos.
+- El requisito de pase solo rige para las reservas nuevas: las ya hechas guardan su pase y no se tocan. La operación bloquea la fila (`EspecialidadRepository.buscarConLock`).
+- **Auditoría:** migración `V4` agrega `especialidad.id_administrador_modificacion` y `fecha_modificacion` (último cambio; vacíos si nunca se modificó). Se registran solo si algo cambió: enviar los mismos datos no guarda nada. No hay historial de cambios anteriores.
+- Pantalla `ModificarEspecialidadPage`: elegir la especialidad (o llegar con «Modificar» desde el listado, que pasa el código por el estado de la navegación), editar y guardar; el código se ve deshabilitado. `ModificarEspecialidadIntegracionTest` lo verifica.
 
 ### Notificaciones push
 

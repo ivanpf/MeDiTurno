@@ -13,13 +13,16 @@ import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
 import com.mediturno.backend.turnos.model.TurnoSemanal;
 import com.mediturno.backend.turnos.repository.TurnoSemanalRepository;
 import com.mediturno.backend.usuarios.model.Medico;
+import com.mediturno.backend.usuarios.repository.AdministradorRepository;
 import com.mediturno.backend.usuarios.repository.MedicoRepository;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -39,13 +42,15 @@ public class EspecialidadService {
     private final EspecialidadRepository especialidadRepository;
     private final MedicoRepository medicoRepository;
     private final TurnoSemanalRepository turnoSemanalRepository;
+    private final AdministradorRepository administradorRepository;
     private final Clock reloj;
 
     public EspecialidadService(EspecialidadRepository especialidadRepository, MedicoRepository medicoRepository,
-            TurnoSemanalRepository turnoSemanalRepository, Clock reloj) {
+            TurnoSemanalRepository turnoSemanalRepository, AdministradorRepository administradorRepository, Clock reloj) {
         this.especialidadRepository = especialidadRepository;
         this.medicoRepository = medicoRepository;
         this.turnoSemanalRepository = turnoSemanalRepository;
+        this.administradorRepository = administradorRepository;
         this.reloj = reloj;
     }
 
@@ -189,8 +194,46 @@ public class EspecialidadService {
             turno.getConsultorio().getNombre(), turno.getEstado());
     }
 
-    /** CU-43. */
-    public EspecialidadResponseDTO modificarEspecialidad(String codigoEspecialidad, ModificarEspecialidadDTO datos) {
-        throw new NoImplementadoException();
+    /**
+     * CU-43. Cambia nombre, descripción, requisito de pase y estado (el código no se modifica). Los campos obligatorios los valida
+     * el controlador (@Valid). El nombre no puede ser el de otra especialidad (409) y no se puede inactivar una especialidad
+     * activa mientras tenga turnos semanales vigentes (409). El requisito de pase solo rige para reservas nuevas: las ya hechas
+     * no se tocan. Si hubo algún cambio, se registra el administrador y la fecha y hora (el último cambio); si no cambió nada,
+     * no se guarda nada.
+     */
+    @Transactional
+    public EspecialidadResponseDTO modificarEspecialidad(Long idAdministrador, String codigoEspecialidad, ModificarEspecialidadDTO datos) {
+        Especialidad especialidad = especialidadRepository.buscarConLock(codigoEspecialidad)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La especialidad no existe"));
+        String nombre = datos.nombre().trim();
+        String descripcion = datos.descripcion() == null || datos.descripcion().isBlank() ? null : datos.descripcion().trim();
+
+        if (especialidadRepository.existsByNombreIgnoreCaseAndCodigoNot(nombre, especialidad.getCodigo())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre ya está en uso por otra especialidad");
+        }
+        boolean seInactiva = especialidad.getEstado() == EstadoActivacion.ACTIVO && datos.estado() == EstadoActivacion.INACTIVO;
+        if (seInactiva && !turnoSemanalRepository.listarVigentesDeEspecialidad(especialidad.getCodigo(), LocalDate.now(reloj)).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "No se puede inactivar la especialidad mientras tenga turnos de atención vigentes");
+        }
+
+        boolean hayCambios = !nombre.equals(especialidad.getNombre())
+            || !Objects.equals(descripcion, especialidad.getDescripcion())
+            || datos.requierePase() != especialidad.isRequierePase()
+            || datos.estado() != especialidad.getEstado();
+        if (hayCambios) {
+            especialidad.setNombre(nombre);
+            especialidad.setDescripcion(descripcion);
+            especialidad.setRequierePase(datos.requierePase());
+            especialidad.setEstado(datos.estado());
+            especialidad.setAdministradorModificacion(administradorRepository.getReferenceById(idAdministrador));
+            especialidad.setFechaModificacion(LocalDateTime.now(reloj));
+            try {
+                especialidadRepository.saveAndFlush(especialidad);
+            } catch (DataIntegrityViolationException e) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El nombre ya está en uso por otra especialidad");
+            }
+        }
+        return convertirAEspecialidadResponseDTO(especialidad);
     }
 }

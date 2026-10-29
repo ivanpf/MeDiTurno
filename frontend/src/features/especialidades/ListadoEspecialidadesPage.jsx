@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../../services/api'
 import estilos from './ListadoEspecialidadesPage.module.css'
 
@@ -29,6 +30,7 @@ function Estado({ estado }) {
 
 // CU-30 Listado y búsqueda de especialidades médicas, con el detalle de cada una.
 export default function ListadoEspecialidadesPage() {
+  const navigate = useNavigate()
   const [filtros, setFiltros] = useState(FILTROS_VACIOS)
   const [especialidades, setEspecialidades] = useState(null)
   const [buscando, setBuscando] = useState(false)
@@ -262,8 +264,11 @@ export default function ListadoEspecialidadesPage() {
                   <td className={estilos.descripcionTabla}>{e.descripcion}</td>
                   <td>{e.requierePase ? 'Sí' : 'No'}</td>
                   <td><Estado estado={e.estado} /></td>
-                  <td>
+                  <td className={estilos.botones}>
                     <button type="button" onClick={() => verDetalle(e.codigo)} disabled={cargandoDetalle}>Ver detalle</button>
+                    <button type="button" onClick={() => navigate('/admin/especialidades/modificar', { state: { codigo: e.codigo } })}>
+                      Modificar
+                    </button>
                   </td>
                 </tr>
               ))}

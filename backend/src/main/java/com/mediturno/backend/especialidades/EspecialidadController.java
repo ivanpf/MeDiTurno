@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.common.seguridad.UsuarioActual;
 import com.mediturno.backend.usuarios.model.Administrador;
 
 /**
@@ -33,9 +34,11 @@ import com.mediturno.backend.usuarios.model.Administrador;
 public class EspecialidadController {
 
     private final EspecialidadService especialidadService;
+    private final UsuarioActual usuarioActual;
 
-    public EspecialidadController(EspecialidadService especialidadService) {
+    public EspecialidadController(EspecialidadService especialidadService, UsuarioActual usuarioActual) {
         this.especialidadService = especialidadService;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping
@@ -68,7 +71,7 @@ public class EspecialidadController {
     }
 
     @PutMapping("/{codigoEspecialidad}")
-    public EspecialidadResponseDTO modificarEspecialidad(@PathVariable String codigoEspecialidad, @RequestBody ModificarEspecialidadDTO datos) {
-        return especialidadService.modificarEspecialidad(codigoEspecialidad, datos);
+    public EspecialidadResponseDTO modificarEspecialidad(@PathVariable String codigoEspecialidad, @Valid @RequestBody ModificarEspecialidadDTO datos) {
+        return especialidadService.modificarEspecialidad(usuarioActual.obtenerIdAdministradorAutenticado(), codigoEspecialidad, datos);
     }
 }

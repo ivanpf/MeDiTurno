@@ -30,6 +30,7 @@ import com.mediturno.backend.especialidades.dto.EspecialidadResponseDTO;
 import com.mediturno.backend.especialidades.model.Especialidad;
 import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
 import com.mediturno.backend.turnos.repository.TurnoSemanalRepository;
+import com.mediturno.backend.usuarios.repository.AdministradorRepository;
 import com.mediturno.backend.usuarios.repository.MedicoRepository;
 
 /** CU-28 Alta individual de especialidades médicas. */
@@ -42,7 +43,7 @@ class AltaEspecialidadTest {
     @BeforeEach
     void preparar() {
         repositorio = mock(EspecialidadRepository.class);
-        servicio = new EspecialidadService(repositorio, mock(MedicoRepository.class), mock(TurnoSemanalRepository.class), Clock.systemUTC());
+        servicio = new EspecialidadService(repositorio, mock(MedicoRepository.class), mock(TurnoSemanalRepository.class), mock(AdministradorRepository.class), Clock.systemUTC());
     }
 
     private AltaEspecialidadDTO datos(String codigo, String nombre) {

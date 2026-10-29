@@ -49,6 +49,14 @@
   color: var(--error);
 }
 
+.botones {
+  white-space: nowrap;
+}
+
+.botones button + button {
+  margin-left: 8px;
+}
+
 .descripcionTabla {
   min-width: 200px;
 }
