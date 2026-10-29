@@ -66,6 +66,12 @@ public class AnuncioController {
             .body(imagen.datos());
     }
 
+    /** CU-18: todos los anuncios que hubo (también los eliminados), con su estado y su situación respecto de hoy. */
+    @GetMapping("/gestion")
+    public List<AnuncioResponseDTO> listarAnunciosParaGestion() {
+        return anuncioService.listarAnunciosParaGestion();
+    }
+
     @DeleteMapping("/{idAnuncio}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminarAnuncio(@PathVariable Long idAnuncio) {

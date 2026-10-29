@@ -201,12 +201,12 @@ class DatosDePruebaTest {
 
     @Test
     void cargaCarteleraYNotificaciones() {
-        assertEquals(5, contar("anuncio"));
-        assertEquals(4, contar("anuncio", "anuncio_estado = 'PUBLICADO'"));
-        assertEquals(2, contar("anuncio", "anuncio_estado = 'PUBLICADO' AND fecha_inicio <= " + HOY + " AND fecha_fin >= " + HOY),
-            "dos anuncios vigentes; los otros están programados, vencidos o eliminados");
-        assertEquals(2, contar("imagen_anuncio", "tipo_contenido = 'image/png' AND length(datos) > 8 AND substring(datos from 2 for 3) = 'PNG'::bytea"),
-            "dos anuncios con una imagen PNG válida");
+        assertEquals(6, contar("anuncio"));
+        assertEquals(5, contar("anuncio", "anuncio_estado = 'PUBLICADO'"));
+        assertEquals(3, contar("anuncio", "anuncio_estado = 'PUBLICADO' AND fecha_inicio <= " + HOY + " AND (fecha_fin IS NULL OR fecha_fin >= " + HOY + ")"),
+            "tres anuncios vigentes; los otros están programados, vencidos o eliminados");
+        assertEquals(2, contar("imagen_anuncio", "tipo_contenido = 'image/jpeg' AND length(datos) > 8 AND substring(datos from 1 for 3) = decode('ffd8ff', 'hex')"),
+            "dos anuncios con una imagen JPG válida");
         assertEquals(11, contar("notificacion"));
         for (String tipo : new String[] {"RESERVA_CONFIRMADA", "SUSPENSION_TURNO", "CONSULTA_REGISTRADA"}) {
             assertTrue(contar("notificacion", "tipo = '" + tipo + "'") >= 1, "falta un aviso " + tipo);

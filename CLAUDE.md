@@ -7,10 +7,10 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-20, CU-21, CU-22, CU-23, CU-28, CU-31, CU-34 y CU-37**. CU-11 y CU-14 están implementados en el backend; sus pantallas web siguen pendientes. Los demás casos pendientes responden `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-31, CU-34 y CU-37**. CU-11 y CU-14 están implementados en el backend; sus pantallas web siguen pendientes. Los demás casos pendientes responden `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
-- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-20, CU-21, CU-22, CU-23, CU-28, CU-31, CU-34 y CU-37; el resto conserva `PaginaPendiente`.
+- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-31, CU-34 y CU-37; el resto conserva `PaginaPendiente`.
 - **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos
@@ -149,13 +149,16 @@ INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE corr
 - Pantalla: el médico elige al paciente en «Mis pacientes» (CU-21), que ofrece «Registrar consulta» solo para los pacientes con orden emitida; abre `RegistrarConsultaPage` con los datos del paciente (por el estado de la navegación; sin ellos, la pantalla pide elegirlo primero), pide confirmación y registra. Desde «Mis pacientes» y antes de registrar la consulta se puede abrir CU-22 para consultar los antecedentes del paciente durante una atención autorizada.
 - `RegistroConsultaIntegracionTest` verifica el registro, los estados, la historia clínica, los errores y los avisos con PostgreSQL embebido.
 
-### Cartelera: publicación de anuncios (CU-17)
+### Cartelera: consulta y publicación de anuncios (CU-6, CU-17 y CU-18)
 
 - `POST /api/anuncios` (solo funcionario) es **multipart**: la parte `datos` lleva el JSON (`AltaAnuncioDTO`: título, contenido, `fechaInicio`, `fechaFin` y `textoAlternativo`) y la parte `imagen`, el archivo (opcional). El front lo envía con `api.postForm`. El id del funcionario sale de `UsuarioActual` (por eso `publicarAnuncio(idFuncionario, datos, imagen)` recibe más parámetros que en el diseño).
 - **Vigencia:** el anuncio queda siempre `PUBLICADO` (no hay borradores). Se ve desde `fechaInicio` (hoy si falta; una fecha futura lo deja programado) hasta `fechaFin` inclusive (sin fecha, no vence). El inicio no puede ser anterior a hoy ni el fin anterior al inicio (`400`).
 - **Imagen:** como máximo **una por anuncio**, JPG o PNG (se reconoce por el contenido, no por la extensión), de hasta 5 MB (`mediturno.anuncios.tamano-maximo-bytes`). El archivo se guarda **en la base** (`imagen_anuncio.datos`, migración `V3`; una fila por anuncio) y no en disco ni como ruta, porque en Cloud Run el disco no persiste. Si se cambia el límite, también `spring.servlet.multipart` y `client_max_body_size` en `frontend/nginx.conf`.
 - `GET /api/anuncios/imagenes/{idImagen}` (cualquier rol) devuelve el archivo; `404` si no existe o si su anuncio fue eliminado. Como un `<img>` no manda el token, el front la pide con `api.descargar` y la muestra con una URL temporal.
-- El seed (`db/datos-prueba`) trae imagen en «Horario de verano» y «Campaña de vacunación». `AnuncioIntegracionTest` cubre alta, vigencia, límite, formato falso y el endpoint de imágenes. CU-6 (cartelera) y CU-18 (eliminar) siguen pendientes.
+- El seed (`db/datos-prueba`) trae imagen en «Horario de verano» y «Campaña de vacunación»; «Traiga su cédula» no tiene imagen ni fecha de fin (no vence). `AnuncioIntegracionTest` cubre alta, vigencia, límite, formato falso y el endpoint de imágenes.
+- **Cartelera (CU-6):** `GET /api/anuncios` (cualquier rol) devuelve los anuncios `PUBLICADO` que se ven hoy (fecha de Montevideo): desde `fechaInicio` hasta `fechaFin`, ambas inclusive; sin fecha de fin no vencen. Van del más nuevo al más viejo según `fechaPublicacion`. Cada uno trae título, contenido, fecha de publicación y, si tiene, los datos de su imagen (sin el archivo, que se pide aparte). Los programados, vencidos y eliminados no aparecen. No tiene paginación. La pantalla `CarteleraPage` muestra las tarjetas y carga la imagen con `ImagenAnuncio` (`api.descargar`). `CarteleraIntegracionTest` lo verifica.
+
+- **Eliminar (CU-18):** `DELETE /api/anuncios/{id}` (solo funcionario; cualquiera puede eliminar cualquier anuncio) **no borra la fila**: pasa el anuncio a `ELIMINADO`, y deja de verse en la cartelera y de entregarse su imagen. Bloquea el anuncio durante la operación (`buscarConLock`). Inexistente `404`; ya eliminado `409`. La pantalla se alimenta de `GET /api/anuncios/gestion` (solo funcionario): todos los anuncios que hubo —también los `ELIMINADO`, que quedan como historial—, el más nuevo primero, con `estado` y `vigencia` (`PROGRAMADO`, `VIGENTE` o `VENCIDO`, calculada con las fechas y el reloj de Montevideo, no se guarda; `AnuncioResponseDTO` la trae siempre). Sin paginación: con muchos anuncios vencidos la lista crece. La pantalla marca los eliminados en rojo, sin botón, y pide confirmación antes de eliminar.
 
 ### Notificaciones push
 
@@ -283,7 +286,7 @@ Ningún médico ni consultorio tiene dos turnos superpuestos.
 | Campanita | Ana tiene avisos sin leer (reservas confirmadas y una suspensión) y otros leídos. El correo a Camila figura `FALLIDA` |
 | CU-28, CU-34, CU-37 | Neurología (especialidad inactiva), el consultorio 4 (inactivo) y un médico inactivo |
 | Estadísticas (CU-40 a CU-42) | 13 semanas de historia: Cardiología con más demanda que Clínica Médica, Pediatría y Traumatología con poca |
-| Cartelera | Dos anuncios vigentes, uno programado (empieza en unos días), uno vencido y uno eliminado |
+| Cartelera | Tres anuncios vigentes (dos con imagen —«Ventanilla» y «Vacunación»— y uno sin imagen ni fecha de fin), uno programado (empieza en unos días), uno vencido y uno eliminado |
 
 **Cómo mantener el script:**
 

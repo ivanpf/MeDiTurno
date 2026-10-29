@@ -5,6 +5,8 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.mediturno.backend.anuncios.dto.AltaAnuncioDTO;
 import com.mediturno.backend.anuncios.dto.AnuncioResponseDTO;
@@ -13,9 +15,10 @@ import com.mediturno.backend.anuncios.dto.ImagenAnuncioResponseDTO;
 import com.mediturno.backend.anuncios.model.Anuncio;
 import com.mediturno.backend.anuncios.model.EstadoAnuncio;
 import com.mediturno.backend.anuncios.model.ImagenAnuncio;
+import com.mediturno.backend.anuncios.model.VigenciaAnuncio;
 import com.mediturno.backend.anuncios.repository.AnuncioRepository;
 import com.mediturno.backend.anuncios.repository.ImagenAnuncioRepository;
-import com.mediturno.backend.common.exception.NoImplementadoException;
+import com.mediturno.backend.anuncios.repository.ImagenAnuncioRepository.ResumenImagen;
 import com.mediturno.backend.usuarios.repository.FuncionarioRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -26,7 +29,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-6, CU-17, CU-18.
- * Los métodos de CU-6 y CU-18 todavía no están implementados: lanzan NoImplementadoException (respuesta 501).
  */
 @Service
 public class AnuncioService {
@@ -50,9 +52,16 @@ public class AnuncioService {
         this.tamanoMaximoBytes = tamanoMaximoBytes;
     }
 
-    /** CU-6. */
+    /** CU-6. Los anuncios publicados que se ven hoy, el más nuevo primero. Lo ve cualquier perfil. */
+    @Transactional(readOnly = true)
     public List<AnuncioResponseDTO> listarCartelera() {
-        throw new NoImplementadoException();
+        return convertirALista(anuncioRepository.buscarVigentes(EstadoAnuncio.PUBLICADO, LocalDate.now(reloj)));
+    }
+
+    /** CU-18. Todos los anuncios que hubo (publicados y eliminados), el más nuevo primero: sirve de historial y para elegir cuál eliminar. */
+    @Transactional(readOnly = true)
+    public List<AnuncioResponseDTO> listarAnunciosParaGestion() {
+        return convertirALista(anuncioRepository.findAllByOrderByFechaPublicacionDescIdAnuncioDesc());
     }
 
     /** CU-17. */
@@ -90,9 +99,30 @@ public class AnuncioService {
         return new ArchivoImagenDTO(imagen.getDatos(), imagen.getTipoContenido());
     }
 
-    /** CU-18. */
+    /**
+     * CU-18. El anuncio no se borra: pasa a ELIMINADO y deja de verse en la cartelera (y su imagen deja de entregarse).
+     * Cualquier funcionario puede eliminar cualquier anuncio.
+     */
+    @Transactional
     public void eliminarAnuncio(Long idAnuncio) {
-        throw new NoImplementadoException();
+        Anuncio anuncio = anuncioRepository.buscarConLock(idAnuncio)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El anuncio no existe"));
+        if (anuncio.getAnuncioEstado() == EstadoAnuncio.ELIMINADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El anuncio ya fue eliminado");
+        }
+        anuncio.setAnuncioEstado(EstadoAnuncio.ELIMINADO);
+        anuncioRepository.save(anuncio);
+    }
+
+    private List<AnuncioResponseDTO> convertirALista(List<Anuncio> anuncios) {
+        if (anuncios.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, ImagenAnuncioResponseDTO> imagenes = imagenAnuncioRepository
+            .resumenesDe(anuncios.stream().map(Anuncio::getIdAnuncio).toList()).stream()
+            .collect(Collectors.toMap(ResumenImagen::getIdAnuncio,
+                i -> new ImagenAnuncioResponseDTO(i.getIdImagen(), i.getNombreArchivo(), i.getTextoAlternativo())));
+        return anuncios.stream().map(a -> convertirAAnuncioResponseDTO(a, imagenes.get(a.getIdAnuncio()))).toList();
     }
 
     private void validarVigencia(LocalDate inicio, LocalDate fin, LocalDate hoy) {
@@ -158,9 +188,21 @@ public class AnuncioService {
     }
 
     private AnuncioResponseDTO convertirAAnuncioResponseDTO(Anuncio anuncio, ImagenAnuncio imagen) {
-        ImagenAnuncioResponseDTO imagenDTO = imagen == null ? null
-            : new ImagenAnuncioResponseDTO(imagen.getIdImagenAnuncio(), imagen.getNombreArchivo(), imagen.getTextoAlternativo());
+        return convertirAAnuncioResponseDTO(anuncio, imagen == null ? null
+            : new ImagenAnuncioResponseDTO(imagen.getIdImagenAnuncio(), imagen.getNombreArchivo(), imagen.getTextoAlternativo()));
+    }
+
+    private AnuncioResponseDTO convertirAAnuncioResponseDTO(Anuncio anuncio, ImagenAnuncioResponseDTO imagenDTO) {
         return new AnuncioResponseDTO(anuncio.getIdAnuncio(), anuncio.getTitulo(), anuncio.getContenido(),
-            anuncio.getFechaPublicacion(), anuncio.getFechaInicio(), anuncio.getFechaFin(), anuncio.getAnuncioEstado(), imagenDTO);
+            anuncio.getFechaPublicacion(), anuncio.getFechaInicio(), anuncio.getFechaFin(), anuncio.getAnuncioEstado(),
+            vigenciaDe(anuncio), imagenDTO);
+    }
+
+    private VigenciaAnuncio vigenciaDe(Anuncio anuncio) {
+        LocalDate hoy = LocalDate.now(reloj);
+        if (anuncio.getFechaInicio() != null && anuncio.getFechaInicio().isAfter(hoy)) {
+            return VigenciaAnuncio.PROGRAMADO;
+        }
+        return anuncio.getFechaFin() != null && anuncio.getFechaFin().isBefore(hoy) ? VigenciaAnuncio.VENCIDO : VigenciaAnuncio.VIGENTE;
     }
 }

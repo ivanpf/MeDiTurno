@@ -21,15 +21,13 @@ export default function RecuperarAccesoPage() {
   const [nuevaContrasena, setNuevaContrasena] = useState('')
   const [repetirContrasena, setRepetirContrasena] = useState('')
   const [error, setError] = useState('')
-  const [cargando, setCargando] = useState(false)
+  const [cargando, setCargando] = useState(Boolean(token)) // con token, empieza validándolo
 
   // Con un token en la URL se valida al entrar: 204 habilita el paso de nueva contraseña,
   // 404/410 muestra «enlace vencido», otro error permite volver a solicitar.
   useEffect(() => {
     if (!token) return
     let vigente = true
-    setError('')
-    setCargando(true)
     api.get(`/auth/recuperacion/${encodeURIComponent(token)}`)
       .then(() => vigente && setEstado('definir'))
       .catch((e) => {
