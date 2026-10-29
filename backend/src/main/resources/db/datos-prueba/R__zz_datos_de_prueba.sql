@@ -127,8 +127,8 @@ BEGIN
         ('CARD', FALSE, 'Cardiología', 'Diagnóstico y tratamiento de enfermedades del corazón.', 'ACTIVO'),
         ('CLIN', FALSE, 'Clínica Médica', 'Atención general de adultos.', 'ACTIVO'),
         ('PEDI', FALSE, 'Pediatría', 'Atención de niños y adolescentes.', 'ACTIVO'),
-        ('TRAU', TRUE, 'Traumatología', 'Lesiones de huesos, articulaciones y músculos. Requiere pase.', 'ACTIVO'),
-        ('DERM', TRUE, 'Dermatología', 'Enfermedades de la piel. Requiere pase.', 'ACTIVO'),
+        ('TRAU', TRUE, 'Traumatología', 'Lesiones de huesos, articulaciones y músculos.', 'ACTIVO'),
+        ('DERM', TRUE, 'Dermatología', 'Enfermedades de la piel.', 'ACTIVO'),
         ('NEUR', FALSE, 'Neurología', 'Especialidad inactiva (sirve para probar los casos de especialidad inactiva).', 'INACTIVO');
 
     INSERT INTO consultorio (codigo, ubicacion, nombre, descripcion, estado) VALUES
