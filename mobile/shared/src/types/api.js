@@ -76,25 +76,30 @@
 
 /**
  * @typedef {Object} ReservaResponseDTO
- * @property {number} id
- * @property {string} codigo - ej: "RES-000123"
+ * @property {number} idReserva
  * @property {'VIGENTE'|'ORDEN_EMITIDA'|'ATENDIDA'|'CANCELADA'|'ANULADA'|'VENCIDA'} estado
- * @property {string} fechaOcurrencia - ISO datetime
- * @property {string} horaInicio - HH:mm
- * @property {string} horaFin - HH:mm
+ * @property {string} fecha - YYYY-MM-DD
+ * @property {string} horaInicio - HH:mm:ss
+ * @property {string} horaFin - HH:mm:ss
  * @property {number} numero
- * @property {string} horaEstimadaAtencion - ~HH:mm
- * @property {Object} especialidad
- * @property {string} especialidad.codigo
- * @property {string} especialidad.nombre
- * @property {Object} medico
- * @property {number} medico.id
- * @property {string} medico.nombre
- * @property {string} medico.apellido
- * @property {Object} consultorio
- * @property {number} consultorio.id
- * @property {string} consultorio.nombre
- * @property {boolean} requierePase
+ * @property {string} horaEstimada - HH:mm:ss
+ * @property {string} especialidad
+ * @property {string} nombreMedico
+ * @property {string} consultorio
+ * @property {number|null} idPaciente
+ * @property {string} nombrePaciente
+ * @property {string} cedulaPaciente
+ * @property {number|null} numeroOrden
+ * @property {string|null} estadoOrden
+ */
+
+/**
+ * Listado y vista previa de cancelación (CU-9).
+ * @typedef {Object} ReservaCancelacionDTO
+ * @property {ReservaResponseDTO} reserva
+ * @property {boolean} puedeCancelar - Calculado por el backend desde el inicio del turno.
+ * @property {string|null} motivoNoCancelable
+ * @property {string|null} fechaCancelacion - Fecha y hora locales de la institución, YYYY-MM-DDTHH:mm:ss.
  */
 
 /**

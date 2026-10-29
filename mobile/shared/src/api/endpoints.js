@@ -101,6 +101,21 @@ export async function cancelarReserva(idReserva) {
   return api.post(`/reservas/${idReserva}/cancelacion`);
 }
 
+// CU-9: listado de apoyo y comprobación previa; el historial de CU-10 conserva su endpoint.
+/** @returns {Promise<import('../types/api').ReservaCancelacionDTO[]>} */
+export async function listarProximasPropias() {
+  return api.get('/reservas/mias/proximas');
+}
+
+/**
+ * @param {number} idReserva
+ * @returns {Promise<import('../types/api').ReservaCancelacionDTO>}
+ */
+export async function vistaPreviaCancelacion(idReserva) {
+  return api.get(`/reservas/${idReserva}/cancelacion/vista-previa`);
+}
+
+
 /**
  * @param {import('../types/api').CriteriosBusquedaDTO} [criterios]
  * @returns {Promise<import('../types/api').ReservaResponseDTO[]>}
@@ -111,7 +126,7 @@ export async function listarMisReservas(criterios = {}) {
     if (v !== undefined && v !== null) params.append(k, v);
   });
   const query = params.toString() ? `?${params}` : '';
-  return api.get(`/reservas/mis${query}`);
+  return api.get(`/reservas/mias${query}`);
 }
 
 /**
