@@ -5,6 +5,7 @@ import java.util.List;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
 import com.mediturno.backend.especialidades.dto.AltaEspecialidadDTO;
+import com.mediturno.backend.especialidades.dto.EspecialidadDetalleResponseDTO;
 import com.mediturno.backend.especialidades.dto.EspecialidadResponseDTO;
 import com.mediturno.backend.especialidades.dto.ModificarEspecialidadDTO;
 import jakarta.validation.Valid;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.common.seguridad.UsuarioActual;
 import com.mediturno.backend.usuarios.model.Administrador;
 
 /**
@@ -32,15 +34,23 @@ import com.mediturno.backend.usuarios.model.Administrador;
 public class EspecialidadController {
 
     private final EspecialidadService especialidadService;
+    private final UsuarioActual usuarioActual;
 
-    public EspecialidadController(EspecialidadService especialidadService) {
+    public EspecialidadController(EspecialidadService especialidadService, UsuarioActual usuarioActual) {
         this.especialidadService = especialidadService;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public EspecialidadResponseDTO altaEspecialidad(@Valid @RequestBody AltaEspecialidadDTO datos) {
         return especialidadService.altaEspecialidad(datos);
+    }
+
+    /** CU-29, paso previo: valida el archivo y muestra lo detectado, sin guardar nada. */
+    @PostMapping("/csv/previsualizacion")
+    public ResultadoImportacionDTO previsualizarEspecialidadesCSV(@RequestParam("archivo") MultipartFile archivo) {
+        return especialidadService.previsualizarEspecialidadesCSV(archivo);
     }
 
     @PostMapping("/csv")
@@ -60,8 +70,14 @@ public class EspecialidadController {
         return especialidadService.obtenerEspecialidad(codigoEspecialidad);
     }
 
+    /** Detalle con médicos y turnos asociados: solo para el administrador (el de arriba es el de datos básicos, para todos). */
+    @GetMapping("/{codigoEspecialidad}/detalle")
+    public EspecialidadDetalleResponseDTO obtenerDetalleEspecialidad(@PathVariable String codigoEspecialidad) {
+        return especialidadService.obtenerDetalleEspecialidad(codigoEspecialidad);
+    }
+
     @PutMapping("/{codigoEspecialidad}")
-    public EspecialidadResponseDTO modificarEspecialidad(@PathVariable String codigoEspecialidad, @RequestBody ModificarEspecialidadDTO datos) {
-        return especialidadService.modificarEspecialidad(codigoEspecialidad, datos);
+    public EspecialidadResponseDTO modificarEspecialidad(@PathVariable String codigoEspecialidad, @Valid @RequestBody ModificarEspecialidadDTO datos) {
+        return especialidadService.modificarEspecialidad(usuarioActual.obtenerIdAdministradorAutenticado(), codigoEspecialidad, datos);
     }
 }

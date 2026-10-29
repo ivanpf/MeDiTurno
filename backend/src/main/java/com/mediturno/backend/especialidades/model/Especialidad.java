@@ -1,13 +1,19 @@
 package com.mediturno.backend.especialidades.model;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import com.mediturno.backend.common.model.EstadoActivacion;
+import com.mediturno.backend.usuarios.model.Administrador;
 
 @Entity
 @Table(name = "especialidad")
@@ -29,6 +35,30 @@ public class Especialidad {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, length = 20)
     private EstadoActivacion estado;
+
+    /** Último administrador que modificó la especialidad (CU-43); nulo si nunca se modificó. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_administrador_modificacion")
+    private Administrador administradorModificacion;
+
+    @Column(name = "fecha_modificacion")
+    private LocalDateTime fechaModificacion;
+
+    public Administrador getAdministradorModificacion() {
+        return administradorModificacion;
+    }
+
+    public void setAdministradorModificacion(Administrador administradorModificacion) {
+        this.administradorModificacion = administradorModificacion;
+    }
+
+    public LocalDateTime getFechaModificacion() {
+        return fechaModificacion;
+    }
+
+    public void setFechaModificacion(LocalDateTime fechaModificacion) {
+        this.fechaModificacion = fechaModificacion;
+    }
 
     public String getCodigo() {
         return codigo;

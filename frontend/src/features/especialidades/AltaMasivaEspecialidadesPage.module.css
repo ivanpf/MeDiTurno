@@ -1,0 +1,49 @@
+.ayuda {
+  max-width: 720px;
+  margin: 0 0 16px;
+  color: var(--gris);
+}
+
+.formulario {
+  max-width: 640px;
+  margin-bottom: 24px;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.resumen {
+  margin: 0 0 12px;
+  font-weight: 600;
+  color: var(--azul-oscuro);
+}
+
+.lista {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.pie {
+  margin: 8px 0 0;
+}
+
+/* Fila con errores en la previsualización: se distingue con el fondo de error y el texto en rojo */
+.conError td {
+  background: var(--error-claro);
+}
+
+.valida {
+  font-weight: 700;
+  color: var(--exito);
+}
+
+/* Las descripciones largas se parten en lugar de ensanchar la tabla */
+.valor {
+  min-width: 100px;
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}

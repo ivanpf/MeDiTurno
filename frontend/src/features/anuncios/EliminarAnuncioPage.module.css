@@ -1,7 +1,6 @@
-/* Las celdas van centradas en vertical y todas las filas miden lo mismo, tengan o no el botón «Eliminar». */
+/* Todas las filas miden lo mismo, tengan o no el botón «Eliminar». */
 .tablaAnuncios:global(.tabla) td {
   height: 60px;
-  vertical-align: middle;
 }
 
 .mensajes {
