@@ -1,0 +1,56 @@
+/* Las celdas van centradas en vertical y todas las filas miden lo mismo, tengan o no el botón «Eliminar». */
+.tablaAnuncios:global(.tabla) td {
+  height: 60px;
+  vertical-align: middle;
+}
+
+.mensajes {
+  max-width: 720px;
+  margin-bottom: 16px;
+}
+
+.titulo {
+  min-width: 180px;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+}
+
+.etiqueta {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.vigente {
+  color: var(--exito);
+  background: var(--exito-claro);
+}
+
+.programado {
+  color: var(--mostaza-oscuro);
+  background: var(--mostaza-claro);
+}
+
+.eliminado {
+  color: var(--error);
+  background: var(--error-claro);
+}
+
+.vencido {
+  color: var(--gris);
+  background: var(--fondo);
+  border-color: var(--borde);
+}
+
+/* Encabezado de la columna de botones: no se ve, pero lo lee un lector de pantalla. */
+.oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

@@ -18,6 +18,10 @@ spring:
     url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:mediturno_db}
     username: ${DB_USER:mediturno}
     password: ${DB_PASSWORD:mediturno123}
+  servlet:
+    multipart:
+      max-file-size: 5MB       # la imagen de un anuncio (ver mediturno.anuncios)
+      max-request-size: 6MB    # la imagen y los datos del anuncio
   mvc:
     format:
       date: iso   # las fechas que viajan en la URL (por ejemplo, la vista previa de una suspensión) son aaaa-mm-dd
@@ -44,3 +48,7 @@ mediturno:
     semanas-adelante: 8
   ocurrencias:
     cron: "0 0 2 * * *"       # cuándo se generan las fechas de los turnos (todos los días a las 2:00)
+  anuncios:
+    # Límite de la imagen de un anuncio (CU-17): una por anuncio, JPG o PNG. Si se sube el tamaño, subir también
+    # spring.servlet.multipart (arriba) y client_max_body_size en frontend/nginx.conf.
+    tamano-maximo-bytes: 5242880   # 5 MB
