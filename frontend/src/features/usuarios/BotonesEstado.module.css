@@ -1,0 +1,17 @@
+/* Botones de activar e inactivar una cuenta (CU-46): un rojo y un verde muy suaves, de las variables de error y éxito */
+.inactivar {
+  background: var(--error-claro);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.activar {
+  background: var(--exito-claro);
+  border-color: var(--exito);
+  color: var(--exito);
+}
+
+.inactivar:hover:not(:disabled),
+.activar:hover:not(:disabled) {
+  filter: brightness(0.96);
+}

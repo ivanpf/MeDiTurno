@@ -16,7 +16,7 @@ import com.mediturno.backend.especialidades.model.Especialidad;
 @Entity
 @Table(name = "medico")
 @PrimaryKeyJoinColumn(name = "id_usuario")
-public class Medico extends Usuario {
+public class Medico extends UsuarioInterno {
 
     @Column(name = "matricula", nullable = false, unique = true, length = 30)
     private String matricula;

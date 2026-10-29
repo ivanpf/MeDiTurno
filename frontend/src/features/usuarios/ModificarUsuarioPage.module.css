@@ -1,0 +1,83 @@
+.formulario {
+  max-width: 640px;
+}
+
+.mensajes {
+  max-width: 640px;
+  margin-bottom: 16px;
+}
+
+.mensajes ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+/* El fieldset solo agrupa los campos para deshabilitarlos mientras se guarda */
+.campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Campos de a dos; en pantallas chicas, uno debajo del otro */
+.fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fila > * {
+  min-width: 0;
+}
+
+.especialidades {
+  min-width: 0;
+  margin: 16px 0 0;
+  padding: 16px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.especialidades legend {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris);
+}
+
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--texto);
+}
+
+.opcion input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--azul);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ayuda {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+@media (max-width: 800px) {
+  .fila {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

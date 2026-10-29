@@ -7,5 +7,5 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "funcionario")
 @PrimaryKeyJoinColumn(name = "id_usuario")
-public class Funcionario extends Usuario {
+public class Funcionario extends UsuarioInterno {
 }

@@ -1,7 +1,13 @@
 package com.mediturno.backend.common.busqueda;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -31,6 +37,33 @@ public final class FiltrosBusqueda {
 
     /** El carácter de escape del patrón de {@link #patronContiene}, para pasárselo a {@code cb.like}. */
     public static final char ESCAPE = '\\';
+
+    /**
+     * Condición de búsqueda de una persona (paciente o usuario interno) por texto, o {@code null} si no hay nada que buscar:
+     * la cédula, el nombre, el apellido y el correo, sin distinguir mayúsculas, y también «apellido nombre» y «nombre apellido».
+     * La cédula se guarda como 1.234.567-8; quien escribe 1234567 también la encuentra.
+     */
+    public static Predicate coincidenciasDePersona(From<?, ?> persona, CriteriaBuilder cb, String texto) {
+        String patron = patronContiene(texto);
+        if (patron == null) {
+            return null;
+        }
+        List<Predicate> coincidencias = new ArrayList<>(List.of(
+            cb.like(cb.lower(persona.get("cedula")), patron, ESCAPE),
+            cb.like(cb.lower(persona.get("nombre")), patron, ESCAPE),
+            cb.like(cb.lower(persona.get("apellido")), patron, ESCAPE),
+            cb.like(cb.lower(persona.get("correo")), patron, ESCAPE),
+            cb.like(cb.lower(cb.concat(cb.concat(persona.get("apellido"), " "), persona.get("nombre"))), patron, ESCAPE),
+            cb.like(cb.lower(cb.concat(cb.concat(persona.get("nombre"), " "), persona.get("apellido"))), patron, ESCAPE)));
+        String digitos = texto.replaceAll("[.\\-\\s]", "");
+        if (!digitos.isEmpty() && digitos.chars().allMatch(Character::isDigit)) {
+            Expression<String> sinPuntos = cb.function("replace", String.class,
+                cb.function("replace", String.class, persona.<String>get("cedula"), cb.literal("."), cb.literal("")),
+                cb.literal("-"), cb.literal(""));
+            coincidencias.add(cb.like(sinPuntos, "%" + digitos + "%"));
+        }
+        return cb.or(coincidencias.toArray(new Predicate[0]));
+    }
 
     /** ACTIVO o INACTIVO (sin distinguir mayúsculas); {@code null} si no se indicó; 400 si es otra cosa. */
     public static EstadoActivacion interpretarEstado(String texto) {
