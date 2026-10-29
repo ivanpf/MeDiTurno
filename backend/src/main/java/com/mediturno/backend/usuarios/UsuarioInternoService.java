@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -50,11 +51,15 @@ import com.mediturno.backend.usuarios.repository.UsuarioRepository;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -65,6 +70,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class UsuarioInternoService {
 
+    private static final Logger log = LoggerFactory.getLogger(UsuarioInternoService.class);
     private static final SecureRandom GENERADOR = new SecureRandom();
     private static final String CARACTERES_CONTRASENA = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
@@ -535,7 +541,7 @@ public class UsuarioInternoService {
         return convertirAUsuarioResponseDTO(usuario);
     }
 
-    private static Set<String> codigos(java.util.Collection<Especialidad> especialidades) {
+    private static Set<String> codigos(Collection<Especialidad> especialidades) {
         return especialidades.stream().map(Especialidad::getCodigo).collect(Collectors.toSet());
     }
 
@@ -656,13 +662,39 @@ public class UsuarioInternoService {
                 contrasenas.add(contrasena);
             }
             usuarioRepository.saveAllAndFlush(nuevos);
-            for (int i = 0; i < nuevos.size(); i++) {
-                emailService.enviarCredencialesTemporales(nuevos.get(i).getCorreo(), contrasenas.get(i));
-            }
+            enviarCredencialesDespuesDeConfirmar(nuevos, contrasenas);
         } catch (RuntimeException e) {
             // Las identidades creadas quedarían sin dueño: la base se deshace sola, el proveedor no.
             uidsCreados.forEach(authService::eliminarCuenta);
             throw e;
+        }
+    }
+
+    /**
+     * Los correos salen recién cuando las cuentas quedaron confirmadas en la base: si salieran antes y la importación se
+     * deshiciera, las personas tendrían credenciales de cuentas que ya no existen. Un correo que falla no revierte nada y no
+     * frena a los demás: se deja en el log con la dirección para reenviarlo a mano.
+     */
+    private void enviarCredencialesDespuesDeConfirmar(List<Usuario> nuevos, List<String> contrasenas) {
+        Runnable envio = () -> {
+            for (int i = 0; i < nuevos.size(); i++) {
+                String correo = nuevos.get(i).getCorreo();
+                try {
+                    emailService.enviarCredencialesTemporales(correo, contrasenas.get(i));
+                } catch (RuntimeException e) {
+                    log.error("La cuenta de {} se creó, pero no se pudo enviar el correo con las credenciales", correo, e);
+                }
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    envio.run();
+                }
+            });
+        } else {
+            envio.run();
         }
     }
 

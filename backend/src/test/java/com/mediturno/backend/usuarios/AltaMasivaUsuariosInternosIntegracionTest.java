@@ -36,6 +36,8 @@ import com.mediturno.backend.usuarios.model.Funcionario;
 import com.mediturno.backend.usuarios.model.Medico;
 import com.mediturno.backend.usuarios.model.ProveedorAcceso;
 import com.mediturno.backend.usuarios.model.Usuario;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** CU-35 Alta masiva de usuarios internos por CSV, con una base PostgreSQL real. */
 class AltaMasivaUsuariosInternosIntegracionTest extends BaseUsuariosInternos {
@@ -66,8 +68,15 @@ class AltaMasivaUsuariosInternosIntegracionTest extends BaseUsuariosInternos {
         return servicio.previsualizarUsuariosInternosCSV(csv(contenido));
     }
 
+    /**
+     * La prueba corre dentro de una transacción que se deshace sola y nunca llega al «commit», así que lo que el servicio deja
+     * para después de confirmar (los correos) se ejecuta a mano. Si el servicio lanza una excepción no se ejecuta, igual que en
+     * una transacción deshecha.
+     */
     private ResultadoImportacionDTO importar(String contenido) {
-        return servicio.altaUsuariosInternosCSV(csv(contenido));
+        ResultadoImportacionDTO resultado = servicio.altaUsuariosInternosCSV(csv(contenido));
+        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        return resultado;
     }
 
     private List<String> erroresDeLaFila(ResultadoImportacionDTO r, int numero) {
@@ -247,16 +256,24 @@ class AltaMasivaUsuariosInternosIntegracionTest extends BaseUsuariosInternos {
     }
 
     @Test
-    void siFallaElCorreoNoSeCreaNadaYSeBorranTodasLasCuentasCreadas() {
+    void siFallaUnCorreoLasCuentasQuedanCreadasYLosDemasCorreosSalen() {
         doThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "correo caído"))
             .when(correo).enviarCredencialesTemporales(eq("ms.bruno@ejemplo.com"), anyString());
 
-        ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> importar(TRES_VALIDOS));
+        ResultadoImportacionDTO r = importar(TRES_VALIDOS);
 
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, error.getStatusCode());
-        verify(proveedor).eliminarCuenta("uid-ms.ana@ejemplo.com");
-        verify(proveedor).eliminarCuenta("uid-ms.bruno@ejemplo.com");
-        verify(proveedor).eliminarCuenta("uid-ms.carla@ejemplo.com");
+        assertEquals(3, r.registrosCreados());
+        assertTrue(existe("ms.bruno@ejemplo.com"));
+        verify(proveedor, never()).eliminarCuenta(anyString());
+        verify(correo).enviarCredencialesTemporales(eq("ms.ana@ejemplo.com"), anyString());
+        verify(correo).enviarCredencialesTemporales(eq("ms.carla@ejemplo.com"), anyString());
+    }
+
+    @Test
+    void ningunCorreoSaleAntesDeConfirmarLaImportacion() {
+        servicio.altaUsuariosInternosCSV(csv(TRES_VALIDOS));
+
+        verify(correo, never()).enviarCredencialesTemporales(anyString(), anyString());
     }
 
     @Test
