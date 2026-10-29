@@ -5,6 +5,7 @@ import java.util.List;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
 import com.mediturno.backend.especialidades.dto.AltaEspecialidadDTO;
+import com.mediturno.backend.especialidades.dto.EspecialidadDetalleResponseDTO;
 import com.mediturno.backend.especialidades.dto.EspecialidadResponseDTO;
 import com.mediturno.backend.especialidades.dto.ModificarEspecialidadDTO;
 import jakarta.validation.Valid;
@@ -58,6 +59,12 @@ public class EspecialidadController {
     @GetMapping("/{codigoEspecialidad}")
     public EspecialidadResponseDTO obtenerEspecialidad(@PathVariable String codigoEspecialidad) {
         return especialidadService.obtenerEspecialidad(codigoEspecialidad);
+    }
+
+    /** Detalle con médicos y turnos asociados: solo para el administrador (el de arriba es el de datos básicos, para todos). */
+    @GetMapping("/{codigoEspecialidad}/detalle")
+    public EspecialidadDetalleResponseDTO obtenerDetalleEspecialidad(@PathVariable String codigoEspecialidad) {
+        return especialidadService.obtenerDetalleEspecialidad(codigoEspecialidad);
     }
 
     @PutMapping("/{codigoEspecialidad}")

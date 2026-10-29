@@ -26,5 +26,9 @@ public interface MedicoRepository extends JpaRepository<Medico, Long> {
     @Query("select distinct m from Medico m left join fetch m.especialidades where m.estado = :estado order by m.apellido, m.nombre")
     List<Medico> listarConEspecialidades(@Param("estado") EstadoActivacion estado);
 
+    /** Los médicos en ese estado que atienden la especialidad, ordenados por apellido y nombre. */
+    @Query("select m from Medico m join m.especialidades e where e.codigo = :codigoEspecialidad and m.estado = :estado order by m.apellido, m.nombre")
+    List<Medico> listarPorEspecialidad(@Param("codigoEspecialidad") String codigoEspecialidad, @Param("estado") EstadoActivacion estado);
+
     boolean existsByMatriculaIgnoreCase(String matricula);
 }

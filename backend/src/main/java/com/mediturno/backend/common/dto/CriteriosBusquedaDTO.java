@@ -16,6 +16,8 @@ import java.time.LocalDate;
  *   <li>CU-20 (turnos semanales): {@code idMedico}, {@code codigoEspecialidad}, {@code dia} (LUNES...DOMINGO),
  *       {@code codigoConsultorio} y {@code estado} (ACTIVO o SUSPENDIDO); {@code ordenarPor} puede ser medico,
  *       especialidad, dia, horario, consultorio o estado.</li>
+ *   <li>CU-30 (especialidades): {@code texto} (busca en el código y en el nombre), {@code estado} (ACTIVO o INACTIVO) y
+ *       {@code requierePase}; {@code ordenarPor} puede ser codigo o nombre (por defecto, nombre).</li>
  * </ul>
  * {@code dia} y {@code estado} son texto porque cada caso de uso tiene sus propios valores.
  */
@@ -28,16 +30,24 @@ public record CriteriosBusquedaDTO(
         String ordenarPor,
         Boolean descendente,
         LocalDate fechaDesde,
-        LocalDate fechaHasta) {
+        LocalDate fechaHasta,
+        String texto,
+        Boolean requierePase) {
+
+    /** Conserva la forma usada por los casos de uso que no usan búsqueda por texto ni el requisito de pase. */
+    public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,
+            String estado, String ordenarPor, Boolean descendente, LocalDate fechaDesde, LocalDate fechaHasta) {
+        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, fechaDesde, fechaHasta, null, null);
+    }
 
     /** Conserva la forma usada por los casos de uso que no utilizan un rango de fechas. */
     public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,
             String estado, String ordenarPor, Boolean descendente) {
-        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, null, null);
+        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, null, null, null, null);
     }
 
     /** Sin ningún criterio: devuelve todo, en el orden por defecto. */
     public static CriteriosBusquedaDTO vacio() {
-        return new CriteriosBusquedaDTO(null, null, null, null, null, null, null, null, null);
+        return new CriteriosBusquedaDTO(null, null, null, null, null, null, null, null, null, null, null);
     }
 }
