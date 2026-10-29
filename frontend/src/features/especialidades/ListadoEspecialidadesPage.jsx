@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, ApiError } from '../../services/api'
+import { api } from '../../services/api'
+import { comoError } from '../../utils/errores'
+import { hora, NOMBRE_DIA } from '../../utils/formatos'
 import estilos from './ListadoEspecialidadesPage.module.css'
 
 const ORDENES = [
@@ -8,24 +10,10 @@ const ORDENES = [
   ['codigo', 'Código'],
 ]
 
-const NOMBRE_DIA = {
-  LUNES: 'Lunes',
-  MARTES: 'Martes',
-  MIERCOLES: 'Miércoles',
-  JUEVES: 'Jueves',
-  VIERNES: 'Viernes',
-  SABADO: 'Sábado',
-  DOMINGO: 'Domingo',
-}
-
 const FILTROS_VACIOS = { texto: '', estado: '', requierePase: '', ordenarPor: 'nombre', descendente: false }
 
-const hora = (texto) => texto.slice(0, 5)
-
-const comoError = (err, mensaje) => (err instanceof ApiError ? err : new ApiError(0, mensaje))
-
 function Estado({ estado }) {
-  return <span className={estado === 'ACTIVO' ? estilos.activa : estilos.inactiva}>{estado === 'ACTIVO' ? 'Activa' : 'Inactiva'}</span>
+  return <span className={estado === 'ACTIVO' ? 'estado-activo' : 'estado-inactivo'}>{estado === 'ACTIVO' ? 'Activa' : 'Inactiva'}</span>
 }
 
 // CU-30 Listado y búsqueda de especialidades médicas, con el detalle de cada una.
@@ -112,8 +100,8 @@ export default function ListadoEspecialidadesPage() {
 
       {error && <p className="mensaje-error" role="alert">{error.mensaje}</p>}
 
-      <form className={estilos.filtros} onSubmit={enviarBusqueda}>
-        <div className={estilos.camposDeFiltro}>
+      <form className="listado-filtros" onSubmit={enviarBusqueda}>
+        <div className="listado-campos">
           <label>
             Buscar por código o nombre
             <input type="search" name="texto" value={filtros.texto} onChange={cambiarFiltro} maxLength={100} />
@@ -141,30 +129,30 @@ export default function ListadoEspecialidadesPage() {
             </select>
           </label>
         </div>
-        <label className={estilos.inversa}>
+        <label className="casilla-inversa">
           <input type="checkbox" name="descendente" checked={filtros.descendente} onChange={cambiarFiltro} />
           Orden descendente
         </label>
-        <div className={estilos.acciones}>
+        <div className="listado-acciones">
           <button type="submit" className="principal" disabled={buscando}>Buscar</button>
           <button type="button" onClick={limpiarFiltros} disabled={buscando}>Limpiar</button>
         </div>
       </form>
 
-      <div ref={panelDetalle} className={estilos.anclaDetalle}>
+      <div ref={panelDetalle} className="detalle-ancla">
         {errorDetalle && (
           <div className="mensaje-error" role="alert">
             {errorDetalle.mensaje}
-            <div className={estilos.acciones}>
+            <div className="listado-acciones">
               <button type="button" onClick={cerrarDetalle}>Cerrar</button>
             </div>
           </div>
         )}
 
         {detalle && (
-          <article className={estilos.detalle} aria-labelledby="titulo-detalle">
+          <article className="detalle-panel" aria-labelledby="titulo-detalle">
             <h2 id="titulo-detalle">{detalle.nombre}</h2>
-            <dl className={estilos.datos}>
+            <dl className="detalle-datos">
               <div>
                 <dt>Código</dt>
                 <dd>{detalle.codigo}</dd>
@@ -177,7 +165,7 @@ export default function ListadoEspecialidadesPage() {
                 <dt>Pase previo</dt>
                 <dd>{detalle.requierePase ? 'Requiere pase' : 'No requiere pase'}</dd>
               </div>
-              <div className={estilos.descripcion}>
+              <div className="detalle-ancho">
                 <dt>Descripción</dt>
                 <dd>{detalle.descripcion || 'Sin descripción'}</dd>
               </div>
@@ -185,7 +173,7 @@ export default function ListadoEspecialidadesPage() {
 
             <h3>Médicos activos que la atienden</h3>
             {detalle.medicos.length === 0 ? (
-              <p className={estilos.vacio}>Ningún médico activo atiende esta especialidad.</p>
+              <p className="texto-vacio">Ningún médico activo atiende esta especialidad.</p>
             ) : (
               <div className="tabla-scroll">
                 <table className="tabla">
@@ -206,7 +194,7 @@ export default function ListadoEspecialidadesPage() {
 
             <h3>Turnos de atención vigentes</h3>
             {detalle.turnos.length === 0 ? (
-              <p className={estilos.vacio}>No hay turnos de atención vigentes para esta especialidad.</p>
+              <p className="texto-vacio">No hay turnos de atención vigentes para esta especialidad.</p>
             ) : (
               <div className="tabla-scroll">
                 <table className="tabla">
@@ -221,7 +209,7 @@ export default function ListadoEspecialidadesPage() {
                         <td>{hora(t.horaInicio)}-{hora(t.horaFin)}</td>
                         <td>{t.nombreConsultorio}</td>
                         <td>
-                          <span className={t.estado === 'ACTIVO' ? estilos.activa : estilos.inactiva}>
+                          <span className={t.estado === 'ACTIVO' ? 'estado-activo' : 'estado-inactivo'}>
                             {t.estado === 'ACTIVO' ? 'Activo' : 'Suspendido'}
                           </span>
                         </td>
@@ -232,7 +220,7 @@ export default function ListadoEspecialidadesPage() {
               </div>
             )}
 
-            <div className={estilos.acciones}>
+            <div className="listado-acciones">
               <button type="button" onClick={cerrarDetalle}>Cerrar detalle</button>
             </div>
           </article>
@@ -253,7 +241,7 @@ export default function ListadoEspecialidadesPage() {
                 <th>Descripción</th>
                 <th>Pase previo</th>
                 <th>Estado</th>
-                <th><span className={estilos.soloLectores}>Acciones</span></th>
+                <th><span className="solo-lectores">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
@@ -264,7 +252,7 @@ export default function ListadoEspecialidadesPage() {
                   <td className={estilos.descripcionTabla}>{e.descripcion}</td>
                   <td>{e.requierePase ? 'Sí' : 'No'}</td>
                   <td><Estado estado={e.estado} /></td>
-                  <td className={estilos.botones}>
+                  <td className="celda-botones">
                     <button type="button" onClick={() => verDetalle(e.codigo)} disabled={cargandoDetalle}>Ver detalle</button>
                     <button type="button" onClick={() => navigate('/admin/especialidades/modificar', { state: { codigo: e.codigo } })}>
                       Modificar

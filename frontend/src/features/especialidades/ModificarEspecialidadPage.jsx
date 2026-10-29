@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { api, ApiError } from '../../services/api'
+import { api } from '../../services/api'
+import { comoError, soloMensaje } from '../../utils/errores'
 import estilos from './ModificarEspecialidadPage.module.css'
-
-// El backend informa los datos inválidos como «campo: mensaje»; a la persona solo le interesa el mensaje.
-const soloMensaje = (detalle) => detalle.split(': ').slice(1).join(': ') || detalle
-
-const comoError = (err, mensaje) => (err instanceof ApiError ? err : new ApiError(0, mensaje))
 
 const aFormulario = (e) => ({
   nombre: e.nombre,
