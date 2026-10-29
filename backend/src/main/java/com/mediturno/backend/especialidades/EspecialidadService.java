@@ -1,8 +1,8 @@
 package com.mediturno.backend.especialidades;
 
+import com.mediturno.backend.common.csv.LectorCsv;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.especialidades.dto.AltaEspecialidadDTO;
 import com.mediturno.backend.especialidades.dto.EspecialidadDetalleResponseDTO;
@@ -21,8 +21,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -34,7 +38,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-28, CU-29, CU-30, CU-43.
- * Los métodos todavía no están implementados: lanzan NoImplementadoException (respuesta 501).
  */
 @Service
 public class EspecialidadService {
@@ -93,9 +96,173 @@ public class EspecialidadService {
         return new EspecialidadResponseDTO(e.getCodigo(), e.getNombre(), e.getDescripcion(), e.isRequierePase(), e.getEstado());
     }
 
-    /** CU-29. */
+    private static final int MAXIMO_FILAS_CSV = 1000;
+    private static final List<String> COLUMNAS_CSV = List.of("Código", "Nombre", "Descripción", "Requiere pase", "Estado");
+
+    /** Resultado de analizar un CSV: lo que se le muestra a la persona y las especialidades que se crearían. */
+    private record AnalisisCsv(ResultadoImportacionDTO resultado, List<Especialidad> nuevas) {
+    }
+
+    /**
+     * CU-29, previsualización. Lee el CSV y valida cada fila (campos obligatorios, largos, valores, y códigos o nombres repetidos
+     * en el archivo o ya registrados) sin guardar nada. Es el paso previo a la importación.
+     */
+    @Transactional(readOnly = true)
+    public ResultadoImportacionDTO previsualizarEspecialidadesCSV(MultipartFile archivo) {
+        return analizarCsv(archivo).resultado();
+    }
+
+    /**
+     * CU-29. Vuelve a analizar el archivo (nada de lo que mostró la previsualización se da por cierto) y, solo si todas las filas
+     * son válidas, crea todas las especialidades en una sola transacción; si alguna tiene errores no se crea ninguna (422).
+     * Devuelve el resultado con la cantidad de especialidades creadas.
+     */
+    @Transactional
     public ResultadoImportacionDTO altaEspecialidadesCSV(MultipartFile archivo) {
-        throw new NoImplementadoException();
+        AnalisisCsv analisis = analizarCsv(archivo);
+        if (!analisis.resultado().valido()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                "El archivo contiene errores: corríjalo y vuelva a cargarlo. No se creó ninguna especialidad.");
+        }
+        try {
+            especialidadRepository.saveAllAndFlush(analisis.nuevas());
+        } catch (DataIntegrityViolationException e) {
+            // Otro administrador creó alguna en el mismo instante: las restricciones de la base lo detectan.
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Alguna especialidad se registró mientras se importaba el archivo. Vuelva a cargarlo. No se creó ninguna especialidad.");
+        }
+        return analisis.resultado().conRegistrosCreados(analisis.nuevas().size());
+    }
+
+    private AnalisisCsv analizarCsv(MultipartFile archivo) {
+        LectorCsv.ContenidoCsv contenido;
+        try {
+            contenido = LectorCsv.leer(archivo, MAXIMO_FILAS_CSV);
+        } catch (LectorCsv.CsvInvalidoException e) {
+            return new AnalisisCsv(ResultadoImportacionDTO.conErrorDeArchivo(e.getMessage()), List.of());
+        }
+
+        Map<String, Integer> columnas = new HashMap<>();
+        for (int i = 0; i < contenido.encabezados().size(); i++) {
+            columnas.putIfAbsent(LectorCsv.normalizar(contenido.encabezados().get(i)), i);
+        }
+        List<String> faltan = new ArrayList<>();
+        if (!columnas.containsKey("codigo")) {
+            faltan.add("código");
+        }
+        if (!columnas.containsKey("nombre")) {
+            faltan.add("nombre");
+        }
+        if (!columnas.containsKey("descripcion")) {
+            faltan.add("descripción");
+        }
+        if (!columnas.containsKey("requierepase")) {
+            faltan.add("requiere pase");
+        }
+        if (!faltan.isEmpty()) {
+            return new AnalisisCsv(ResultadoImportacionDTO.conErrorDeArchivo(
+                "Faltan columnas obligatorias en el encabezado: " + String.join(", ", faltan) + "."), List.of());
+        }
+        if (contenido.filas().isEmpty()) {
+            return new AnalisisCsv(ResultadoImportacionDTO.conErrorDeArchivo("El archivo no tiene especialidades: solo contiene el encabezado."), List.of());
+        }
+
+        Set<String> codigosRegistrados = new HashSet<>();
+        Set<String> nombresRegistrados = new HashSet<>();
+        especialidadRepository.findAll().forEach(e -> {
+            codigosRegistrados.add(e.getCodigo());
+            nombresRegistrados.add(e.getNombre().toLowerCase());
+        });
+        Map<String, Integer> codigosDelArchivo = new HashMap<>();
+        Map<String, Integer> nombresDelArchivo = new HashMap<>();
+
+        List<ResultadoImportacionDTO.Fila> filas = new ArrayList<>();
+        List<Especialidad> nuevas = new ArrayList<>();
+        for (LectorCsv.FilaCsv fila : contenido.filas()) {
+            List<String> errores = new ArrayList<>();
+            String codigo = valorDe(fila, columnas, "codigo");
+            String nombre = valorDe(fila, columnas, "nombre");
+            String descripcion = valorDe(fila, columnas, "descripcion");
+            String textoPase = valorDe(fila, columnas, "requierepase");
+            String textoEstado = valorDe(fila, columnas, "estado");
+
+            if (fila.valores().size() > contenido.encabezados().size()
+                    && fila.valores().subList(contenido.encabezados().size(), fila.valores().size()).stream().anyMatch(v -> !v.isEmpty())) {
+                errores.add("La fila tiene más valores que columnas en el encabezado");
+            }
+            if (codigo.isEmpty()) {
+                errores.add("El código es obligatorio");
+            } else if (codigo.length() > 20) {
+                errores.add("El código admite hasta 20 caracteres");
+            } else if (codigosRegistrados.contains(codigo)) {
+                errores.add("El código ya está en uso por otra especialidad");
+            } else if (codigosDelArchivo.containsKey(codigo)) {
+                errores.add("El código está repetido en el archivo (también en la fila " + codigosDelArchivo.get(codigo) + ")");
+            }
+            if (nombre.isEmpty()) {
+                errores.add("El nombre es obligatorio");
+            } else if (nombre.length() > 100) {
+                errores.add("El nombre admite hasta 100 caracteres");
+            } else if (nombresRegistrados.contains(nombre.toLowerCase())) {
+                errores.add("El nombre ya está en uso por otra especialidad");
+            } else if (nombresDelArchivo.containsKey(nombre.toLowerCase())) {
+                errores.add("El nombre está repetido en el archivo (también en la fila " + nombresDelArchivo.get(nombre.toLowerCase()) + ")");
+            }
+            if (descripcion.length() > 500) {
+                errores.add("La descripción admite hasta 500 caracteres");
+            }
+            Boolean requierePase = interpretarSiNo(textoPase);
+            if (textoPase.isEmpty()) {
+                errores.add("Indique si requiere pase previo (sí o no)");
+            } else if (requierePase == null) {
+                errores.add("«Requiere pase» debe ser sí o no");
+            }
+            EstadoActivacion estado = textoEstado.isEmpty() ? EstadoActivacion.ACTIVO : interpretarEstadoCsv(textoEstado);
+            if (estado == null) {
+                errores.add("El estado debe ser activa o inactiva");
+            }
+
+            if (errores.isEmpty()) {
+                Especialidad especialidad = new Especialidad();
+                especialidad.setCodigo(codigo);
+                especialidad.setNombre(nombre);
+                especialidad.setDescripcion(descripcion.isEmpty() ? null : descripcion);
+                especialidad.setRequierePase(requierePase);
+                especialidad.setEstado(estado);
+                nuevas.add(especialidad);
+            }
+            // Un código o nombre repetido en el archivo se marca en la segunda aparición, aunque la primera tuviera otros errores.
+            if (!codigo.isEmpty()) {
+                codigosDelArchivo.putIfAbsent(codigo, fila.numero());
+            }
+            if (!nombre.isEmpty()) {
+                nombresDelArchivo.putIfAbsent(nombre.toLowerCase(), fila.numero());
+            }
+            filas.add(new ResultadoImportacionDTO.Fila(fila.numero(), List.of(codigo, nombre, descripcion, textoPase, textoEstado), errores));
+        }
+        return new AnalisisCsv(ResultadoImportacionDTO.deFilas(COLUMNAS_CSV, filas), nuevas);
+    }
+
+    private static String valorDe(LectorCsv.FilaCsv fila, Map<String, Integer> columnas, String columna) {
+        Integer indice = columnas.get(columna);
+        return indice == null || indice >= fila.valores().size() ? "" : fila.valores().get(indice);
+    }
+
+    /** «sí», «si», «s», «true», «1», «verdadero» y sus contrarios; nulo si no es ninguno. */
+    private static Boolean interpretarSiNo(String texto) {
+        return switch (LectorCsv.normalizar(texto)) {
+            case "si", "s", "true", "verdadero", "1" -> Boolean.TRUE;
+            case "no", "n", "false", "falso", "0" -> Boolean.FALSE;
+            default -> null;
+        };
+    }
+
+    private static EstadoActivacion interpretarEstadoCsv(String texto) {
+        return switch (LectorCsv.normalizar(texto)) {
+            case "activo", "activa" -> EstadoActivacion.ACTIVO;
+            case "inactivo", "inactiva" -> EstadoActivacion.INACTIVO;
+            default -> null;
+        };
     }
 
     /**

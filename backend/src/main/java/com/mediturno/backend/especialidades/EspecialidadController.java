@@ -47,6 +47,12 @@ public class EspecialidadController {
         return especialidadService.altaEspecialidad(datos);
     }
 
+    /** CU-29, paso previo: valida el archivo y muestra lo detectado, sin guardar nada. */
+    @PostMapping("/csv/previsualizacion")
+    public ResultadoImportacionDTO previsualizarEspecialidadesCSV(@RequestParam("archivo") MultipartFile archivo) {
+        return especialidadService.previsualizarEspecialidadesCSV(archivo);
+    }
+
     @PostMapping("/csv")
     public ResultadoImportacionDTO altaEspecialidadesCSV(@RequestParam("archivo") MultipartFile archivo) {
         return especialidadService.altaEspecialidadesCSV(archivo);

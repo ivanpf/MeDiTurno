@@ -7,10 +7,10 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-30, CU-31, CU-34, CU-37 y CU-43**. CU-11 y CU-14 están implementados en el backend; sus pantallas web siguen pendientes. Los demás casos pendientes responden `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-29, CU-30, CU-31, CU-34, CU-37 y CU-43**. CU-11 y CU-14 están implementados en el backend; sus pantallas web siguen pendientes. Los demás casos pendientes responden `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
-- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-30, CU-31, CU-34, CU-37 y CU-43; el resto conserva `PaginaPendiente`.
+- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-12, CU-13, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-28, CU-29, CU-30, CU-31, CU-34, CU-37 y CU-43; el resto conserva `PaginaPendiente`.
 - **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos
@@ -173,6 +173,14 @@ INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE corr
 - El requisito de pase solo rige para las reservas nuevas: las ya hechas guardan su pase y no se tocan. La operación bloquea la fila (`EspecialidadRepository.buscarConLock`).
 - **Auditoría:** migración `V4` agrega `especialidad.id_administrador_modificacion` y `fecha_modificacion` (último cambio; vacíos si nunca se modificó). Se registran solo si algo cambió: enviar los mismos datos no guarda nada. No hay historial de cambios anteriores.
 - Pantalla `ModificarEspecialidadPage`: elegir la especialidad (o llegar con «Modificar» desde el listado, que pasa el código por el estado de la navegación), editar y guardar; el código se ve deshabilitado. `ModificarEspecialidadIntegracionTest` lo verifica.
+
+### Alta masiva de especialidades por CSV (CU-29)
+
+- Dos pasos, los dos solo administrador y `multipart` con la parte `archivo`: `POST /api/especialidades/csv/previsualizacion` (`previsualizarEspecialidadesCSV`, no guarda nada) y `POST /api/especialidades/csv` (`altaEspecialidadesCSV`), que **vuelve a analizar el archivo** y, solo si todas las filas son válidas, crea todas en una transacción; si alguna falla no crea ninguna (`422`; `409` si otra persona registró una en ese instante). Responde `ResultadoImportacionDTO` con `registrosCreados`. `previsualizarEspecialidadesCSV` es un método nuevo respecto del diseño.
+- **Archivo:** UTF-8 (con o sin BOM; otra codificación se rechaza con un mensaje), separador coma, punto y coma o tabulación (se detecta en el encabezado), comillas para campos con separadores o saltos de línea, hasta 1000 filas. Las filas vacías se ignoran pero cuentan en el número de fila (el encabezado es la fila 1). Columnas obligatorias: `código`, `nombre`, `descripción` y `requiere pase` (se reconocen sin importar tildes, mayúsculas, espacios o guiones bajos ni el orden); `estado` es opcional (activa o inactiva; vacío = activa). «Requiere pase» acepta sí/no, s/n, true/false, 1/0.
+- **Validación por fila** (los mismos criterios que CU-28): obligatorios y largos, valores de pase y estado, código o nombre ya registrado, y código o nombre repetido dentro del archivo (se marca la segunda aparición e indica la fila de la primera). Una fila puede tener varios errores; cada error trae el número de fila.
+- **Reutilizable para CU-32, CU-35 y CU-38:** `common/csv/LectorCsv` lee el archivo (encabezados y filas con su número; `CsvInvalidoException` con el motivo) y `ResultadoImportacionDTO` es genérico (`columnas` y `filas` con `valores` y `errores`, más errores del archivo, totales y `registrosCreados`). Cada caso de uso define sus columnas y reglas.
+- Pantalla `AltaMasivaEspecialidadesPage`: elegir archivo, «Previsualizar» (tabla con todas las filas, las que tienen errores marcadas y el motivo), «Confirmar importación» (solo habilitado si todo es válido, con ventana de confirmación) y «Cancelar» para corregir y volver a cargar; ofrece descargar un archivo de ejemplo. `AltaMasivaEspecialidadesIntegracionTest` lo verifica.
 
 ### Notificaciones push
 
