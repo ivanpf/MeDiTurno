@@ -137,14 +137,15 @@
 
 /**
  * @typedef {Object} CriteriosBusquedaDTO
- * @property {number} [pagina=0]
- * @property {number} [tamanio=20]
- * @property {string} [ordenPor]
- * @property {'ASC'|'DESC'} [ordenDireccion]
- * @property {string} [fechaDesde]
- * @property {string} [fechaHasta]
- * @property {string} [especialidadCodigo]
- * @property {number} [medicoId]
+ * @property {number|string} [idMedico] - Identificador, no el nombre. En la URL se envía como texto.
+ * @property {string} [codigoEspecialidad]
+ * @property {string} [dia]
+ * @property {string} [codigoConsultorio]
+ * @property {string} [estado] - CU-10: estado de la reserva.
+ * @property {string} [ordenarPor] - CU-10: fecha, medico, especialidad, estado o numero.
+ * @property {boolean} [descendente=true] - CU-10 ordena por fecha descendente por defecto.
+ * @property {string} [fechaDesde] - YYYY-MM-DD, inclusive.
+ * @property {string} [fechaHasta] - YYYY-MM-DD, inclusive.
  */
 
 /**

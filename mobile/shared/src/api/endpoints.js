@@ -120,6 +120,7 @@ export async function vistaPreviaCancelacion(idReserva) {
  * @param {import('../types/api').CriteriosBusquedaDTO} [criterios]
  * @returns {Promise<import('../types/api').ReservaResponseDTO[]>}
  */
+// CU-10: historial completo. No usa el listado de próximas reservas ni aplica filtros locales.
 export async function listarMisReservas(criterios = {}) {
   const params = new URLSearchParams();
   Object.entries(criterios).forEach(([k, v]) => {

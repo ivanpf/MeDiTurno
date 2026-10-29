@@ -1,6 +1,7 @@
 package com.mediturno.backend.reservas;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
+import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.ordenes.model.EstadoOrden;
 import com.mediturno.backend.ordenes.model.Orden;

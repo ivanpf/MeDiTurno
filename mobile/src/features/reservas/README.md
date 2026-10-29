@@ -98,5 +98,56 @@ incluida una respuesta incierta por conexión, se refresca el listado. Solo se r
 Si la actualización falla, se exige recargar antes de otro intento. Un bloqueo inmediato evita envíos duplicados,
 y cambiar de reserva, conservarla o actualizar la lista descarta la vista previa anterior.
 
-El historial completo con búsqueda del CU-10 permanece separado: `GET /api/reservas/mias`.
+El historial completo con búsqueda del CU-10 usa su propio endpoint: `GET /api/reservas/mias`.
 No se modifican backend, base de datos ni frontend web. No se agregan ni ejecutan tests en esta etapa.
+
+## CU-10: historial de reservas desde mobile
+
+En **Menú → Mis reservas**, la sección **Próximas** conserva el CU-9. La sección **Historial**
+consulta las reservas futuras y anteriores, incluidas las canceladas. La lectura no modifica reservas.
+
+- `app/(app)/reservas.js`: ambas secciones, formularios, listado y detalle del resultado elegido.
+- `src/features/reservas/useHistorialReservas.js`: peticiones, filtros aplicados, errores y selección.
+- `src/features/reservas/historialReservas.js`: parámetros, validación del período y textos.
+- `shared/src/api/endpoints.js`: reutiliza `listarMisReservas(criterios)`.
+- `shared/src/types/api.js`: documenta los nombres reales de `CriteriosBusquedaDTO`.
+
+Contrato actual:
+
+```text
+GET /api/reservas/mias
+  ?fechaDesde=YYYY-MM-DD
+  &fechaHasta=YYYY-MM-DD
+  &codigoEspecialidad=CODIGO
+  &idMedico=ID
+  &estado=VIGENTE
+  &ordenarPor=fecha
+  &descendente=true
+```
+
+Todos los filtros son opcionales. El paciente sale del token; no se envía un identificador de paciente.
+Las fechas se escriben como `DD/MM/AAAA` y se envían como `YYYY-MM-DD`. **Buscar** aplica el formulario;
+**Limpiar filtros** consulta de nuevo sin restricciones, con fecha descendente. Un aviso distingue los
+cambios todavía sin aplicar de los resultados de la última consulta. Los resultados mantienen el orden
+y el contenido enviados por backend. No hay filtros locales ni datos simulados.
+
+La especialidad usa el catálogo existente, incluidas las inactivas. Si el catálogo no está disponible,
+el código puede escribirse y el fallo se muestra con un botón para reintentar. Una respuesta vacía del
+historial se distingue de un error, incluidos `400`, `403` y `501`; se conservan mensaje y detalles del servidor.
+Las respuestas viejas se descartan al salir o al comenzar otra búsqueda.
+
+El listado y el detalle muestran especialidad, médico, fecha, horario, consultorio, número y estado de
+reserva; también número y estado de la orden cuando existe. El detalle usa el `ReservaResponseDTO` del
+listado y se cierra al tocar de nuevo la reserva o con Atrás en Android.
+
+### Pendientes del contrato de backend
+
+- `ReservaResponseDTO` devuelve `nombreMedico` pero no `idMedico`. `GET /api/medicos` solo admite
+  administrador y funcionario. Por indicación del usuario, el filtro se mantiene **habilitado** como
+  campo **Médico (identificador)**, enviando `idMedico` sin inferirlo del nombre ni ocultar errores.
+  Al completar el contrato se podrá ofrecer un selector por nombre.
+- El backend de `origin/main` en `0bd25a5` tenía un import faltante de `NoImplementadoException`
+  en `ReservaService`. Con autorización del usuario, `CU10-Mobile` agrega únicamente esa línea
+  para poder compilar y levantar el backend actual. Los filtros usan el endpoint existente.
+
+No se agregan ni ejecutan tests en esta etapa. El único cambio de código en backend es ese import.
