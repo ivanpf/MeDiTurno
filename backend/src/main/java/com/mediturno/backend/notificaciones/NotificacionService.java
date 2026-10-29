@@ -14,9 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.mediturno.backend.common.exception.NoImplementadoException;
+import com.mediturno.backend.turnos.DisponibilidadService;
 import com.mediturno.backend.consultas.model.Consulta;
 import com.mediturno.backend.consultas.repository.ConsultaRepository;
 import com.mediturno.backend.notificaciones.dto.NotificacionResponseDTO;
@@ -34,8 +36,8 @@ import com.mediturno.backend.turnos.repository.SuspensionTurnoRepository;
 
 /**
  * Lógica de negocio de: CU-6, CU-8, CU-13, CU-23.
- * Implementados: el aviso de suspensión de un turno (CU-13) y el de consulta registrada (CU-23), en la aplicación y por correo. El aviso push y los demás métodos
- * todavía lanzan NoImplementadoException.
+ * Implementados: el aviso de suspensión de un turno (CU-13) y el de consulta registrada (CU-23), en la aplicación, por correo y push, y el de
+ * reserva confirmada (CU-8), en la aplicación y push. Cada push queda registrado en el canal PUSH (ENVIADA o FALLIDA). Los demás métodos todavía lanzan NoImplementadoException.
  */
 @Service
 public class NotificacionService {
@@ -49,18 +51,26 @@ public class NotificacionService {
     private final ReservaRepository reservaRepository;
     private final ConsultaRepository consultaRepository;
     private final EmailService emailService;
+    private final PushNotificationService pushService;
+    private final DisponibilidadService disponibilidadService;
     private final TransactionTemplate transaccion;
+    private final TransactionTemplate transaccionNueva;
     private final Clock reloj;
 
     public NotificacionService(NotificacionRepository notificacionRepository, SuspensionTurnoRepository suspensionTurnoRepository,
-            ReservaRepository reservaRepository, ConsultaRepository consultaRepository, EmailService emailService, PlatformTransactionManager administradorDeTransacciones,
-            Clock reloj) {
+            ReservaRepository reservaRepository, ConsultaRepository consultaRepository, EmailService emailService,
+            PushNotificationService pushService, DisponibilidadService disponibilidadService,
+            PlatformTransactionManager administradorDeTransacciones, Clock reloj) {
         this.notificacionRepository = notificacionRepository;
         this.suspensionTurnoRepository = suspensionTurnoRepository;
         this.reservaRepository = reservaRepository;
         this.consultaRepository = consultaRepository;
         this.emailService = emailService;
+        this.pushService = pushService;
+        this.disponibilidadService = disponibilidadService;
         this.transaccion = new TransactionTemplate(administradorDeTransacciones);
+        this.transaccionNueva = new TransactionTemplate(administradorDeTransacciones);
+        this.transaccionNueva.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.reloj = reloj;
     }
 
@@ -73,24 +83,35 @@ public class NotificacionService {
      * CU-13. Uso interno. Recibe las reservas alcanzadas por la suspensión (las anuladas y las que tienen orden emitida, que no
      * se anulan). Avisa a cada paciente: una notificación en la aplicación y un
      * correo por reserva. El correo se manda fuera de la transacción: si falla, esa notificación queda FALLIDA y las demás
-     * siguen. El aviso push lo hará otro caso de uso (necesita la aplicación móvil).
+     * siguen. También se manda un aviso push (de mejor esfuerzo).
      */
     public void notificarSuspensionTurno(Long idSuspensionTurno, List<Long> idsReservas) {
-        List<Long> correosPendientes = transaccion.execute(estado -> registrarNotificaciones(idSuspensionTurno, idsReservas));
-        if (correosPendientes == null) {
+        Pendientes pendientes = transaccion.execute(estado -> registrarNotificaciones(idSuspensionTurno, idsReservas));
+        if (pendientes == null) {
             return;
         }
-        for (Long idNotificacion : correosPendientes) {
+        for (Long idNotificacion : pendientes.correos()) {
             enviarCorreo(idNotificacion);
+        }
+        for (AvisoPush push : pendientes.pushes()) {
+            pushService.enviarYRegistrar(push.idNotificacion(), push.idUsuario(), "Turno suspendido", push.mensaje());
         }
     }
 
+    /** Un aviso push ya registrado (PENDIENTE) que falta enviar. */
+    private record AvisoPush(Long idNotificacion, Long idUsuario, String mensaje) {
+    }
+
+    private record Pendientes(List<Long> correos, List<AvisoPush> pushes) {
+    }
+
     /** Guarda las notificaciones (en la aplicación ya enviadas, por correo pendientes) y devuelve los ids de los correos. */
-    private List<Long> registrarNotificaciones(Long idSuspensionTurno, List<Long> idsReservas) {
+    private Pendientes registrarNotificaciones(Long idSuspensionTurno, List<Long> idsReservas) {
         SuspensionTurno suspension = suspensionTurnoRepository.findById(idSuspensionTurno)
             .orElseThrow(() -> new IllegalArgumentException("No existe la suspensión " + idSuspensionTurno));
         LocalDateTime ahora = LocalDateTime.now(reloj);
         List<Long> correos = new ArrayList<>();
+        List<AvisoPush> pushes = new ArrayList<>();
         for (Reserva reserva : reservaRepository.findAllById(idsReservas)) {
             String mensaje = armarMensaje(reserva, suspension);
 
@@ -100,8 +121,13 @@ public class NotificacionService {
             notificacionRepository.save(enLaAplicacion);
 
             correos.add(notificacionRepository.save(nueva(reserva, CanalNotificacion.EMAIL, mensaje, ahora)).getIdNotificacion());
+            Long idUsuario = reserva.getPaciente().getIdUsuario();
+            if (pushService.tieneDispositivos(idUsuario)) {
+                Long idPush = notificacionRepository.save(nueva(reserva, CanalNotificacion.PUSH, mensaje, ahora)).getIdNotificacion();
+                pushes.add(new AvisoPush(idPush, idUsuario, mensaje));
+            }
         }
-        return correos;
+        return new Pendientes(correos, pushes);
     }
 
     private static Notificacion nueva(Reserva reserva, CanalNotificacion canal, String mensaje, LocalDateTime ahora) {
@@ -174,10 +200,10 @@ public class NotificacionService {
     /**
      * CU-23. Uso interno. Avisa al paciente que se incorporó nueva información a su historia clínica, sin exponer contenido
      * clínico: una notificación en la aplicación y un correo. El correo se manda fuera de la transacción y, si falla, la
-     * notificación queda FALLIDA. El aviso push lo hará otro caso de uso (necesita la aplicación móvil).
+     * notificación queda FALLIDA. También se manda un aviso push (de mejor esfuerzo).
      */
     public void notificarConsultaRegistrada(Long idConsulta) {
-        Long idCorreo = transaccion.execute(estado -> {
+        AvisoConCorreo aviso = transaccion.execute(estado -> {
             Consulta consulta = consultaRepository.findById(idConsulta)
                 .orElseThrow(() -> new IllegalArgumentException("No existe la consulta " + idConsulta));
             LocalDateTime ahora = LocalDateTime.now(reloj);
@@ -189,10 +215,57 @@ public class NotificacionService {
             enLaAplicacion.setFechaEnvio(ahora);
             notificacionRepository.save(enLaAplicacion);
 
-            return notificacionRepository.save(nuevaDeConsulta(consulta, CanalNotificacion.EMAIL, mensaje, ahora)).getIdNotificacion();
+            Long idCorreo = notificacionRepository.save(nuevaDeConsulta(consulta, CanalNotificacion.EMAIL, mensaje, ahora)).getIdNotificacion();
+            Long idUsuario = consulta.getPaciente().getIdUsuario();
+            Long idPush = pushService.tieneDispositivos(idUsuario)
+                ? notificacionRepository.save(nuevaDeConsulta(consulta, CanalNotificacion.PUSH, mensaje, ahora)).getIdNotificacion()
+                : null;
+            return new AvisoConCorreo(idCorreo, idPush, idUsuario, mensaje);
         });
-        if (idCorreo != null) {
-            enviarCorreo(idCorreo);
+        if (aviso != null) {
+            enviarCorreo(aviso.idCorreo());
+            if (aviso.idPush() != null) {
+                pushService.enviarYRegistrar(aviso.idPush(), aviso.idUsuario(), "Nueva información en su historia clínica", aviso.mensaje());
+            }
+        }
+    }
+
+    private record AvisoConCorreo(Long idCorreo, Long idPush, Long idUsuario, String mensaje) {
+    }
+
+    /**
+     * CU-8. Uso interno. Avisa al paciente que su reserva quedó confirmada (identificador, número y hora estimada): una
+     * notificación en la aplicación y un push de mejor esfuerzo. Usa su propia transacción para poder llamarse justo después
+     * de confirmar la reserva; nunca lanza una excepción.
+     */
+    public void notificarReservaConfirmada(Long idReserva) {
+        try {
+            AvisoPush push = transaccionNueva.execute(estado -> {
+                Reserva reserva = reservaRepository.findById(idReserva)
+                    .orElseThrow(() -> new IllegalArgumentException("No existe la reserva " + idReserva));
+                OcurrenciaTurno ocurrencia = reserva.getOcurrenciaTurno();
+                String mensaje = "Su reserva " + idReserva + " quedó confirmada: " + ocurrencia.getTurnoSemanal().getEspecialidad().getNombre()
+                    + " el " + ocurrencia.getFecha().format(FECHA) + ", número " + reserva.getNumero() + ", hora estimada de atención ~"
+                    + disponibilidadService.horaEstimada(ocurrencia, reserva.getNumero()).format(HORA) + ".";
+                LocalDateTime ahora = LocalDateTime.now(reloj);
+                Notificacion enLaAplicacion = nueva(reserva, CanalNotificacion.APLICACION, mensaje, ahora);
+                enLaAplicacion.setTipo(TipoNotificacion.RESERVA_CONFIRMADA);
+                enLaAplicacion.setEstado(EstadoNotificacion.ENVIADA);
+                enLaAplicacion.setFechaEnvio(ahora);
+                notificacionRepository.save(enLaAplicacion);
+                Long idUsuario = reserva.getPaciente().getIdUsuario();
+                if (!pushService.tieneDispositivos(idUsuario)) {
+                    return null;
+                }
+                Notificacion porPush = nueva(reserva, CanalNotificacion.PUSH, mensaje, ahora);
+                porPush.setTipo(TipoNotificacion.RESERVA_CONFIRMADA);
+                return new AvisoPush(notificacionRepository.save(porPush).getIdNotificacion(), idUsuario, mensaje);
+            });
+            if (push != null) {
+                pushService.enviarYRegistrar(push.idNotificacion(), push.idUsuario(), "Reserva confirmada", push.mensaje());
+            }
+        } catch (RuntimeException e) {
+            log.warn("No se pudo registrar el aviso de la reserva {}: {}", idReserva, e.getMessage());
         }
     }
 

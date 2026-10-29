@@ -81,7 +81,20 @@ Con Metro corriendo, apretá "a" para abrir Android. Si el dispositivo no conect
     adb reverse tcp:8081 tcp:8081
 
 
-3. Cómo llega la app al backend
+3. Notificaciones push
+
+La app recibe avisos por Firebase Cloud Messaging con el mismo proyecto de Firebase de la
+autenticación. Necesita el archivo mobile/google-services.json (ya versionado); si lo cambia,
+regenere la carpeta nativa con `npx expo prebuild --platform android --clean`.
+El funcionamiento y cómo probarlo están en README-BACKEND-NOTIFICACIONES_PUSH.md.
+
+En Windows, si Gradle no encuentra el SDK o el JDK, defina antes de compilar:
+
+    $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+    $env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+
+
+4. Cómo llega la app al backend
 
 En Android (emulador) la app usa 10.0.2.2 para llegar al localhost de tu computadora:
 apunta al backend en http://10.0.2.2:8080 sin configuración extra.
@@ -90,7 +103,7 @@ Si usás un teléfono físico, redirigí también el backend:
     adb reverse tcp:8080 tcp:8080
 
 
-4. Iniciar sesión
+5. Iniciar sesión
 
 El login usa Firebase y ya viene configurado (datos públicos en app.json, en "extra").
 Usá un usuario de prueba, por ejemplo:
@@ -100,7 +113,7 @@ Usá un usuario de prueba, por ejemplo:
 La lista completa de usuarios de prueba está en la sección "Autenticación (Firebase)" de CLAUDE.md.
 
 
-5. Compilar para producción e instalar la APK
+6. Compilar para producción e instalar la APK
 
 Opción A - EAS Build (en la nube, recomendado)
 

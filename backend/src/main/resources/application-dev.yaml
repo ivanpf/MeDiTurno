@@ -1,0 +1,6 @@
+# Perfil de desarrollo (SPRING_PROFILES_ACTIVE=dev). compose.yml lo activa.
+# Además de las migraciones de la estructura y los usuarios de prueba (db/seed), carga los datos de prueba
+# (db/datos-prueba: turnos, reservas, historia clínica, etc.). No usar en producción.
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed,classpath:db/datos-prueba

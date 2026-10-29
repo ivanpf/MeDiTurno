@@ -1,8 +1,8 @@
 /**
- * Notificaciones push de la app del paciente (Expo Push, la misma mecánica de la POC del equipo).
+ * Notificaciones push de la app del paciente (Firebase Cloud Messaging; el backend envía directo por FCM).
  *
  * Flujo:
- *  1. Al iniciar sesión se pide permiso y, si lo concede, se obtiene el Expo Push Token del
+ *  1. Al iniciar sesión se pide permiso y, si lo concede, se obtiene el token de FCM del
  *     dispositivo y se registra en el backend (POST /api/notificaciones/push, autenticado:
  *     el token queda asociado al usuario de la sesión).
  *  2. Al cerrar sesión se elimina el token registrado (DELETE /api/notificaciones/push).
@@ -13,15 +13,9 @@
  */
 
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registrarPushToken, eliminarPushToken } from '../api/endpoints';
 import { COLORS } from '../theme/colors';
-
-// Identificador del proyecto EAS, requerido por getExpoPushTokenAsync.
-// El valor de app.json queda embebido en el binario nativo al compilar; el fallback literal
-// cubre los builds de desarrollo instalados antes de agregar ese valor.
-const PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId || '50046a95-963e-475a-ac63-5209e2658977';
 
 // Mientras la app esté abierta en primer plano, los avisos se muestran como banner y suena el tono por defecto.
 Notifications.setNotificationHandler({
@@ -36,14 +30,10 @@ Notifications.setNotificationHandler({
 /**
  * Pide permisos de notificaciones y, si el dispositivo lo concede y no estaba registrado,
  * registra el token del dispositivo en el backend a nombre del usuario con sesión.
- * @returns {Promise<string|null>} el Expo Push Token registrado, o null si no se pudo.
+ * @returns {Promise<string|null>} el token de FCM registrado, o null si no se pudo.
  */
 export async function pedirPermisoYRegistrarToken() {
   try {
-    if (!PROJECT_ID) {
-      return null;
-    }
-
     // En Android hay que crear el canal antes de pedir los permisos.
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
@@ -64,11 +54,13 @@ export async function pedirPermisoYRegistrarToken() {
       return null;
     }
 
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID })).data;
-    await registrarPushToken({ token });
+    // Token nativo de Firebase Cloud Messaging: el backend envía directo por FCM, sin pasar por Expo.
+    const token = (await Notifications.getDevicePushTokenAsync()).data;
+    await registrarPushToken(token);
     return token;
-  } catch {
+  } catch (error) {
     // No se bloquea el inicio de sesión por el registro del dispositivo.
+    console.warn('[push] No se pudo registrar el token:', error?.message ?? error);
     return null;
   }
 }

@@ -190,6 +190,7 @@ Los valores de `.env.example` sirven **únicamente para desarrollo local**. `.en
 PostgreSQL arranca vacío. **Las tablas las crea el propio backend al iniciar**, con migraciones de Flyway (scripts SQL en `backend/src/main/resources/db/migration/`). No hay que ejecutar nada a mano.
 
 - El backend necesita que PostgreSQL esté disponible para arrancar.
+- **Datos de prueba:** con Podman se cargan solos al levantar con la base vacía (usuarios de cada rol, turnos, reservas, historia clínica, etc.). Qué contienen y cómo recargarlos: sección *Datos de prueba* de [`CLAUDE.md`](CLAUDE.md). Si corre el backend fuera de contenedores, active el perfil `dev` con la variable `SPRING_PROFILES_ACTIVE=dev`.
 - Para empezar con la base desde cero (se pierden los datos locales): `podman compose down -v` y volver a levantar.
 - Cómo cambiar la base y las reglas de las migraciones: ver la sección *Base de datos y migraciones* de [`CLAUDE.md`](CLAUDE.md).
 

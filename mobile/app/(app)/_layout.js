@@ -79,8 +79,12 @@ const estilos = StyleSheet.create({
     paddingVertical: 12,
   },
   usuarioMovil: {
-    marginBottom: 8,
-    paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borde,
   },
@@ -88,7 +92,7 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    alignSelf: 'flex-start',
+    flexShrink: 1,
     paddingVertical: 4,
     paddingLeft: 4,
     paddingRight: 14,
@@ -115,8 +119,6 @@ const estilos = StyleSheet.create({
     flexShrink: 1,
   },
   rol: {
-    alignSelf: 'flex-start',
-    marginTop: 10,
     paddingVertical: 3,
     paddingHorizontal: 12,
     fontSize: 13,
@@ -126,10 +128,15 @@ const estilos = StyleSheet.create({
     borderRadius: 9999,
     overflow: 'hidden',
   },
-  btnSalir: {
-    alignSelf: 'flex-start',
-    marginTop: 10,
-    paddingVertical: 8,
+  pie: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borde,
+  },
+  botonSalir: {
+    alignItems: 'center',
+    paddingVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: COLORS.azul,
@@ -272,9 +279,6 @@ export default function AppLayout() {
               <Text style={estilos.personaNombre}>{nombre}</Text>
             </View>
             <Text style={estilos.rol}>{ETIQUETA_ROL[rol]}</Text>
-            <TouchableOpacity style={estilos.botonSalir} onPress={pedirConfirmacion}>
-              <Text style={estilos.botonSalirTexto}>Cerrar sesión</Text>
-            </TouchableOpacity>
           </View>
 
           {secciones.map((sec) =>
@@ -312,6 +316,12 @@ export default function AppLayout() {
               })()
             ),
           )}
+
+          <View style={estilos.pie}>
+            <TouchableOpacity style={estilos.botonSalir} onPress={pedirConfirmacion}>
+              <Text style={estilos.botonSalirTexto}>Cerrar sesión</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
