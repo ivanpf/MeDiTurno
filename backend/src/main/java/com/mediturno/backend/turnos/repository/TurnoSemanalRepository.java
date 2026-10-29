@@ -50,6 +50,18 @@ public interface TurnoSemanalRepository extends JpaRepository<TurnoSemanal, Long
     List<TurnoSemanal> listarVigentesDeEspecialidad(@Param("codigoEspecialidad") String codigoEspecialidad, @Param("hoy") LocalDate hoy);
 
     /**
+     * Turnos del médico cuya vigencia no terminó a esa fecha (sin fecha de fin, o con fin de hoy en adelante), activos o
+     * suspendidos.
+     */
+    @Query("""
+        select t from TurnoSemanal t
+        where t.medico.idUsuario = :idMedico
+          and (t.vigenteHasta is null or t.vigenteHasta >= :hoy)
+        order by t.idTurnoSemanal
+        """)
+    List<TurnoSemanal> listarVigentesDeMedico(@Param("idMedico") Long idMedico, @Param("hoy") LocalDate hoy);
+
+    /**
      * Turnos del consultorio cuya vigencia no terminó a esa fecha (sin fecha de fin, o con fin de hoy en adelante), activos
      * o suspendidos.
      */

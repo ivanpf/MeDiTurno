@@ -31,4 +31,11 @@ public interface MedicoRepository extends JpaRepository<Medico, Long> {
     List<Medico> listarPorEspecialidad(@Param("codigoEspecialidad") String codigoEspecialidad, @Param("estado") EstadoActivacion estado);
 
     boolean existsByMatriculaIgnoreCase(String matricula);
+
+    /** ¿Otro médico (no el indicado) tiene esa matrícula? Para validar el cambio de matrícula de alguien que ya existe. */
+    boolean existsByMatriculaIgnoreCaseAndIdUsuarioNot(String matricula, Long idUsuario);
+
+    /** Todas las matrículas registradas, en minúsculas: las cargas masivas comprueban así los duplicados de una sola vez. */
+    @Query("select lower(m.matricula) from Medico m")
+    List<String> listarMatriculasEnMinusculas();
 }

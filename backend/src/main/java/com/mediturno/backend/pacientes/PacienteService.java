@@ -3,9 +3,6 @@ package com.mediturno.backend.pacientes;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -34,7 +31,6 @@ import com.mediturno.backend.pacientes.repository.PacienteRepository;
 import com.mediturno.backend.usuarios.model.ProveedorAcceso;
 import com.mediturno.backend.usuarios.repository.AdministradorRepository;
 import com.mediturno.backend.usuarios.repository.UsuarioRepository;
-import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
@@ -253,8 +249,6 @@ public class PacienteService {
         AnalizadorCsv.Columna.obligatoria(APELLIDO), AnalizadorCsv.Columna.obligatoria(CORREO),
         AnalizadorCsv.Columna.obligatoria(FECHA_NACIMIENTO),
         AnalizadorCsv.Columna.opcional(TELEFONO), AnalizadorCsv.Columna.opcional(DOMICILIO));
-    // La fecha puede venir como 1985-03-27 (ISO) o como 27/03/1985 (la forma habitual en Uruguay).
-    private static final DateTimeFormatter FECHA_CON_BARRAS = DateTimeFormatter.ofPattern("d/M/uuuu").withResolverStyle(ResolverStyle.STRICT);
 
     /**
      * CU-32, previsualización. Lee el CSV y valida cada fila (campos obligatorios, formatos, largos y cédulas o correos repetidos
@@ -332,7 +326,7 @@ public class PacienteService {
             } else if (correoPrevio != null) {
                 errores.add("El correo electrónico está repetido en el archivo (también en la fila " + correoPrevio + ")");
             }
-            LocalDate fechaNacimiento = interpretarFecha(textoFecha);
+            LocalDate fechaNacimiento = FormatoUsuario.interpretarFecha(textoFecha);
             if (textoFecha.isEmpty()) {
                 errores.add("La fecha de nacimiento es obligatoria");
             } else if (fechaNacimiento == null) {
@@ -364,18 +358,6 @@ public class PacienteService {
         });
     }
 
-    /** Fecha en formato AAAA-MM-DD o DD/MM/AAAA; nulo si está vacía o no es una fecha real. */
-    private static LocalDate interpretarFecha(String texto) {
-        if (texto.isEmpty()) {
-            return null;
-        }
-        try {
-            return texto.contains("/") ? LocalDate.parse(texto, FECHA_CON_BARRAS) : LocalDate.parse(texto);
-        } catch (DateTimeParseException e) {
-            return null;
-        }
-    }
-
     /**
      * CU-33. Los criterios son opcionales y se combinan (todos tienen que cumplirse): {@code texto} busca en la cédula (con o sin
      * puntos y guion), el nombre, el apellido y el correo, sin distinguir mayúsculas, y también «apellido nombre» o «nombre
@@ -387,29 +369,13 @@ public class PacienteService {
     public List<PacienteResponseDTO> listarPacientes(CriteriosBusquedaDTO criterios) {
         EstadoActivacion estado = FiltrosBusqueda.interpretarEstado(criterios.estado());
         Sort orden = ordenDeLosPacientes(criterios);
-        String patron = FiltrosBusqueda.patronContiene(criterios.texto());
-        String digitos = criterios.texto() == null ? "" : criterios.texto().replaceAll("[.\\-\\s]", "");
-        String patronCedulaSinPuntos = !digitos.isEmpty() && digitos.chars().allMatch(Character::isDigit) ? "%" + digitos + "%" : null;
         Boolean tieneCuenta = criterios.tieneCuenta();
 
         Specification<Paciente> filtros = (paciente, consulta, cb) -> {
             List<Predicate> condiciones = new ArrayList<>();
-            if (patron != null) {
-                List<Predicate> coincidencias = new ArrayList<>(List.of(
-                    cb.like(cb.lower(paciente.get("cedula")), patron, FiltrosBusqueda.ESCAPE),
-                    cb.like(cb.lower(paciente.get("nombre")), patron, FiltrosBusqueda.ESCAPE),
-                    cb.like(cb.lower(paciente.get("apellido")), patron, FiltrosBusqueda.ESCAPE),
-                    cb.like(cb.lower(paciente.get("correo")), patron, FiltrosBusqueda.ESCAPE),
-                    cb.like(cb.lower(cb.concat(cb.concat(paciente.get("apellido"), " "), paciente.get("nombre"))), patron, FiltrosBusqueda.ESCAPE),
-                    cb.like(cb.lower(cb.concat(cb.concat(paciente.get("nombre"), " "), paciente.get("apellido"))), patron, FiltrosBusqueda.ESCAPE)));
-                if (patronCedulaSinPuntos != null) {
-                    // La cédula se guarda como 1.234.567-8; quien escribe 1234567 también la encuentra.
-                    Expression<String> sinPuntos = cb.function("replace", String.class,
-                        cb.function("replace", String.class, paciente.<String>get("cedula"), cb.literal("."), cb.literal("")),
-                        cb.literal("-"), cb.literal(""));
-                    coincidencias.add(cb.like(sinPuntos, patronCedulaSinPuntos));
-                }
-                condiciones.add(cb.or(coincidencias.toArray(new Predicate[0])));
+            Predicate texto = FiltrosBusqueda.coincidenciasDePersona(paciente, cb, criterios.texto());
+            if (texto != null) {
+                condiciones.add(texto);
             }
             if (tieneCuenta != null) {
                 condiciones.add(tieneCuenta ? cb.isNotNull(paciente.get("firebaseUid")) : cb.isNull(paciente.get("firebaseUid")));
