@@ -116,12 +116,24 @@
  */
 
 /**
+ * Propuesta para CU-6: el record del backend todavía no tiene campos. Sigue las tablas anuncio e imagen_anuncio.
  * @typedef {Object} AnuncioResponseDTO
  * @property {number} id
  * @property {string} titulo
  * @property {string} contenido
  * @property {string} fechaPublicacion - ISO datetime
+ * @property {string|null} fechaInicio - YYYY-MM-DD
+ * @property {string|null} fechaFin - YYYY-MM-DD
+ * @property {'PUBLICADO'|'ELIMINADO'} estado
  * @property {string} autor
+ * @property {ImagenAnuncioDTO[]} imagenes
+ */
+
+/**
+ * @typedef {Object} ImagenAnuncioDTO
+ * @property {string} imagen - URL
+ * @property {number} orden
+ * @property {string|null} textoAlternativo
  */
 
 /**
