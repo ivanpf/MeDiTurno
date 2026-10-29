@@ -65,6 +65,12 @@ public class PacienteController {
         return pacienteService.altaPaciente(datos);
     }
 
+    /** CU-32, paso previo: valida el archivo y muestra lo detectado, sin guardar nada. */
+    @PostMapping("/csv/previsualizacion")
+    public ResultadoImportacionDTO previsualizarPacientesCSV(@RequestParam("archivo") MultipartFile archivo) {
+        return pacienteService.previsualizarPacientesCSV(archivo);
+    }
+
     @PostMapping("/csv")
     public ResultadoImportacionDTO altaPacientesCSV(@RequestParam("archivo") MultipartFile archivo) {
         return pacienteService.altaPacientesCSV(archivo);
@@ -81,8 +87,8 @@ public class PacienteController {
     }
 
     @PutMapping("/{idPaciente}")
-    public PacienteResponseDTO modificarPaciente(@PathVariable Long idPaciente, @RequestBody ModificarPacienteDTO datos) {
-        return pacienteService.modificarPaciente(idPaciente, datos);
+    public PacienteResponseDTO modificarPaciente(@PathVariable Long idPaciente, @Valid @RequestBody ModificarPacienteDTO datos) {
+        return pacienteService.modificarPaciente(usuarioActual.obtenerIdAdministradorAutenticado(), idPaciente, datos);
     }
 
     @RolesPermitidos(Paciente.class)

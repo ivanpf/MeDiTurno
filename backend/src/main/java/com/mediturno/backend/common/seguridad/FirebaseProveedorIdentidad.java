@@ -105,6 +105,21 @@ public class FirebaseProveedorIdentidad implements ProveedorIdentidad {
     }
 
     @Override
+    public void actualizarCorreo(String uid, String correo) {
+        if (firebaseAuth == null) {
+            throw new ProveedorIdentidadException("Firebase no está configurado");
+        }
+        try {
+            firebaseAuth.updateUser(new UserRecord.UpdateRequest(uid).setEmail(correo));
+        } catch (FirebaseAuthException e) {
+            if (e.getAuthErrorCode() == AuthErrorCode.EMAIL_ALREADY_EXISTS) {
+                throw new CorreoYaRegistradoEnProveedorException();
+            }
+            throw new ProveedorIdentidadException("Firebase no pudo cambiar el correo: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public void eliminarCuenta(String uid) {
         if (firebaseAuth == null) {
             return;

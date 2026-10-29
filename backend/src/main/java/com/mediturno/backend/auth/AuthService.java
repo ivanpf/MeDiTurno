@@ -102,6 +102,22 @@ public class AuthService {
         }
     }
 
+    /**
+     * CU-44. Uso interno: cambia el correo de la cuenta de acceso de una persona para que coincida con el de sus datos.
+     * 409 si otra cuenta ya usa ese correo; 503 si el proveedor no pudo hacerlo.
+     */
+    public void actualizarCorreo(String idProveedor, String correo) {
+        try {
+            proveedorIdentidad.actualizarCorreo(idProveedor, correo);
+        } catch (CorreoYaRegistradoEnProveedorException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta de acceso con ese correo electrónico.");
+        } catch (ProveedorIdentidadException e) {
+            log.error("No se pudo cambiar el correo de la cuenta {}: {}", idProveedor, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                "No se pudo actualizar el correo de la cuenta de acceso. Intente nuevamente.");
+        }
+    }
+
     /** CU-7. Uso interno: verifica el token que el front obtuvo al iniciar sesión con Google y devuelve su uid y correo. */
     public IdentidadVerificada obtenerIdentidadVerificada(String tokenAcceso) {
         return proveedorIdentidad.verificarIdentidad(tokenAcceso)
