@@ -24,6 +24,14 @@ public interface ProveedorIdentidad {
      */
     String crearCuenta(String correo, String contrasena);
 
+    /**
+     * Cambia el correo de una cuenta existente (CU-44).
+     *
+     * @throws CorreoYaRegistradoEnProveedorException si otra cuenta ya usa ese correo
+     * @throws ProveedorIdentidadException            si el proveedor no pudo cambiarlo
+     */
+    void actualizarCorreo(String uid, String correo);
+
     /** Borra una cuenta creada en el proveedor. Se usa para deshacer un registro que no se pudo completar. */
     void eliminarCuenta(String uid);
 }

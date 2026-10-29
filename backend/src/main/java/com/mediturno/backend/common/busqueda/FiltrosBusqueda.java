@@ -46,13 +46,14 @@ public final class FiltrosBusqueda {
 
     /**
      * Orden por una de las propiedades permitidas, sin distinguir mayúsculas (la primera es la que rige si no se pidió ninguna);
-     * 400 si pidió otra. {@code descendente} invierte el sentido.
+     * 400 si pidió otra. {@code descendente} invierte el sentido. La propiedad se ordena con la escritura de {@code permitidas}
+     * («fechaAlta»), aunque se haya pedido como «fechaalta».
      */
     public static Sort ordenar(String ordenarPor, boolean descendente, String... permitidas) {
-        String propiedad = ordenarPor == null || ordenarPor.isBlank() ? permitidas[0] : ordenarPor.trim().toLowerCase();
-        if (!Arrays.asList(permitidas).contains(propiedad)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El orden indicado no es válido (use " + enumerar(permitidas) + ").");
-        }
+        String propiedad = ordenarPor == null || ordenarPor.isBlank() ? permitidas[0] : Arrays.stream(permitidas)
+            .filter(p -> p.equalsIgnoreCase(ordenarPor.trim()))
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El orden indicado no es válido (use " + enumerar(permitidas) + ")."));
         Sort.Order orden = descendente ? Sort.Order.desc(propiedad) : Sort.Order.asc(propiedad);
         return Sort.by(orden.ignoreCase());
     }

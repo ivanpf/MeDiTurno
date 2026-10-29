@@ -12,3 +12,6 @@ export const NOMBRE_DIA = {
   SABADO: 'Sábado',
   DOMINGO: 'Domingo',
 }
+
+// El backend manda las fechas como «1990-05-17» (o «1990-05-17T10:20:30» si traen hora); se muestran como «17/05/1990».
+export const fecha = (texto) => (texto ? texto.slice(0, 10).split('-').reverse().join('/') : '')
