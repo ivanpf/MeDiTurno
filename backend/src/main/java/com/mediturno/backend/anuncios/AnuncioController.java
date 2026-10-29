@@ -1,20 +1,28 @@
 package com.mediturno.backend.anuncios;
 
+import java.time.Duration;
 import java.util.List;
 
 import com.mediturno.backend.anuncios.dto.AltaAnuncioDTO;
 import com.mediturno.backend.anuncios.dto.AnuncioResponseDTO;
+import com.mediturno.backend.anuncios.dto.ArchivoImagenDTO;
+import com.mediturno.backend.common.seguridad.RolesPermitidos;
+import com.mediturno.backend.common.seguridad.UsuarioActual;
+import com.mediturno.backend.usuarios.model.Funcionario;
+import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import com.mediturno.backend.common.seguridad.RolesPermitidos;
-import com.mediturno.backend.usuarios.model.Funcionario;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Endpoints de: CU-6, CU-17, CU-18.
@@ -26,9 +34,11 @@ import com.mediturno.backend.usuarios.model.Funcionario;
 public class AnuncioController {
 
     private final AnuncioService anuncioService;
+    private final UsuarioActual usuarioActual;
 
-    public AnuncioController(AnuncioService anuncioService) {
+    public AnuncioController(AnuncioService anuncioService, UsuarioActual usuarioActual) {
         this.anuncioService = anuncioService;
+        this.usuarioActual = usuarioActual;
     }
 
     @RolesPermitidos
@@ -37,10 +47,23 @@ public class AnuncioController {
         return anuncioService.listarCartelera();
     }
 
-    @PostMapping
+    /** Multipart: la parte «datos» lleva el anuncio en JSON y la parte «imagen», el archivo (opcional). */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public AnuncioResponseDTO publicarAnuncio(@RequestBody AltaAnuncioDTO datos) {
-        return anuncioService.publicarAnuncio(datos);
+    public AnuncioResponseDTO publicarAnuncio(@RequestPart("datos") @Valid AltaAnuncioDTO datos,
+            @RequestPart(value = "imagen", required = false) MultipartFile imagen) {
+        return anuncioService.publicarAnuncio(usuarioActual.obtenerIdFuncionarioAutenticado(), datos, imagen);
+    }
+
+    /** El archivo de una imagen. Lo usan la cartelera (CU-6) y la vista previa de un anuncio. */
+    @RolesPermitidos
+    @GetMapping("/imagenes/{idImagen}")
+    public ResponseEntity<byte[]> obtenerImagen(@PathVariable Long idImagen) {
+        ArchivoImagenDTO imagen = anuncioService.obtenerImagen(idImagen);
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(imagen.tipoContenido()))
+            .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
+            .body(imagen.datos());
     }
 
     @DeleteMapping("/{idAnuncio}")
