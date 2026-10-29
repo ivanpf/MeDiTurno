@@ -170,7 +170,7 @@
  * @property {string} mensaje
  * @property {string} fecha - ISO datetime
  * @property {boolean} leida
- * @property {'RECORDATORIO_CONSULTA'|'SUSPENSION_TURNO'|'CONSULTA_REGISTRADA'} tipo
+ * @property {'RECORDATORIO_CONSULTA'|'SUSPENSION_TURNO'|'CONSULTA_REGISTRADA'|'RESERVA_CONFIRMADA'} tipo
  * @property {'EMAIL'|'PUSH'|'APLICACION'} canal
  */
 

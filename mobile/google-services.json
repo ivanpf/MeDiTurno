@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "364481560232",
+    "project_id": "mediturno-auth-db915",
+    "storage_bucket": "mediturno-auth-db915.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:364481560232:android:bf40862ab2b6c2b3d28c9d",
+        "android_client_info": {
+          "package_name": "com.mediturno.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "364481560232-8kmd9kq1b2kjhkagbtvoverhko8dlnqo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjF14iAMiR288Qibrdih17tbyp822ezy8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "364481560232-8kmd9kq1b2kjhkagbtvoverhko8dlnqo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

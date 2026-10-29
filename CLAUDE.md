@@ -145,9 +145,16 @@ INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE corr
 - `POST /api/consultas/{numeroOrden}` (solo médico) registra la consulta realizada con una orden emitida. Cuerpo: `motivo` y `observaciones` (obligatorios, hasta 5000 caracteres) e `indicaciones` (opcional). Responde `201` con `ConsultaResponseDTO`, que también usarán CU-11, CU-22 y CU-26.
 - En una sola transacción (`ConsultaService.registrarConsulta`, con bloqueo de la reserva): guarda la consulta en la historia clínica del paciente (la abre si todavía no tenía una; hay una por paciente, y la historia general es el conjunto de sus consultas), pasa la reserva a `ATENDIDA` y la orden a `UTILIZADA`. Una consulta registrada no se puede modificar.
 - Errores: `422` si la orden no existe, no es de un turno del médico o no está emitida (mismo mensaje en todos los casos, para no revelar órdenes de otros médicos); `409` si la consulta ya fue registrada; `400` por datos obligatorios (anotaciones del DTO).
-- **Aviso al paciente** (`NotificacionService.notificarConsultaRegistrada`), después de confirmar el registro y sin contenido clínico: una notificación en la aplicación (tipo `CONSULTA_REGISTRADA`) y un correo (`EmailService.enviarAvisoHistoriaClinica`). Si el correo falla, queda `FALLIDA` y el registro no se revierte. **El aviso push no está**: el diagrama lo dibuja, pero depende de la aplicación móvil (`PushNotificationService` sin implementar); pendiente de decidir si se usa.
+- **Aviso al paciente** (`NotificacionService.notificarConsultaRegistrada`), después de confirmar el registro y sin contenido clínico: una notificación en la aplicación (tipo `CONSULTA_REGISTRADA`) y un correo (`EmailService.enviarAvisoHistoriaClinica`). Si el correo falla, queda `FALLIDA` y el registro no se revierte. **Push:** también se manda un aviso push (ver «Notificaciones push»).
 - Pantalla: el médico elige al paciente en «Mis pacientes» (CU-21), que ofrece «Registrar consulta» solo para los pacientes con orden emitida; abre `RegistrarConsultaPage` con los datos del paciente (por el estado de la navegación; sin ellos, la pantalla pide elegirlo primero), pide confirmación y registra. Desde «Mis pacientes» y antes de registrar la consulta se puede abrir CU-22 para consultar los antecedentes del paciente durante una atención autorizada.
 - `RegistroConsultaIntegracionTest` verifica el registro, los estados, la historia clínica, los errores y los avisos con PostgreSQL embebido.
+
+### Notificaciones push
+
+- Los avisos salen **directo por Firebase Cloud Messaging (FCM)**, sin pasar por Expo ni por EAS. `PushNotificationService` guarda el token nativo de FCM de cada dispositivo (`POST/DELETE /api/notificaciones/push`; un token pertenece a la última persona que inició sesión) y envía con `FirebaseMessaging` del SDK de Firebase Admin, usando la misma clave de servicio de la autenticación (`secrets/firebase-clave.json`). Se envía en un hilo aparte (`@Async`, activado en `BackendApplication`) y es de mejor esfuerzo: no lanza excepciones ni revierte nada, y borra los tokens que FCM responde `UNREGISTERED` o `INVALID_ARGUMENT`. Cada push queda registrado en `notificacion` con canal `PUSH` (`ENVIADA` o `FALLIDA`), solo si la persona tiene dispositivos registrados.
+- La app móvil obtiene el token nativo de FCM con `Notifications.getDevicePushTokenAsync()` y lo registra al iniciar sesión. Necesita `mobile/google-services.json` (app Android `com.mediturno.mobile` del proyecto de Firebase, versionado en el repositorio: es configuración pública del cliente). Detalle y pruebas en `mobile/README-BACKEND-NOTIFICACIONES_PUSH.md`.
+- Avisos: CU-13 («Turno suspendido»), CU-23 («Nueva información en su historia clínica») y CU-8 (`notificarReservaConfirmada`, «Reserva confirmada», tipo `RESERVA_CONFIRMADA`, migración `V2`; se manda al confirmarse la transacción de la reserva).
+- Probar: iniciar sesión en la app (acepta el permiso y se registra el token en `token_dispositivo`) y reservar un turno como paciente desde la web o la app; llega «Reserva confirmada». El log del backend muestra `Push enviado ...` o `FCM rechazó el push (...)`.
 
 ### Historial de atenciones propias (CU-26)
 
@@ -195,7 +202,7 @@ La migración `V1__crear_tablas.sql` crea las 20 tablas del modelo. Hay una enti
 | `EstadoPase` | `VIGENTE`, `USADO`, `VENCIDO` |
 | `EstadoAnuncio` | `PUBLICADO`, `ELIMINADO` |
 | `EstadoNotificacion` | `PENDIENTE`, `ENVIADA`, `FALLIDA`, `LEIDA` |
-| `TipoNotificacion` | `RECORDATORIO_CONSULTA`, `SUSPENSION_TURNO`, `CONSULTA_REGISTRADA` |
+| `TipoNotificacion` | `RECORDATORIO_CONSULTA`, `SUSPENSION_TURNO`, `CONSULTA_REGISTRADA`, `RESERVA_CONFIRMADA` (migración `V2`) |
 | `CanalNotificacion` | `EMAIL`, `PUSH`, `APLICACION` |
 
 - **Flujo de estados de una reserva:** `VIGENTE` → `ORDEN_EMITIDA` (CU-16) → `ATENDIDA` (CU-23). Desde `VIGENTE`: `CANCELADA` (el paciente, CU-9) o `ANULADA` (suspensión del turno, CU-13). Si pasa la fecha sin atención, `VENCIDA`.
@@ -212,6 +219,71 @@ La migración `V1__crear_tablas.sql` crea las 20 tablas del modelo. Hay una enti
 - **Tipos:** los textos largos (antecedentes, motivo, indicaciones, contenido del anuncio) son `TEXT`; las fechas con hora, `TIMESTAMP` (`LocalDateTime`); los horarios, `TIME`.
 - **Prueba automática:** `EsquemaBaseDeDatosTest` levanta un PostgreSQL embebido (no necesita Podman; la primera vez descarga los binarios), ejecuta las migraciones, comprueba que cada entidad coincida con su tabla y verifica las reglas más importantes. Se ejecuta con `./mvnw test`.
 
+### Datos de prueba (seed)
+
+Para probar los casos de uso sin cargar datos a mano hay dos scripts de población:
+
+- `db/seed/R__usuarios_de_prueba.sql`: los cuatro usuarios con cuenta de Firebase (ver «Usuarios de prueba»).
+- `db/datos-prueba/R__zz_datos_de_prueba.sql`: todo lo demás (especialidades, consultorios, médicos, pacientes, turnos, ocurrencias, reservas, historia clínica, cartelera). Reutiliza a esas cuatro personas.
+
+Cómo se cargan:
+
+- **Solo en desarrollo.** `db/datos-prueba` se agrega a las ubicaciones de Flyway únicamente con el perfil `dev` de Spring (`application-dev.yaml`). `compose.yml` ya activa ese perfil, así que con Podman los datos aparecen solos al levantar el backend con la base vacía. **En producción no se activa el perfil `dev`.**
+- **Fuera de contenedores**, activar el perfil al arrancar el backend: `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run` (PowerShell: `$env:SPRING_PROFILES_ACTIVE = "dev"` y después `.\mvnw.cmd spring-boot:run`).
+- **Es una migración repetible** (`R__`). El nombre empieza con `zz` para que corra después de `R__usuarios_de_prueba.sql` (Flyway ordena las repetibles por nombre). Si la base ya tiene otros usuarios (además de los cuatro de prueba), especialidades, turnos o reservas, **no hace nada** y lo avisa en el log del backend (nunca falla el arranque).
+- **Empezar de cero** (borra todos los datos locales): `podman compose down -v` y volver a levantar.
+- **Las fechas son relativas al día en que se cargan** (en Montevideo, como el `Clock` de la aplicación, aunque la base esté en UTC): hay historia de las últimas 13 semanas, las ocurrencias cubren las próximas 8, y hay tres turnos hoy y uno mañana. Pasadas unas semanas conviene recargar.
+- **Si el script cambió y su base ya tenía datos**, Flyway lo vuelve a ejecutar pero no carga nada (lo protege el bloque contra duplicados): para ver los datos nuevos, `podman compose down -v`.
+
+**Personas de prueba:**
+
+| Rol | Personas |
+|---|---|
+| Administrador | Carlos Méndez (`admin@mediturno.com`) |
+| Funcionarios | Juan Pérez (`funcionario@mediturno.com`), Marta Silva (`funcionario2@mediturno.test`) |
+| Médicos | Laura Gómez (`medico@mediturno.com`; Cardiología y Clínica Médica), Diego Rossi (Traumatología), Sofía Acosta (Pediatría), Andrés Cabrera (Clínica Médica), Valeria Núñez (Dermatología), Ricardo Pereira (**inactivo**) |
+| Pacientes | Ana López (`paciente@mediturno.com`), Luis Díaz, María Fernández, Pedro Castro (sin teléfono ni domicilio), Lucía Ramos, Jorge Benítez, Valentina Olivera, Martín Sosa, Carolina Techera, Federico Pintos, Gabriela Rodríguez, Tomás y Camila Ferreira (niños), Joaquín Viera (sin historia clínica), Rosa Álvarez (**inactiva**) |
+
+Solo las cuatro personas `@mediturno.com` tienen cuenta de Firebase; las `@mediturno.test` están «en el padrón, sin cuenta» (sirven para probar el registro, CU-7). Lo pensado para probar a mano está armado sobre esas cuatro cuentas, sobre todo **Ana López** y la **Dra. Gómez**.
+
+**Turnos** (los días fijos no cambian; los de hoy y mañana dependen del día de carga):
+
+| Turno | Para qué sirve |
+|---|---|
+| Cardiología lunes 9–12 y Clínica Médica miércoles 14–17 (Dra. Gómez), Pediatría martes 8–11 (Dra. Acosta), Traumatología jueves 14–17 (Dr. Rossi) | Turnos activos con historia y reservas |
+| Traumatología viernes 9–12 (Dr. Rossi) | **Suspensión temporal** que rige desde hace una semana y termina en dos (fechas `SUSPENDIDA`; las posteriores se pueden reservar) |
+| Pediatría sábado 9–12 (Dra. Acosta) | **Suspensión permanente** |
+| Dermatología martes 14–17 (Dra. Núñez) | Turno nuevo, vigente desde hoy y solo por 4 semanas (`vigente_hasta`) |
+| Hoy 8–12 y 13–17 (Dr. Cabrera, Clínica Médica) y hoy 18–21 (Dra. Gómez, Cardiología) | La atención del día. Juntos cubren de 7 a 21 la ventana para emitir órdenes |
+| Mañana 18–20 (Dr. Cabrera) | Reservas a menos de 48 horas |
+
+Ningún médico ni consultorio tiene dos turnos superpuestos.
+
+**Qué se puede probar con estos datos:**
+
+| Caso de uso | Con qué datos |
+|---|---|
+| CU-8 reserva | Fechas con números libres y ocupados. El turno de la tarde del Dr. Cabrera de **la semana que viene está sin cupos**. **Traumatología y Dermatología requieren pase**: Ana tiene un pase vigente a Traumatología, pero el de Dermatología **venció** (puede probar el rechazo con el turno de la Dra. Núñez) |
+| CU-9 cancelación | Ana: Cardiología a 3 días o más (se puede cancelar), **mañana** (a menos de 48 horas: no se puede) y la de hoy con orden emitida (no vigente) |
+| CU-10 historial | Ana tiene reservas en los seis estados (atendidas, vencida, cancelada, con orden, vigentes y anulada) |
+| CU-11, CU-22 | Ana: cinco atenciones con la Dra. Gómez, el Dr. Rossi y el Dr. Cabrera, en Clínica Médica, Traumatología y Cardiología. Los demás pacientes tienen historial generado |
+| CU-12, CU-20 | Once turnos semanales: activos, suspendidos (temporal y permanente), con fin de vigencia, de hoy y de mañana |
+| CU-13, CU-14 | Las dos suspensiones (una con la reserva anulada de Ana, otra con la de Camila Ferreira). Para probar una suspensión nueva, cualquier turno activo tiene reservas futuras |
+| CU-15, CU-16 | Reservas vigentes de hoy en los tres turnos del día (Lucía, María, Luis, Gabriela, Pedro): a cualquier hora entre las 7 y las 21 hay una a la que se le puede emitir la orden. Ana y Joaquín ya tienen la orden emitida |
+| CU-21, CU-22, CU-23, CU-24 | El turno de **hoy de 18 a 21 de la Dra. Gómez**: Ana (orden emitida, con antecedentes), Joaquín (orden emitida, **sin historia clínica**: CU-22 vacía y CU-23 se la abre), Pedro (vigente) y una cancelada. Al registrar la consulta de Ana se puede emitir un pase (por ejemplo, a Dermatología) |
+| CU-26 | La Dra. Gómez tiene muchas atenciones propias en Cardiología y Clínica Médica |
+| Campanita | Ana tiene avisos sin leer (reservas confirmadas y una suspensión) y otros leídos. El correo a Camila figura `FALLIDA` |
+| CU-28, CU-34, CU-37 | Neurología (especialidad inactiva), el consultorio 4 (inactivo) y un médico inactivo |
+| Estadísticas (CU-40 a CU-42) | 13 semanas de historia: Cardiología con más demanda que Clínica Médica, Pediatría y Traumatología con poca |
+| Cartelera | Dos anuncios vigentes, uno programado (empieza en unos días), uno vencido y uno eliminado |
+
+**Cómo mantener el script:**
+
+- Lo hecho a mano (los casos de Ana, de la Dra. Gómez y de hoy) va arriba; después, dos bucles generan con una regla fija el historial de los demás pacientes y las reservas de las próximas semanas, saltando los números y los pacientes que ya están en esa fecha.
+- Se puede editar, pero hay que respetar el bloque que lo protege contra duplicados y **no usar ids fijos**: se obtienen con `RETURNING ... INTO`, porque los ids son automáticos. Las fechas salen de `v_hoy` y `v_ahora` (Montevideo), nunca de `CURRENT_DATE`.
+- Si una migración nueva cambia una tabla (por ejemplo, agrega una columna obligatoria), hay que actualizar también el script de datos.
+- `DatosDePruebaTest` carga el script sobre una base real, comprueba lo que contiene, que sea coherente con las reglas (cada atención con su orden y su consulta, reservas con pase donde se exige, sin turnos superpuestos, sin reservas pendientes en fechas pasadas) y que volver a ejecutarlo no duplica nada. Si el script deja de ser válido, ese test falla.
+
 ### Pasos para cambiar la base
 
 1. **Crear un script nuevo** con el número siguiente al último que haya en `db/migration` de `main`. Ejemplo: `V3__agrega_motivo_a_suspension_turno.sql` con `ALTER TABLE suspension_turno ADD COLUMN motivo VARCHAR(255);`.
@@ -226,7 +298,7 @@ La migración `V1__crear_tablas.sql` crea las 20 tablas del modelo. Hay una enti
 - **Excepción:** un script que existe solo en tu rama y que nadie más ejecutó se puede editar. Después hay que reiniciar tu base local: `podman compose down -v` (borra los datos) y volver a arrancar.
 - Un script por cambio lógico, corto y legible en una revisión.
 - No usar `ddl-auto: update` ni `create`, y no modificar el esquema a mano con un cliente SQL: si hace falta un cambio, se escribe el script.
-- Los datos de prueba (*seed*) van en scripts aparte; la convención se define cuando se agreguen.
+- Los datos de prueba (*seed*) **no** van en migraciones `V`: van en `db/seed/` y `db/datos-prueba/` (ver «Datos de prueba»).
 
 ## Cómo implementar un caso de uso
 
