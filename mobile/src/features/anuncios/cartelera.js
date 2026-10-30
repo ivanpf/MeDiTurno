@@ -1,5 +1,5 @@
-// Cálculos de presentación del CU-6. Cuando exista el backend, qué anuncios están vigentes lo decidirá
-// GET /api/anuncios; mientras tanto se filtran acá los datos de prueba con el mismo criterio.
+// Cálculos de presentación del CU-6. Los anuncios vigentes ya los decide el backend en
+// GET /api/anuncios; estos filtros repiten el mismo criterio como defensa en el cliente.
 
 // «2026-10-28» (fecha local de hoy), para comparar con fechaInicio y fechaFin.
 export function hoyISO(ahora = new Date()) {
@@ -15,13 +15,14 @@ export function anunciosVigentes(anuncios, hoy = hoyISO()) {
     .sort((a, b) => b.fechaPublicacion.localeCompare(a.fechaPublicacion));
 }
 
-// Fotos del carrusel: las de cada anuncio según su orden, con el título del anuncio al que pertenecen.
+// Fotos del carrusel: la imagen de cada anuncio, con el título del anuncio al que pertenece.
+// La uri ya viene armada por la fuente de datos, junto con las cabeceras de autenticación.
 export function fotosDelCarrusel(anuncios) {
-  return anuncios.flatMap((anuncio) => [...(anuncio.imagenes ?? [])]
-    .sort((a, b) => a.orden - b.orden)
+  return anuncios.flatMap((anuncio) => (anuncio.imagenes ?? [])
     .map((imagen) => ({
-      clave: `${anuncio.id}-${imagen.orden}`,
+      clave: `${anuncio.id}-${imagen.idImagen ?? imagen.orden}`,
       uri: imagen.imagen,
+      headers: imagen.headers,
       descripcion: imagen.textoAlternativo || anuncio.titulo,
       idAnuncio: anuncio.id,
       titulo: anuncio.titulo,

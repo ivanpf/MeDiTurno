@@ -41,7 +41,7 @@ function Diapositiva({ foto, ancho }) {
           <Text style={estilos.sinFotoTexto}>No se pudo cargar la imagen.</Text>
         </View>
       ) : (
-        <Image source={{ uri: foto.uri }} style={estilos.foto} resizeMode="cover" onError={() => setFallo(true)} />
+        <Image source={{ uri: foto.uri, headers: foto.headers }} style={estilos.foto} resizeMode="cover" onError={() => setFallo(true)} />
       )}
       <View style={estilos.pie}>
         <Text style={estilos.pieTitulo} numberOfLines={2}>{foto.titulo}</Text>

@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 import { getAuth } from 'firebase/auth';
 
 const HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-const API_BASE = __DEV__ ? `http://${HOST}:8080/api` : 'https://api.mediturno.com/api';
+export const API_BASE = __DEV__ ? `http://${HOST}:8080/api` : 'https://api.mediturno.com/api';
 
 /**
  * @class ApiError
