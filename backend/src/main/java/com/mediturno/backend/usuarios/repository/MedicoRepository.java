@@ -26,5 +26,16 @@ public interface MedicoRepository extends JpaRepository<Medico, Long> {
     @Query("select distinct m from Medico m left join fetch m.especialidades where m.estado = :estado order by m.apellido, m.nombre")
     List<Medico> listarConEspecialidades(@Param("estado") EstadoActivacion estado);
 
+    /** Los médicos en ese estado que atienden la especialidad, ordenados por apellido y nombre. */
+    @Query("select m from Medico m join m.especialidades e where e.codigo = :codigoEspecialidad and m.estado = :estado order by m.apellido, m.nombre")
+    List<Medico> listarPorEspecialidad(@Param("codigoEspecialidad") String codigoEspecialidad, @Param("estado") EstadoActivacion estado);
+
     boolean existsByMatriculaIgnoreCase(String matricula);
+
+    /** ¿Otro médico (no el indicado) tiene esa matrícula? Para validar el cambio de matrícula de alguien que ya existe. */
+    boolean existsByMatriculaIgnoreCaseAndIdUsuarioNot(String matricula, Long idUsuario);
+
+    /** Todas las matrículas registradas, en minúsculas: las cargas masivas comprueban así los duplicados de una sola vez. */
+    @Query("select lower(m.matricula) from Medico m")
+    List<String> listarMatriculasEnMinusculas();
 }

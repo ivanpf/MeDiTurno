@@ -3,5 +3,6 @@ package com.mediturno.backend.notificaciones.model;
 public enum TipoNotificacion {
     RECORDATORIO_CONSULTA,
     SUSPENSION_TURNO,
-    CONSULTA_REGISTRADA
+    CONSULTA_REGISTRADA,
+    RESERVA_CONFIRMADA
 }

@@ -1,0 +1,44 @@
+.formulario {
+  max-width: 640px;
+}
+
+.mensajes {
+  max-width: 640px;
+  margin-bottom: 16px;
+}
+
+.mensajes ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+/* Código y nombre lado a lado; en pantallas chicas, uno debajo del otro */
+.fila {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+}
+
+.fila > * {
+  min-width: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ayuda {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+@media (max-width: 800px) {
+  .fila {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

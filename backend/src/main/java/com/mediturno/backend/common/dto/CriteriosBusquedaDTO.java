@@ -16,6 +16,18 @@ import java.time.LocalDate;
  *   <li>CU-20 (turnos semanales): {@code idMedico}, {@code codigoEspecialidad}, {@code dia} (LUNES...DOMINGO),
  *       {@code codigoConsultorio} y {@code estado} (ACTIVO o SUSPENDIDO); {@code ordenarPor} puede ser medico,
  *       especialidad, dia, horario, consultorio o estado.</li>
+ *   <li>CU-30 (especialidades): {@code texto} (busca en el código y en el nombre), {@code estado} (ACTIVO o INACTIVO) y
+ *       {@code requierePase}; {@code ordenarPor} puede ser codigo o nombre (por defecto, nombre).</li>
+ *   <li>CU-39 (consultorios): {@code texto} (busca en el código y en el nombre), {@code ubicacion} (exacta, sin distinguir
+ *       mayúsculas) y {@code estado} (ACTIVO o INACTIVO); {@code ordenarPor} puede ser codigo, nombre o ubicacion (por defecto,
+ *       nombre).</li>
+ *   <li>CU-33 (pacientes): {@code texto} (busca en la cédula, el nombre, el apellido y el correo), {@code tieneCuenta}
+ *       (si ya creó su cuenta o no) y {@code estado} (ACTIVO o INACTIVO); {@code ordenarPor} puede ser apellido, nombre o
+ *       fechaAlta (por defecto, apellido).</li>
+ *   <li>CU-36 (usuarios internos): {@code texto} (busca en la cédula, el nombre, el apellido y el correo), {@code rol}
+ *       (ADMINISTRADOR, FUNCIONARIO o MEDICO), {@code estado} (ACTIVO o INACTIVO) y, para los médicos,
+ *       {@code codigoEspecialidad}; {@code ordenarPor} puede ser apellido, nombre, rol o fechaCreacion (por defecto,
+ *       apellido).</li>
  * </ul>
  * {@code dia} y {@code estado} son texto porque cada caso de uso tiene sus propios valores.
  */
@@ -28,16 +40,51 @@ public record CriteriosBusquedaDTO(
         String ordenarPor,
         Boolean descendente,
         LocalDate fechaDesde,
-        LocalDate fechaHasta) {
+        LocalDate fechaHasta,
+        String texto,
+        Boolean requierePase,
+        String ubicacion,
+        Boolean tieneCuenta,
+        String rol) {
+
+    /** Conserva la forma usada por los casos de uso que no filtran por rol (CU-33). */
+    public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,
+            String estado, String ordenarPor, Boolean descendente, LocalDate fechaDesde, LocalDate fechaHasta,
+            String texto, Boolean requierePase, String ubicacion, Boolean tieneCuenta) {
+        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, fechaDesde, fechaHasta,
+            texto, requierePase, ubicacion, tieneCuenta, null);
+    }
+
+    /** Conserva la forma usada por los casos de uso que no filtran por si el paciente tiene cuenta (CU-39). */
+    public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,
+            String estado, String ordenarPor, Boolean descendente, LocalDate fechaDesde, LocalDate fechaHasta,
+            String texto, Boolean requierePase, String ubicacion) {
+        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, fechaDesde, fechaHasta,
+            texto, requierePase, ubicacion, null, null);
+    }
+
+    /** Conserva la forma usada por los casos de uso que no filtran por ubicación (CU-30). */
+    public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,
+            String estado, String ordenarPor, Boolean descendente, LocalDate fechaDesde, LocalDate fechaHasta,
+            String texto, Boolean requierePase) {
+        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, fechaDesde, fechaHasta,
+            texto, requierePase, null, null, null);
+    }
+
+    /** Conserva la forma usada por los casos de uso que no usan búsqueda por texto ni el requisito de pase. */
+    public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,
+            String estado, String ordenarPor, Boolean descendente, LocalDate fechaDesde, LocalDate fechaHasta) {
+        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, fechaDesde, fechaHasta, null, null, null, null, null);
+    }
 
     /** Conserva la forma usada por los casos de uso que no utilizan un rango de fechas. */
     public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,
             String estado, String ordenarPor, Boolean descendente) {
-        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, null, null);
+        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, null, null, null, null, null, null);
     }
 
     /** Sin ningún criterio: devuelve todo, en el orden por defecto. */
     public static CriteriosBusquedaDTO vacio() {
-        return new CriteriosBusquedaDTO(null, null, null, null, null, null, null, null, null);
+        return new CriteriosBusquedaDTO(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 }

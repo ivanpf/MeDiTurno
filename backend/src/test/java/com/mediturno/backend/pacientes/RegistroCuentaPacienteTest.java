@@ -32,6 +32,7 @@ import com.mediturno.backend.pacientes.dto.VerificacionRegistroDTO;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.pacientes.repository.PacienteRepository;
 import com.mediturno.backend.usuarios.model.ProveedorAcceso;
+import com.mediturno.backend.usuarios.repository.AdministradorRepository;
 import com.mediturno.backend.usuarios.repository.UsuarioRepository;
 
 /** CU-7 Registro de cuenta de paciente. El proveedor de identidad (Firebase) es un doble. */
@@ -50,7 +51,7 @@ class RegistroCuentaPacienteTest {
         pacientes = mock(PacienteRepository.class);
         usuarios = mock(UsuarioRepository.class);
         proveedor = mock(ProveedorIdentidad.class);
-        servicio = new PacienteService(pacientes, usuarios, new AuthService(usuarios, proveedor, Clock.systemDefaultZone()), Clock.systemDefaultZone());
+        servicio = new PacienteService(pacientes, usuarios, new AuthService(usuarios, proveedor, Clock.systemDefaultZone()), mock(AdministradorRepository.class), Clock.systemDefaultZone());
 
         delPadron = new Paciente();
         delPadron.setIdUsuario(7L);

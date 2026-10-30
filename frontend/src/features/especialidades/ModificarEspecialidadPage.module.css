@@ -1,0 +1,79 @@
+.formulario {
+  max-width: 640px;
+}
+
+.mensajes {
+  max-width: 640px;
+  margin-bottom: 16px;
+}
+
+.mensajes ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+/* Código y nombre lado a lado; en pantallas chicas, uno debajo del otro */
+.fila {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+}
+
+.fila > * {
+  min-width: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* Opciones Sí / No (botones de radio): se ven las dos y se nota cuál está elegida */
+.opciones {
+  min-width: 0;
+  margin: 14px 0;
+  padding: 0;
+  border: 0;
+}
+
+.opciones legend {
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris);
+}
+
+.opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 24px 0 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--texto);
+}
+
+/* El estilo global de input (ancho completo, borde) no sirve para un radio */
+.opcion input {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--azul);
+}
+
+.ayuda {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+@media (max-width: 800px) {
+  .fila {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

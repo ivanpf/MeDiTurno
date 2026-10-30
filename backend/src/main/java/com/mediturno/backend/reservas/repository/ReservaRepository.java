@@ -82,6 +82,21 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long>, JpaSpec
     List<Reserva> buscarPendientesDelTurnoEntreFechas(
             @Param("idTurno") Long idTurno, @Param("desde") java.time.LocalDate desde, @Param("hasta") java.time.LocalDate hasta);
 
+    /**
+     * Hay alguna reserva pendiente (vigente o con orden emitida) de un turno que se atiende en ese consultorio y que todavía no
+     * terminó: de un día posterior a hoy o de hoy con el turno sin terminar a esa hora. Es lo que impide cambiar su ubicación.
+     */
+    @Query("""
+        select count(r) > 0 from Reserva r
+        where r.ocurrenciaTurno.turnoSemanal.consultorio.codigo = :codigoConsultorio
+          and r.reservaEstado in (com.mediturno.backend.reservas.model.EstadoReserva.VIGENTE,
+                                  com.mediturno.backend.reservas.model.EstadoReserva.ORDEN_EMITIDA)
+          and (r.ocurrenciaTurno.fecha > :hoy
+               or (r.ocurrenciaTurno.fecha = :hoy and r.ocurrenciaTurno.horaFin > :ahora))
+        """)
+    boolean existenReservasPendientesEnConsultorio(@Param("codigoConsultorio") String codigoConsultorio,
+            @Param("hoy") java.time.LocalDate hoy, @Param("ahora") java.time.LocalTime ahora);
+
     /** Números de la ocurrencia que tienen una reserva que los conserva (las canceladas y anuladas los liberan), en orden. */
     @Query("""
         select r.numero from Reserva r

@@ -1,4 +1,5 @@
 // CU-8 completo: especialidad → médico → fecha → número → confirmación.
+// CU-9 (cancelar una reserva existente) se implementa por separado en reservas.js.
 // La pantalla describe qué mostrar; useReservaConsulta maneja el estado y las peticiones.
 import React, { useRef } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';

@@ -38,6 +38,54 @@ public interface TurnoSemanalRepository extends JpaRepository<TurnoSemanal, Long
     List<Long> idsConVigenciaEntre(@Param("estados") Collection<EstadoTurnoSemanal> estados, @Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
 
     /**
+     * Turnos de la especialidad cuya vigencia no terminó a esa fecha (sin fecha de fin, o con fin de hoy en adelante), activos
+     * o suspendidos. Sin orden de día: el día se guarda como texto, así que quien lo necesita ordena por {@code DiaSemana}.
+     */
+    @Query("""
+        select t from TurnoSemanal t
+        where t.especialidad.codigo = :codigoEspecialidad
+          and (t.vigenteHasta is null or t.vigenteHasta >= :hoy)
+        order by t.idTurnoSemanal
+        """)
+    List<TurnoSemanal> listarVigentesDeEspecialidad(@Param("codigoEspecialidad") String codigoEspecialidad, @Param("hoy") LocalDate hoy);
+
+    /**
+     * Turnos del médico cuya vigencia no terminó a esa fecha (sin fecha de fin, o con fin de hoy en adelante), activos o
+     * suspendidos.
+     */
+    @Query("""
+        select t from TurnoSemanal t
+        where t.medico.idUsuario = :idMedico
+          and (t.vigenteHasta is null or t.vigenteHasta >= :hoy)
+        order by t.idTurnoSemanal
+        """)
+    List<TurnoSemanal> listarVigentesDeMedico(@Param("idMedico") Long idMedico, @Param("hoy") LocalDate hoy);
+
+    /**
+     * Turnos del consultorio cuya vigencia no terminó a esa fecha (sin fecha de fin, o con fin de hoy en adelante), activos
+     * o suspendidos.
+     */
+    @Query("""
+        select t from TurnoSemanal t
+        where t.consultorio.codigo = :codigoConsultorio
+          and (t.vigenteHasta is null or t.vigenteHasta >= :hoy)
+        order by t.idTurnoSemanal
+        """)
+    List<TurnoSemanal> listarVigentesDeConsultorio(@Param("codigoConsultorio") String codigoConsultorio, @Param("hoy") LocalDate hoy);
+
+    /** Cuántos turnos vigentes (misma definición que {@link #listarVigentesDeConsultorio}) usa cada consultorio. Solo los que usan alguno. */
+    @Query("""
+        select new com.mediturno.backend.turnos.repository.TurnoSemanalRepository$TurnosPorConsultorio(t.consultorio.codigo, count(t))
+        from TurnoSemanal t
+        where t.vigenteHasta is null or t.vigenteHasta >= :hoy
+        group by t.consultorio.codigo
+        """)
+    List<TurnosPorConsultorio> contarVigentesPorConsultorio(@Param("hoy") LocalDate hoy);
+
+    record TurnosPorConsultorio(String codigoConsultorio, long cantidad) {
+    }
+
+    /**
      * Turnos que se superponen con la franja propuesta: del mismo médico o del mismo consultorio, el mismo día de la
      * semana, con horarios que se intersectan (inicio &lt; finExistente y fin &gt; inicioExistente) y cuya vigencia
      * todavía no terminó cuando empieza la del nuevo turno. Incluye los suspendidos, porque pueden rehabilitarse.

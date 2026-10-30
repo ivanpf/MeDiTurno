@@ -57,8 +57,24 @@ async function descargar(ruta) {
   return respuesta.blob()
 }
 
+// Para enviar archivos: el cuerpo es un FormData. No se fija el Content-Type: el navegador lo completa con el separador de las partes.
+async function enviarFormulario(ruta, formData) {
+  const token = await obtenerToken()
+  const respuesta = await fetch(BASE + ruta, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  const datos = respuesta.status === 204 ? null : await respuesta.json().catch(() => null)
+  if (!respuesta.ok) {
+    throw new ApiError(respuesta.status, datos?.mensaje ?? 'Ocurrió un error', datos?.detalles ?? [])
+  }
+  return datos
+}
+
 export const api = {
   descargar,
+  postForm: enviarFormulario,
   get: (ruta) => request('GET', ruta),
   post: (ruta, cuerpo) => request('POST', ruta, cuerpo ?? {}),
   put: (ruta, cuerpo) => request('PUT', ruta, cuerpo ?? {}),

@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import tools.jackson.databind.exc.MismatchedInputException;
@@ -57,6 +58,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> parametroInvalido(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.badRequest()
             .body(new ApiError(400, "Hay datos inválidos", List.of("El valor del parámetro «" + ex.getName() + "» no es válido"), Instant.now()));
+    }
+
+    /** Un archivo (o el conjunto) supera el límite de {@code spring.servlet.multipart}: se avisa en lugar de un error genérico. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> archivoDemasiadoGrande(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.badRequest()
+            .body(ApiError.of(400, "Los archivos superan el tamaño permitido"));
     }
 
     /** Errores HTTP (ruta inexistente, método no permitido, ResponseStatusException) y errores inesperados. */

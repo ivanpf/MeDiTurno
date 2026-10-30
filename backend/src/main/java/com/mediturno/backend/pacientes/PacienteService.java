@@ -1,13 +1,19 @@
 package com.mediturno.backend.pacientes;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
 
 import com.mediturno.backend.auth.AuthService;
 import com.mediturno.backend.auth.dto.CrearCuentaRequestDTO;
+import com.mediturno.backend.common.busqueda.FiltrosBusqueda;
+import com.mediturno.backend.common.csv.AnalizadorCsv;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.PerfilDTO;
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
@@ -23,10 +29,15 @@ import com.mediturno.backend.pacientes.dto.VerificacionRegistroDTO;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.pacientes.repository.PacienteRepository;
 import com.mediturno.backend.usuarios.model.ProveedorAcceso;
+import com.mediturno.backend.usuarios.repository.AdministradorRepository;
 import com.mediturno.backend.usuarios.repository.UsuarioRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -42,13 +53,15 @@ public class PacienteService {
     private final PacienteRepository pacienteRepository;
     private final UsuarioRepository usuarioRepository;
     private final AuthService authService;
+    private final AdministradorRepository administradorRepository;
     private final Clock reloj;
 
     public PacienteService(PacienteRepository pacienteRepository, UsuarioRepository usuarioRepository, AuthService authService,
-            Clock reloj) {
+            AdministradorRepository administradorRepository, Clock reloj) {
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
         this.authService = authService;
+        this.administradorRepository = administradorRepository;
         this.reloj = reloj;
     }
 
@@ -223,24 +236,235 @@ public class PacienteService {
             p.getFechaNacimiento(), p.getTelefono(), p.getDomicilio(), p.getEstado(), p.getFirebaseUid() != null, p.getFechaAlta());
     }
 
-    /** CU-32. */
+    private static final int MAXIMO_FILAS_CSV = 1000;
+    private static final String CEDULA = "Cédula";
+    private static final String NOMBRE = "Nombre";
+    private static final String APELLIDO = "Apellido";
+    private static final String CORREO = "Correo";
+    private static final String FECHA_NACIMIENTO = "Fecha de nacimiento";
+    private static final String TELEFONO = "Teléfono";
+    private static final String DOMICILIO = "Domicilio";
+    private static final List<AnalizadorCsv.Columna> COLUMNAS_CSV = List.of(
+        AnalizadorCsv.Columna.obligatoria(CEDULA), AnalizadorCsv.Columna.obligatoria(NOMBRE),
+        AnalizadorCsv.Columna.obligatoria(APELLIDO), AnalizadorCsv.Columna.obligatoria(CORREO),
+        AnalizadorCsv.Columna.obligatoria(FECHA_NACIMIENTO),
+        AnalizadorCsv.Columna.opcional(TELEFONO), AnalizadorCsv.Columna.opcional(DOMICILIO));
+
+    /**
+     * CU-32, previsualización. Lee el CSV y valida cada fila (campos obligatorios, formatos, largos y cédulas o correos repetidos
+     * en el archivo o ya registrados) sin guardar nada. Es el paso previo a la importación.
+     */
+    @Transactional(readOnly = true)
+    public ResultadoImportacionDTO previsualizarPacientesCSV(MultipartFile archivo) {
+        return analizarCsv(archivo).resultado();
+    }
+
+    /**
+     * CU-32. Vuelve a analizar el archivo (nada de lo que mostró la previsualización se da por cierto) y, solo si todas las filas
+     * son válidas, incorpora todos los pacientes al padrón en una sola transacción; si alguna tiene errores no se incorpora
+     * ninguno (422). Como en el alta individual (CU-31), no se crean cuentas de acceso ni contraseñas: la persona crea la suya
+     * después (CU-7). Devuelve el resultado con la cantidad de pacientes incorporados.
+     */
+    @Transactional
     public ResultadoImportacionDTO altaPacientesCSV(MultipartFile archivo) {
-        throw new NoImplementadoException();
+        return analizarCsv(archivo).importar(pacienteRepository::saveAllAndFlush,
+            "El archivo contiene errores: corríjalo y vuelva a cargarlo. No se incorporó ningún paciente.",
+            // Otro administrador cargó alguno en el mismo instante: las restricciones de la base lo detectan.
+            "Algún paciente se registró mientras se importaba el archivo. Vuelva a cargarlo. No se incorporó ningún paciente.");
     }
 
-    /** CU-33. */
+    private AnalizadorCsv.Analisis<Paciente> analizarCsv(MultipartFile archivo) {
+        // Se comparan contra todas las personas del sistema (no solo los pacientes): la cédula y el correo son únicos entre roles.
+        Set<String> cedulasRegistradas = new HashSet<>(usuarioRepository.listarCedulas());
+        Set<String> correosRegistrados = new HashSet<>(usuarioRepository.listarCorreosEnMinusculas());
+        AnalizadorCsv.Repetidos cedulasDelArchivo = new AnalizadorCsv.Repetidos();
+        AnalizadorCsv.Repetidos correosDelArchivo = new AnalizadorCsv.Repetidos();
+        LocalDateTime ahora = LocalDateTime.now(reloj);
+
+        return AnalizadorCsv.analizar(archivo, MAXIMO_FILAS_CSV, "pacientes", COLUMNAS_CSV, (fila, errores) -> {
+            String textoCedula = fila.valor(CEDULA);
+            String nombre = fila.valor(NOMBRE);
+            String apellido = fila.valor(APELLIDO);
+            String textoCorreo = fila.valor(CORREO);
+            String textoFecha = fila.valor(FECHA_NACIMIENTO);
+            String telefono = fila.valor(TELEFONO);
+            String domicilio = fila.valor(DOMICILIO);
+
+            // Lo repetido en el archivo se marca en la segunda aparición, aunque la primera tuviera otros errores.
+            String cedula = FormatoUsuario.normalizarCedula(textoCedula);
+            String correo = textoCorreo.toLowerCase(Locale.ROOT);
+            Integer cedulaPrevia = cedula == null ? null : cedulasDelArchivo.vistoEn(cedula, fila.numero());
+            Integer correoPrevio = correosDelArchivo.vistoEn(correo, fila.numero());
+
+            if (textoCedula.isEmpty()) {
+                errores.add("La cédula es obligatoria");
+            } else if (cedula == null) {
+                errores.add("La cédula no tiene un formato válido (ejemplo: 1.234.567-8)");
+            } else if (cedulasRegistradas.contains(cedula)) {
+                errores.add("La cédula ya está registrada");
+            } else if (cedulaPrevia != null) {
+                errores.add("La cédula está repetida en el archivo (también en la fila " + cedulaPrevia + ")");
+            }
+            if (nombre.isEmpty()) {
+                errores.add("El nombre es obligatorio");
+            } else if (nombre.length() > 100) {
+                errores.add("El nombre admite hasta 100 caracteres");
+            }
+            if (apellido.isEmpty()) {
+                errores.add("El apellido es obligatorio");
+            } else if (apellido.length() > 100) {
+                errores.add("El apellido admite hasta 100 caracteres");
+            }
+            if (textoCorreo.isEmpty()) {
+                errores.add("El correo electrónico es obligatorio");
+            } else if (textoCorreo.length() > 255) {
+                errores.add("El correo electrónico admite hasta 255 caracteres");
+            } else if (!FormatoUsuario.correoValido(textoCorreo)) {
+                errores.add("El correo electrónico no tiene un formato válido");
+            } else if (correosRegistrados.contains(correo)) {
+                errores.add("El correo electrónico ya está registrado");
+            } else if (correoPrevio != null) {
+                errores.add("El correo electrónico está repetido en el archivo (también en la fila " + correoPrevio + ")");
+            }
+            LocalDate fechaNacimiento = FormatoUsuario.interpretarFecha(textoFecha);
+            if (textoFecha.isEmpty()) {
+                errores.add("La fecha de nacimiento es obligatoria");
+            } else if (fechaNacimiento == null) {
+                errores.add("La fecha de nacimiento no tiene un formato válido (use AAAA-MM-DD o DD/MM/AAAA)");
+            } else if (!fechaNacimiento.isBefore(LocalDate.now(reloj))) {
+                errores.add("La fecha de nacimiento debe ser anterior a hoy");
+            }
+            if (telefono.length() > 30) {
+                errores.add("El teléfono admite hasta 30 caracteres");
+            }
+            if (domicilio.length() > 255) {
+                errores.add("El domicilio admite hasta 255 caracteres");
+            }
+            if (!errores.isEmpty()) {
+                return null;
+            }
+            Paciente paciente = new Paciente();
+            paciente.setCedula(cedula);
+            paciente.setNombre(nombre);
+            paciente.setApellido(apellido);
+            paciente.setCorreo(correo);
+            paciente.setFechaNacimiento(fechaNacimiento);
+            paciente.setTelefono(aNullSiEstaVacio(telefono));
+            paciente.setDomicilio(aNullSiEstaVacio(domicilio));
+            paciente.setEstado(EstadoActivacion.ACTIVO);
+            paciente.setFechaCreacion(ahora);
+            paciente.setFechaAlta(ahora);
+            return paciente;
+        });
+    }
+
+    /**
+     * CU-33. Los criterios son opcionales y se combinan (todos tienen que cumplirse): {@code texto} busca en la cédula (con o sin
+     * puntos y guion), el nombre, el apellido y el correo, sin distinguir mayúsculas, y también «apellido nombre» o «nombre
+     * apellido»; {@code tieneCuenta} filtra por si el paciente ya creó su cuenta (CU-7); {@code estado}, por ACTIVO o INACTIVO.
+     * Se ordena por apellido (por defecto), nombre o fecha de alta (fechaAlta), de forma ascendente salvo que {@code descendente}
+     * sea verdadero. Sin criterios devuelve todo el padrón. Nunca incluye datos de la historia clínica.
+     */
+    @Transactional(readOnly = true)
     public List<PacienteResponseDTO> listarPacientes(CriteriosBusquedaDTO criterios) {
-        throw new NoImplementadoException();
+        EstadoActivacion estado = FiltrosBusqueda.interpretarEstado(criterios.estado());
+        Sort orden = ordenDeLosPacientes(criterios);
+        Boolean tieneCuenta = criterios.tieneCuenta();
+
+        Specification<Paciente> filtros = (paciente, consulta, cb) -> {
+            List<Predicate> condiciones = new ArrayList<>();
+            Predicate texto = FiltrosBusqueda.coincidenciasDePersona(paciente, cb, criterios.texto());
+            if (texto != null) {
+                condiciones.add(texto);
+            }
+            if (tieneCuenta != null) {
+                condiciones.add(tieneCuenta ? cb.isNotNull(paciente.get("firebaseUid")) : cb.isNull(paciente.get("firebaseUid")));
+            }
+            if (estado != null) {
+                condiciones.add(cb.equal(paciente.get("estado"), estado));
+            }
+            return cb.and(condiciones.toArray(new Predicate[0]));
+        };
+
+        return pacienteRepository.findAll(filtros, orden).stream()
+            .map(PacienteService::convertirAPacienteResponseDTO)
+            .toList();
     }
 
-    /** CU-33. */
+    /** El criterio pedido y, para que el orden sea siempre el mismo, el desempate: la otra parte del nombre y el id. */
+    private static Sort ordenDeLosPacientes(CriteriosBusquedaDTO criterios) {
+        Sort principal = FiltrosBusqueda.ordenar(criterios.ordenarPor(), Boolean.TRUE.equals(criterios.descendente()),
+            "apellido", "nombre", "fechaAlta");
+        Sort desempate = switch (principal.iterator().next().getProperty()) {
+            case "apellido" -> Sort.by("nombre", "idUsuario");
+            case "nombre" -> Sort.by("apellido", "idUsuario");
+            default -> Sort.by("apellido", "nombre", "idUsuario"); // la fecha de alta se repite en una carga masiva
+        };
+        return principal.and(desempate);
+    }
+
+    /** CU-33. Detalle administrativo del paciente: sus datos de contacto y si ya tiene cuenta. No incluye su historia clínica. */
+    @Transactional(readOnly = true)
     public PacienteResponseDTO obtenerPaciente(Long idPaciente) {
-        throw new NoImplementadoException();
+        return pacienteRepository.findById(idPaciente)
+            .map(PacienteService::convertirAPacienteResponseDTO)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El paciente no existe"));
     }
 
-    /** CU-44. */
-    public PacienteResponseDTO modificarPaciente(Long idPaciente, ModificarPacienteDTO datos) {
-        throw new NoImplementadoException();
+    /**
+     * CU-44. Corrige nombre, apellido, correo, fecha de nacimiento, teléfono y domicilio (la cédula no se modifica; no toca la
+     * historia clínica). Los campos obligatorios los valida el controlador (@Valid). El correo nuevo no puede ser de otra persona
+     * (409) y, si el paciente ya tiene cuenta de acceso, se cambia también en ella: si eso falla, no se guarda nada. Si hubo
+     * algún cambio, se registra el administrador y la fecha y hora (el último cambio); si no cambió nada, no se guarda nada.
+     */
+    @Transactional
+    public PacienteResponseDTO modificarPaciente(Long idAdministrador, Long idPaciente, ModificarPacienteDTO datos) {
+        Paciente paciente = pacienteRepository.buscarConLock(idPaciente)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El paciente no existe"));
+        String nombre = datos.nombre().trim();
+        String apellido = datos.apellido().trim();
+        String correo = datos.correo().trim().toLowerCase(Locale.ROOT);
+        String telefono = aNullSiEstaVacio(datos.telefono());
+        String domicilio = aNullSiEstaVacio(datos.domicilio());
+
+        if (!FormatoUsuario.correoValido(correo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo electrónico no tiene un formato válido.");
+        }
+        // Escribir el mismo correo con otras mayúsculas no es un cambio.
+        boolean cambiaCorreo = !correo.equalsIgnoreCase(paciente.getCorreo());
+        if (cambiaCorreo && usuarioRepository.existsByCorreoIgnoreCaseAndIdUsuarioNot(correo, idPaciente)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo electrónico ya pertenece a otra persona");
+        }
+
+        boolean hayCambios = cambiaCorreo
+            || !nombre.equals(paciente.getNombre())
+            || !apellido.equals(paciente.getApellido())
+            || !datos.fechaNacimiento().equals(paciente.getFechaNacimiento())
+            || !Objects.equals(telefono, paciente.getTelefono())
+            || !Objects.equals(domicilio, paciente.getDomicilio());
+        if (hayCambios) {
+            paciente.setNombre(nombre);
+            paciente.setApellido(apellido);
+            if (cambiaCorreo) {
+                paciente.setCorreo(correo);
+            }
+            paciente.setFechaNacimiento(datos.fechaNacimiento());
+            paciente.setTelefono(telefono);
+            paciente.setDomicilio(domicilio);
+            paciente.setAdministradorModificacion(administradorRepository.getReferenceById(idAdministrador));
+            paciente.setFechaModificacion(LocalDateTime.now(reloj));
+            try {
+                pacienteRepository.saveAndFlush(paciente);
+            } catch (DataIntegrityViolationException e) {
+                // Otra persona tomó ese correo en el mismo instante: la restricción de la base lo detecta.
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo electrónico ya pertenece a otra persona");
+            }
+            if (cambiaCorreo && paciente.getFirebaseUid() != null) {
+                // Va después de guardar: si falla, la excepción deshace la transacción y el correo no cambia en ningún lado.
+                authService.actualizarCorreo(paciente.getFirebaseUid(), correo);
+            }
+        }
+        return convertirAPacienteResponseDTO(paciente);
     }
 
     /** CU-5. */

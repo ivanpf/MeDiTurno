@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,10 +17,14 @@ import com.mediturno.backend.common.exception.GlobalExceptionHandler;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.consultorios.dto.AltaConsultorioDTO;
 import com.mediturno.backend.consultorios.repository.ConsultorioRepository;
+import com.mediturno.backend.reservas.repository.ReservaRepository;
+import com.mediturno.backend.turnos.repository.TurnoSemanalRepository;
+import com.mediturno.backend.usuarios.repository.AdministradorRepository;
 
 class AltaConsultorioTest {
     private final ConsultorioRepository repositorio = mock(ConsultorioRepository.class);
-    private final ConsultorioService servicio = new ConsultorioService(repositorio);
+    private final ConsultorioService servicio = new ConsultorioService(repositorio, mock(TurnoSemanalRepository.class),
+            mock(ReservaRepository.class), mock(AdministradorRepository.class), Clock.systemDefaultZone());
 
     @Test
     void camposObligatoriosInvalidosDevuelven400ConSuMensajeSinGuardar() {

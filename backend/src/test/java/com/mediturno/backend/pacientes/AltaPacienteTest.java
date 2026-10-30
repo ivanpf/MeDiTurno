@@ -33,6 +33,7 @@ import com.mediturno.backend.pacientes.dto.AltaPacienteDTO;
 import com.mediturno.backend.pacientes.dto.PacienteResponseDTO;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.pacientes.repository.PacienteRepository;
+import com.mediturno.backend.usuarios.repository.AdministradorRepository;
 import com.mediturno.backend.usuarios.repository.UsuarioRepository;
 
 /** CU-31 Alta individual de pacientes en el padrón. */
@@ -47,7 +48,7 @@ class AltaPacienteTest {
     void preparar() {
         pacientes = mock(PacienteRepository.class);
         usuarios = mock(UsuarioRepository.class);
-        servicio = new PacienteService(pacientes, usuarios, mock(AuthService.class), Clock.systemDefaultZone());
+        servicio = new PacienteService(pacientes, usuarios, mock(AuthService.class), mock(AdministradorRepository.class), Clock.systemDefaultZone());
     }
 
     private AltaPacienteDTO datos(String cedula, String correo) {

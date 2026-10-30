@@ -1,0 +1,92 @@
+.formulario,
+.mensajes {
+  max-width: 640px;
+}
+
+.mensajes {
+  margin-bottom: 16px;
+}
+
+.mensajes ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fila > * {
+  min-width: 0;
+}
+
+.ayuda {
+  margin: 4px 0 16px;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+.imagen {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--blanco);
+}
+
+.miniatura {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--borde);
+}
+
+.detalleImagen {
+  flex: 1;
+  min-width: 0;
+}
+
+.nombre {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  overflow-wrap: anywhere;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+@media (max-width: 800px) {
+  .fila {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .imagen {
+    flex-wrap: wrap;
+  }
+
+  .detalleImagen {
+    flex-basis: calc(100% - 84px);
+  }
+}

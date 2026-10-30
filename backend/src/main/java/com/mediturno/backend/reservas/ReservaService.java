@@ -1,7 +1,9 @@
 package com.mediturno.backend.reservas;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
+import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
+import com.mediturno.backend.notificaciones.NotificacionService;
 import com.mediturno.backend.ordenes.model.EstadoOrden;
 import com.mediturno.backend.ordenes.model.Orden;
 import com.mediturno.backend.especialidades.model.Especialidad;
@@ -34,6 +36,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -48,6 +52,7 @@ public class ReservaService {
     private final OrdenRepository ordenRepository;
     private final PaseService paseService;
     private final DisponibilidadService disponibilidadService;
+    private final NotificacionService notificacionService;
     private final Clock reloj;
 
     public ReservaService(OcurrenciaTurnoRepository ocurrenciaTurnoRepository,
@@ -55,13 +60,15 @@ public class ReservaService {
             PacienteRepository pacienteRepository,
             OrdenRepository ordenRepository,
             PaseService paseService,
-            DisponibilidadService disponibilidadService, Clock reloj) {
+            DisponibilidadService disponibilidadService,
+            NotificacionService notificacionService, Clock reloj) {
         this.ocurrenciaTurnoRepository = ocurrenciaTurnoRepository;
         this.reservaRepository = reservaRepository;
         this.pacienteRepository = pacienteRepository;
         this.ordenRepository = ordenRepository;
         this.paseService = paseService;
         this.disponibilidadService = disponibilidadService;
+        this.notificacionService = notificacionService;
         this.reloj = reloj;
     }
 
@@ -102,7 +109,22 @@ public class ReservaService {
             // Segunda barrera: la restricción parcial de PostgreSQL protege el mismo número.
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No fue posible reservar el número seleccionado");
         }
+        avisarDespuesDeConfirmar(reserva.getIdReserva());
         return convertirAReservaResponseDTO(reserva, null);
+    }
+
+    /** CU-8. El aviso sale recién cuando la reserva quedó confirmada en la base. */
+    private void avisarDespuesDeConfirmar(Long idReserva) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    notificacionService.notificarReservaConfirmada(idReserva);
+                }
+            });
+        } else {
+            notificacionService.notificarReservaConfirmada(idReserva);
+        }
     }
 
     /** CU-9. La fecha y hora de referencia son las de inicio de la ocurrencia, no las del número. */

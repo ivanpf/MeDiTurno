@@ -22,10 +22,6 @@
   background: var(--azul-claro);
 }
 
-.tabla td {
-  vertical-align: middle;
-}
-
 .tabla td:last-child {
   text-align: right;
 }

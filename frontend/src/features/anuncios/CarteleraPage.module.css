@@ -1,0 +1,47 @@
+.lista {
+  display: grid;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.anuncio {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--blanco);
+  box-shadow: var(--sombra);
+}
+
+.anuncio h2 {
+  margin: 0 0 4px;
+  color: var(--azul-oscuro);
+  overflow-wrap: anywhere;
+}
+
+.fecha {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+.imagen {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  margin: 0 0 16px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.contenido {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 800px) {
+  .anuncio {
+    padding: 16px;
+  }
+}

@@ -1,114 +1,91 @@
-# Notificaciones push: plan de acción para el equipo de backend
+# Notificaciones push
 
-Este documento define las tareas del backend para que las notificaciones push de la
-app mobile (CU-8, CU-13 y CU-23) queden operativas.
+Cómo funcionan los avisos push de la app mobile (CU-8, CU-13 y CU-23). Los envía el backend
+directo por **Firebase Cloud Messaging (FCM)**, con el mismo proyecto de Firebase de la
+autenticación (`mediturno-auth-db915`).
 
-**Contexto:** la app mobile ya está lista y no requiere cambios adicionales. Desde el
-último inicio de sesión define los permisos, obtiene el token del dispositivo (Expo Push
-Token) y lo registra en `POST /api/notificaciones/push`; al cerrar sesión lo elimina vía
-`DELETE /api/notificaciones/push`. Mientras los endpoints respondan 501, esas llamadas
-fallan silenciosamente y se reintentan en el próximo inicio de sesión.
+## Cómo funciona
 
-**Objetivo:** implementar la lógica de envío en el backend siguiendo el diseño ya
-definido (autenticado y acotado por usuario).
+```
+App (Android) → token de FCM → POST /api/notificaciones/push → tabla token_dispositivo
+Backend (evento del caso de uso) → PushNotificationService → FirebaseMessaging → FCM → dispositivo
+```
 
-## 1. Implementar `PushNotificationService.registrar(idUsuario, token)`
+- **App:** al iniciar sesión pide el permiso de notificaciones, obtiene el token nativo de FCM
+  (`Notifications.getDevicePushTokenAsync()`) y lo registra en `POST /api/notificaciones/push`.
+  Al cerrar sesión lo elimina con `DELETE /api/notificaciones/push`. Si el registro falla, la
+  app sigue funcionando y se reintenta en el próximo inicio de sesión (el error queda en el log
+  de la app con el prefijo `[push]`).
+- **Backend:** `PushNotificationService` guarda los tokens en `token_dispositivo` y envía con
+  `FirebaseMessaging` (Firebase Admin SDK), usando la clave de servicio de
+  `secrets/firebase-clave.json`. No necesita ninguna variable de entorno ni credencial adicional.
 
-La entidad `TokenDispositivo` ya existe (tabla `token_dispositivo`: token único, FK a
-usuario y `fechaRegistro`):
+## Qué hace el backend
 
-- Buscar por token; si no existe, crearlo asociado al `idUsuario` con
-  `fechaRegistro = ahora`.
-- Si el token ya existe y pertenece a otro usuario, reasignarlo: un dispositivo
-  pertenece a la última persona que inició sesión en él.
+### `PushNotificationService`
 
-## 2. Implementar `PushNotificationService.eliminar(idUsuario)`
+- `registrar(idUsuario, token)`: crea el token asociado al usuario con `fechaRegistro = ahora`.
+  Si el token ya existía y era de otra persona, lo reasigna: un dispositivo pertenece a la
+  última persona que inició sesión en él. Un token vacío responde `400`.
+- `eliminar(idUsuario)`: borra los tokens del usuario.
+- `enviarYRegistrar(idNotificacion, idUsuario, titulo, mensaje)`: envía el aviso a todos los
+  dispositivos del usuario con prioridad alta y el canal de notificaciones `default` de la app.
+  Corre en un hilo aparte (`@Async`), así que no demora la operación que lo originó, y deja
+  anotado en la notificación del canal `PUSH` cómo salió: `ENVIADA` (con la fecha de envío) si
+  llegó a algún dispositivo, `FALLIDA` si no. Es de mejor esfuerzo: nunca lanza una excepción ni
+  revierte la operación que lo originó (mismo criterio que el correo) y registra el resultado en
+  el log. Si FCM responde `UNREGISTERED` o `INVALID_ARGUMENT`, borra ese token.
+- `tieneDispositivos(idUsuario)`: los avisos solo registran una notificación `PUSH` si la persona
+  tiene algún dispositivo registrado.
 
-Borrar físicamente los tokens del usuario en la tabla `token_dispositivo` (el modelo no
-contempla activo/inactivo; borrado directo).
+### Avisos (`NotificacionService`)
 
-## 3. Implementar `PushNotificationService.enviarPush(idUsuario, titulo, mensaje[, datos])`
+| Caso de uso | Método | Título del aviso |
+|---|---|---|
+| CU-8 | `notificarReservaConfirmada` | Reserva confirmada |
+| CU-13 | `notificarSuspensionTurno` | Turno suspendido |
+| CU-23 | `notificarConsultaRegistrada` | Nueva información en su historia clínica |
 
-- Recuperar los tokens del usuario y armar un array JSON con un objeto por token:
-  `{ "to": token, "title": titulo, "body": mensaje, "sound": "default", "data": {...} }`.
-- Hacer un POST a `https://exp.host/--/api/v2/push/send` con los headers
-  `Accept: application/json`, `Accept-encoding: gzip, deflate` y
-  `Content-Type: application/json`.
-- Best-effort: nunca lanzar excepción ni revertir la operación que lo originó (mismo
-  criterio que el envío de correos); registrar el resultado en el log.
-- En la respuesta, si un token responde `DeviceNotRegistered`, borrarlo de la tabla
-  (limpieza de dispositivos desinstalados).
-- Para producción: agregar el header `Authorization: Bearer <EXPO_ACCESS_TOKEN>` con
-  `EXPO_ACCESS_TOKEN` como variable de entorno (gestionar por el canal privado de
-  `secrets/`, nunca por Git; sin ese header la API funciona pero con límites por IP).
+Cada aviso guarda la notificación de la aplicación (la campanita), la del canal `PUSH` (queda
+`PENDIENTE` hasta que sale, y después `ENVIADA` o `FALLIDA`) y, en CU-13 y CU-23, manda el correo. El de CU-8 se registra con el tipo `RESERVA_CONFIRMADA` (migración `V2`) y se
+dispara cuando la transacción de la reserva ya se confirmó, con el identificador de la reserva,
+el número y la hora estimada de atención. Los textos no incluyen contenido clínico.
 
-## 4. Enganchar los avisos en `NotificacionService` (que ya guarda la notificación de la aplicación y envía el correo)
+### Seguridad
 
-- **CU-13** (`notificarSuspensionTurno`): después de guardar la APLICACION, llamar a
-  `enviarPush` con el mismo mensaje ya armado («Su reserva ... fue anulada / no se
-  atenderá porque el turno fue suspendido...»). Título: «Turno suspendido».
-- **CU-23** (`notificarConsultaRegistrada`): ídem, con el mensaje ya armado sin
-  contenido clínico («Se incorporó nueva información a su historia clínica...»).
-  Título: «Nueva información en su historia clínica».
-- Opcional: guardar también un registro por canal `PUSH` (el enum `CanalNotificacion`
-  ya lo tiene) con estado `ENVIADA`/`FALLIDA`, para auditar entregas igual que con el
-  canal `EMAIL`.
+`POST` y `DELETE /api/notificaciones/push` requieren sesión de Firebase y asocian el token al
+`UsuarioActual`. No hay registro anónimo ni envíos masivos: el push es un aviso personal del
+paciente.
 
-## 5. CU-8: aviso de reserva creada (hoy no existe ningún aviso)
+## Configuración
 
-Agregar tras la creación de la reserva (`ReservaService`) un método nuevo en
-`NotificacionService` (por ejemplo `notificarReservaConfirmada(idReserva)`):
+- **`mobile/google-services.json`:** archivo de la app Android `com.mediturno.mobile` del proyecto
+  `mediturno-auth-db915`. Se descarga en Firebase Console > Configuración del proyecto > Tus apps,
+  y va en `mobile/google-services.json` (`app.json` ya lo referencia en
+  `android.googleServicesFile`). Es configuración pública del cliente, como los datos de
+  `extra` en `app.json`; no contiene claves privadas. Está versionado en el repositorio. Sin este
+  archivo la app no compila para Android con Firebase y no se puede obtener el token.
+- **Backend:** la clave de servicio en `secrets/firebase-clave.json` (la misma de la
+  autenticación). La API «Firebase Cloud Messaging API (V1)» debe estar habilitada en el
+  proyecto de Google Cloud (lo está por defecto).
+- Si cambia `google-services.json` o el plugin de Google Services, hay que regenerar la carpeta
+  nativa: `npx expo prebuild --platform android --clean` y volver a compilar.
 
-- Guardar una notificación APLICACION con el mensaje del enunciado: identificador de la
-  reserva, número y hora estimada de atención (la hora estimada ya se calcula en
-  `ReservaResponseDTO` para el front).
-- Enviar el push equivalente (título: «Reserva confirmada»).
+## Probar
 
-## 6. Mantener el flujo seguro ya definido
+1. Levantar el backend y el frontend (`podman compose up -d --build`) y compilar la app en un
+   development build (`npx expo run:android`; no funciona en Expo Go). En Windows definir antes
+   `ANDROID_HOME` y `JAVA_HOME` (ver `mobile/README.md`).
+2. En la app, iniciar sesión con `paciente@mediturno.com` y aceptar el permiso. Comprobar que
+   quedó el token: `select * from token_dispositivo;`.
+3. Reservar un turno con ese paciente (desde la web o la app). Debe llegar «Reserva confirmada»,
+   también con la app en segundo plano o cerrada.
+4. Si no llega, mirar el log del backend: `podman logs backend | findstr /i "push fcm"` muestra
+   `Push enviado ...` o `FCM rechazó el push (...)` con el motivo. El resultado de cada envío
+   también queda en la base:
+   `select tipo, canal, estado, fecha_envio from notificacion where canal = 'PUSH' order by id_notificacion desc;`
 
-`POST/DELETE /api/notificaciones/push` autenticados con Firebase, con el token asociado
-al `UsuarioActual`. No admitir registro anónimo de tokens ni envíos masivos: el push es
-un aviso personal del paciente.
+## Pendiente
 
-## 7. Mantenimiento de tokens huérfanos
-
-Si el paciente desinstala la app sin cerrar sesión, el token queda en la base.
-Sugerencia: tarea programada en `TareasProgramadas` (junto a las existentes) que limpie
-tokens con más de X meses sin actualizarse, además de la limpieza por
-`DeviceNotRegistered` del punto 3.
-
-## 8. Criterio de despliegue
-
-Mientras los endpoints respondan 501, la app funciona igual (las llamadas fallan en
-silencio y se reintentan en el próximo inicio de sesión). Con los puntos 1 a 5
-liberados, los avisos push de los 3 CUs llegan sin ningún cambio adicional en la app.
-
-**Importante:** todo lo relacionado a Firebase (autenticación y notificaciones) se
-gestiona sobre el proyecto Firebase ya existente en main (`mediturno-auth-db915`).
-No se deben generar credenciales sobre ningún otro proyecto de Firebase ajeno
-al repo.
-
-## Proyecto Firebase para las credenciales de push
-
-- Se usan las credenciales del **mismo proyecto Firebase que ya tiene el main para
-  autenticación** (`mediturno-auth-db915`). Para eso, en Firebase Console se registra la
-  app Android de package `com.mediturno.mobile` en ese proyecto y se descarga su
-  `google-services.json`.
-- Ese archivo se coloca en `mobile/google-services.json`: el `app.json` ya lo referencia
-  (`android.googleServicesFile`) y queda embebido en el binario al compilar. Sin este
-  archivo, la app no inicializa Firebase en Android y el token de push no se puede
-  generar (en desarrollo ni en producción).
-- Este requisito es del lado mobile; el backend no consume ese archivo (su acceso a
-  Firebase es por la clave de servicio de `secrets/`).
-- El identificador de proyecto Expo (`extra.eas.projectId` en `app.json`) es de EAS y es
-  independiente de lo anterior; se mantiene el ya configurado.
-
-## Notas para las pruebas
-
-- El push solo funciona en un development build (`npx expo run:android`), no en Expo Go.
-- El proyecto EAS para las notificaciones ya está configurado: el `projectId` figura en
-  `mobile/app.json` (`extra.eas.projectId`).
-- Prueba manual del canal sin backend: insertando la fila del token en
-  `token_dispositivo` (o copiando el token desde los logs de desarrollo), un POST directo
-  a `https://exp.host/--/api/v2/push/send` con ese token debe recibir la notificación en
-  el dispositivo.
+- Recordatorio de consulta (`RECORDATORIO_CONSULTA`): usa este mismo servicio cuando se
+  implemente.

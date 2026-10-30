@@ -7,7 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -19,15 +19,12 @@ public class ImagenAnuncio {
     @Column(name = "id_imagen_anuncio")
     private Long idImagenAnuncio;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_anuncio", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "id_anuncio", nullable = false, unique = true)
     private Anuncio anuncio;
 
-    @Column(name = "imagen", nullable = false, length = 500)
-    private String imagen;
-
-    @Column(name = "orden", nullable = false)
-    private Integer orden;
+    @Column(name = "datos", nullable = true)
+    private byte[] datos;
 
     @Column(name = "nombre_archivo", nullable = true, length = 255)
     private String nombreArchivo;
@@ -54,20 +51,12 @@ public class ImagenAnuncio {
         this.anuncio = anuncio;
     }
 
-    public String getImagen() {
-        return imagen;
+    public byte[] getDatos() {
+        return datos;
     }
 
-    public void setImagen(String imagen) {
-        this.imagen = imagen;
-    }
-
-    public Integer getOrden() {
-        return orden;
-    }
-
-    public void setOrden(Integer orden) {
-        this.orden = orden;
+    public void setDatos(byte[] datos) {
+        this.datos = datos;
     }
 
     public String getNombreArchivo() {

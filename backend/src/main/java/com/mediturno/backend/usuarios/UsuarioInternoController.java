@@ -49,6 +49,12 @@ public class UsuarioInternoController {
         return usuarioInternoService.altaUsuarioInterno(datos);
     }
 
+    /** CU-35, paso previo: valida el archivo y muestra lo detectado, sin guardar nada. */
+    @PostMapping("/csv/previsualizacion")
+    public ResultadoImportacionDTO previsualizarUsuariosInternosCSV(@RequestParam("archivo") MultipartFile archivo) {
+        return usuarioInternoService.previsualizarUsuariosInternosCSV(archivo);
+    }
+
     @PostMapping("/csv")
     public ResultadoImportacionDTO altaUsuariosInternosCSV(@RequestParam("archivo") MultipartFile archivo) {
         return usuarioInternoService.altaUsuariosInternosCSV(archivo);
@@ -59,21 +65,26 @@ public class UsuarioInternoController {
         return usuarioInternoService.listarUsuariosInternos(criterios);
     }
 
+    @GetMapping("/{idUsuarioInterno}")
+    public UsuarioResponseDTO obtenerUsuarioInterno(@PathVariable Long idUsuarioInterno) {
+        return usuarioInternoService.obtenerUsuarioInterno(idUsuarioInterno);
+    }
+
     @PutMapping("/{idUsuarioInterno}")
-    public UsuarioResponseDTO modificarUsuarioInterno(@PathVariable Long idUsuarioInterno, @RequestBody ModificarUsuarioDTO datos) {
-        return usuarioInternoService.modificarUsuarioInterno(idUsuarioInterno, datos);
+    public UsuarioResponseDTO modificarUsuarioInterno(@PathVariable Long idUsuarioInterno, @Valid @RequestBody ModificarUsuarioDTO datos) {
+        return usuarioInternoService.modificarUsuarioInterno(usuarioActual.obtenerIdAdministradorAutenticado(), idUsuarioInterno, datos);
     }
 
     @PostMapping("/{idUsuarioInterno}/activacion")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void activarUsuario(@PathVariable Long idUsuarioInterno) {
-        usuarioInternoService.activarUsuario(idUsuarioInterno);
+        usuarioInternoService.activarUsuario(usuarioActual.obtenerIdAdministradorAutenticado(), idUsuarioInterno);
     }
 
     @PostMapping("/{idUsuarioInterno}/inactivacion")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void inactivarUsuario(@PathVariable Long idUsuarioInterno) {
-        usuarioInternoService.inactivarUsuario(idUsuarioInterno);
+        usuarioInternoService.inactivarUsuario(usuarioActual.obtenerIdAdministradorAutenticado(), idUsuarioInterno);
     }
 
     @RolesPermitidos({Funcionario.class, Medico.class, Administrador.class})
