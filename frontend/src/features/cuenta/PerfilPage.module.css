@@ -1,0 +1,59 @@
+/* CU-5 Mi perfil. */
+
+/* Datos de la identidad (solo lectura): en dos columnas en pantallas anchas. */
+.datos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 240px));
+  gap: 16px;
+  margin: 16px 0 24px;
+  padding: 16px 18px;
+  background: var(--azul-claro);
+  border-radius: 8px;
+}
+
+.datos dt {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gris);
+}
+
+.datos dd {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--texto);
+  overflow-wrap: anywhere;
+}
+
+.formulario {
+  max-width: 640px;
+}
+
+.aclaracion {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gris);
+}
+
+.mensajes {
+  max-width: 640px;
+  margin-bottom: 16px;
+}
+
+.mensajes ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .datos {
+    grid-template-columns: 1fr;
+  }
+}
