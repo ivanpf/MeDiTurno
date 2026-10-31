@@ -27,6 +27,14 @@ public interface TurnoSemanalRepository extends JpaRepository<TurnoSemanal, Long
     @Query("select t from TurnoSemanal t where t.idTurnoSemanal = :id")
     Optional<TurnoSemanal> buscarConLock(@Param("id") Long id);
 
+    /** Los turnos con su médico, especialidad y consultorio ya cargados (estadísticas CU-41 y CU-42). */
+    @Query("""
+        select t from TurnoSemanal t
+        join fetch t.medico join fetch t.especialidad join fetch t.consultorio
+        where t.idTurnoSemanal in :ids
+        """)
+    List<TurnoSemanal> buscarConRelaciones(@Param("ids") Collection<Long> ids);
+
     /** Ids de los turnos en alguno de esos estados cuya vigencia coincide en algún día con el período entre las dos fechas. */
     @Query("""
         select t.idTurnoSemanal from TurnoSemanal t

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import SoloRol from './auth/SoloRol'
 import LoginPage from './features/auth/LoginPage'
@@ -20,7 +21,9 @@ export default function App() {
             path={path}
             element={
               <SoloRol roles={roles}>
-                <Componente />
+                <Suspense fallback={<p role="status">Cargando...</p>}>
+                  <Componente />
+                </Suspense>
               </SoloRol>
             }
           />

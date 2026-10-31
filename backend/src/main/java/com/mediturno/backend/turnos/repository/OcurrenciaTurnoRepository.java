@@ -41,6 +41,24 @@ public interface OcurrenciaTurnoRepository extends JpaRepository<OcurrenciaTurno
     List<OcurrenciaTurno> buscarPorEspecialidadEntreFechas(
             @Param("codigoEspecialidad") String codigoEspecialidad, @Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
 
+    /**
+     * CU-41 y CU-42: por turno semanal, la suma de los cupos de sus fechas entre las dos fechas (inclusive), sin las fechas
+     * suspendidas (no ofrecen cupos). Cada fila es el id del turno y los cupos. Un filtro nulo no filtra.
+     */
+    @Query("""
+        select t.idTurnoSemanal, sum(o.cupos)
+        from OcurrenciaTurno o join o.turnoSemanal t
+        where o.fecha between :desde and :hasta
+          and o.ocurrenciaTurnoEstado <> com.mediturno.backend.turnos.model.EstadoOcurrenciaTurno.SUSPENDIDA
+          and (:codigoEspecialidad is null or t.especialidad.codigo = :codigoEspecialidad)
+          and (:idMedico is null or t.medico.idUsuario = :idMedico)
+          and (:codigoConsultorio is null or t.consultorio.codigo = :codigoConsultorio)
+        group by t.idTurnoSemanal
+        """)
+    List<Object[]> sumarCuposPorTurno(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta,
+            @Param("codigoEspecialidad") String codigoEspecialidad, @Param("idMedico") Long idMedico,
+            @Param("codigoConsultorio") String codigoConsultorio);
+
     /** Fechas que ya tienen ocurrencia para un turno, entre dos fechas (inclusive). */
     @Query("select o.fecha from OcurrenciaTurno o where o.turnoSemanal.idTurnoSemanal = :idTurno and o.fecha between :desde and :hasta")
     List<LocalDate> fechasExistentes(@Param("idTurno") Long idTurno, @Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);

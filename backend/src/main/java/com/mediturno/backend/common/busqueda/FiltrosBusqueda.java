@@ -83,12 +83,36 @@ public final class FiltrosBusqueda {
      * («fechaAlta»), aunque se haya pedido como «fechaalta».
      */
     public static Sort ordenar(String ordenarPor, boolean descendente, String... permitidas) {
-        String propiedad = ordenarPor == null || ordenarPor.isBlank() ? permitidas[0] : Arrays.stream(permitidas)
+        String propiedad = elegirOrden(ordenarPor, permitidas);
+        Sort.Order orden = descendente ? Sort.Order.desc(propiedad) : Sort.Order.asc(propiedad);
+        return Sort.by(orden.ignoreCase());
+    }
+
+    /**
+     * La propiedad de {@code permitidas} que coincide con la pedida, sin distinguir mayúsculas (la primera si no se pidió
+     * ninguna); 400 si pidió otra.
+     */
+    public static String elegirOrden(String ordenarPor, String... permitidas) {
+        if (ordenarPor == null || ordenarPor.isBlank()) {
+            return permitidas[0];
+        }
+        return Arrays.stream(permitidas)
             .filter(p -> p.equalsIgnoreCase(ordenarPor.trim()))
             .findFirst()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El orden indicado no es válido (use " + enumerar(permitidas) + ")."));
-        Sort.Order orden = descendente ? Sort.Order.desc(propiedad) : Sort.Order.asc(propiedad);
-        return Sort.by(orden.ignoreCase());
+    }
+
+    /** El valor del enum (sin distinguir mayúsculas); {@code null} si no se indicó; 400 si no existe. */
+    public static <E extends Enum<E>> E interpretarEstado(Class<E> tipo, String texto) {
+        if (texto == null || texto.isBlank()) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(tipo, texto.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "El estado indicado no es válido (use " + enumerar(Arrays.stream(tipo.getEnumConstants()).map(Enum::name).toArray(String[]::new)) + ").");
+        }
     }
 
     private static String enumerar(String[] opciones) {
