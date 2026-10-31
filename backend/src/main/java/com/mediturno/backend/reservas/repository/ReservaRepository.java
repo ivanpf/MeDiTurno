@@ -106,4 +106,39 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long>, JpaSpec
         order by r.numero
         """)
     List<Integer> buscarNumerosOcupados(@Param("idOcurrenciaTurno") Long idOcurrenciaTurno);
+
+    /**
+     * CU-40: reservas por especialidad de los turnos que se atienden entre las dos fechas (inclusive), solo en esos estados.
+     * Cada fila es código de la especialidad, nombre y cantidad; solo salen las especialidades con alguna reserva.
+     */
+    @Query("""
+        select e.codigo, e.nombre, count(r)
+        from Reserva r join r.ocurrenciaTurno o join o.turnoSemanal t join t.especialidad e
+        where o.fecha between :desde and :hasta and r.reservaEstado in :estados
+        group by e.codigo, e.nombre
+        """)
+    List<Object[]> contarPorEspecialidad(@Param("desde") java.time.LocalDate desde, @Param("hasta") java.time.LocalDate hasta,
+            @Param("estados") java.util.Collection<com.mediturno.backend.reservas.model.EstadoReserva> estados);
+
+    /**
+     * CU-41 y CU-42: reservas por turno semanal con fecha de atención entre las dos fechas (inclusive). Cada fila es el id del
+     * turno, todas sus reservas, las que todavía no se atendieron (vigentes o con orden emitida) y las que conservan su número
+     * (todas menos las canceladas y anuladas). Un filtro nulo no filtra.
+     */
+    @Query("""
+        select t.idTurnoSemanal, count(r),
+          sum(case when r.reservaEstado in (com.mediturno.backend.reservas.model.EstadoReserva.VIGENTE,
+                                            com.mediturno.backend.reservas.model.EstadoReserva.ORDEN_EMITIDA) then 1 else 0 end),
+          sum(case when r.reservaEstado not in (com.mediturno.backend.reservas.model.EstadoReserva.CANCELADA,
+                                                com.mediturno.backend.reservas.model.EstadoReserva.ANULADA) then 1 else 0 end)
+        from Reserva r join r.ocurrenciaTurno o join o.turnoSemanal t
+        where o.fecha between :desde and :hasta
+          and (:codigoEspecialidad is null or t.especialidad.codigo = :codigoEspecialidad)
+          and (:idMedico is null or t.medico.idUsuario = :idMedico)
+          and (:codigoConsultorio is null or t.consultorio.codigo = :codigoConsultorio)
+        group by t.idTurnoSemanal
+        """)
+    List<Object[]> contarPorTurno(@Param("desde") java.time.LocalDate desde, @Param("hasta") java.time.LocalDate hasta,
+            @Param("codigoEspecialidad") String codigoEspecialidad, @Param("idMedico") Long idMedico,
+            @Param("codigoConsultorio") String codigoConsultorio);
 }

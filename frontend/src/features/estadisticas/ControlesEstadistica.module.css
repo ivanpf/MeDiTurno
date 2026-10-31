@@ -1,0 +1,36 @@
+.porcentaje {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+}
+
+.porcentaje span {
+  min-width: 64px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Barra nativa <progress>, sin el aspecto del sistema */
+.barra {
+  flex: 1;
+  min-width: 80px;
+  height: 10px;
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  background: var(--azul-claro);
+  overflow: hidden;
+}
+
+.barra::-webkit-progress-bar {
+  background: var(--azul-claro);
+}
+
+.barra::-webkit-progress-value {
+  background: var(--azul);
+}
+
+.barra::-moz-progress-bar {
+  background: var(--azul);
+}
