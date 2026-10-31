@@ -1,44 +1,45 @@
+import { lazy } from 'react'
 import { ROLES } from './auth/roles'
-import ReservarConsultaPage from './features/reservas/ReservarConsultaPage'
-import MisReservasPage from './features/reservas/MisReservasPage'
-import MiHistoriaClinicaPage from './features/consultas/MiHistoriaClinicaPage'
-import TurnosSemanalesPage from './features/turnos/TurnosSemanalesPage'
-import AltaTurnoPage from './features/turnos/AltaTurnoPage'
-import TurnosSuspendidosPage from './features/turnos/TurnosSuspendidosPage'
-import ConsultaReservaPage from './features/reservas/ConsultaReservaPage'
-import ReservasParaAtencionPage from './features/reservas/ReservasParaAtencionPage'
-import PublicarAnuncioPage from './features/anuncios/PublicarAnuncioPage'
-import EliminarAnuncioPage from './features/anuncios/EliminarAnuncioPage'
-import PacientesPorTurnoPage from './features/consultas/PacientesPorTurnoPage'
-import HistoriaClinicaAtencionPage from './features/consultas/HistoriaClinicaAtencionPage'
-import RegistrarConsultaPage from './features/consultas/RegistrarConsultaPage'
-import EmitirPasePage from './features/pases/EmitirPasePage'
-import HabilitarReconsultaPage from './features/pases/HabilitarReconsultaPage'
-import HistorialAtencionesPage from './features/consultas/HistorialAtencionesPage'
-import PasesEmitidosPage from './features/pases/PasesEmitidosPage'
-import AltaEspecialidadPage from './features/especialidades/AltaEspecialidadPage'
-import AltaMasivaEspecialidadesPage from './features/especialidades/AltaMasivaEspecialidadesPage'
-import ListadoEspecialidadesPage from './features/especialidades/ListadoEspecialidadesPage'
-import ModificarEspecialidadPage from './features/especialidades/ModificarEspecialidadPage'
-import AltaPacientePage from './features/pacientes/AltaPacientePage'
-import AltaMasivaPacientesPage from './features/pacientes/AltaMasivaPacientesPage'
-import ListadoPacientesPage from './features/pacientes/ListadoPacientesPage'
-import ModificarPacientePage from './features/pacientes/ModificarPacientePage'
-import AltaUsuarioInternoPage from './features/usuarios/AltaUsuarioInternoPage'
-import AltaMasivaUsuariosPage from './features/usuarios/AltaMasivaUsuariosPage'
-import ListadoUsuariosPage from './features/usuarios/ListadoUsuariosPage'
-import ModificarUsuarioPage from './features/usuarios/ModificarUsuarioPage'
-import EstadoUsuarioPage from './features/usuarios/EstadoUsuarioPage'
-import AltaConsultorioPage from './features/consultorios/AltaConsultorioPage'
-import AltaMasivaConsultoriosPage from './features/consultorios/AltaMasivaConsultoriosPage'
-import ListadoConsultoriosPage from './features/consultorios/ListadoConsultoriosPage'
-import ModificarConsultorioPage from './features/consultorios/ModificarConsultorioPage'
-import ReservasPorEspecialidadPage from './features/estadisticas/ReservasPorEspecialidadPage'
-import TurnosMasDemandadosPage from './features/estadisticas/TurnosMasDemandadosPage'
-import OcupacionTurnosPage from './features/estadisticas/OcupacionTurnosPage'
-import CarteleraPage from './features/anuncios/CarteleraPage'
-import PerfilPage from './features/cuenta/PerfilPage'
-import CambiarContrasenaPage from './features/cuenta/CambiarContrasenaPage'
+const ReservarConsultaPage = lazy(() => import('./features/reservas/ReservarConsultaPage'))
+const MisReservasPage = lazy(() => import('./features/reservas/MisReservasPage'))
+const MiHistoriaClinicaPage = lazy(() => import('./features/consultas/MiHistoriaClinicaPage'))
+const TurnosSemanalesPage = lazy(() => import('./features/turnos/TurnosSemanalesPage'))
+const AltaTurnoPage = lazy(() => import('./features/turnos/AltaTurnoPage'))
+const TurnosSuspendidosPage = lazy(() => import('./features/turnos/TurnosSuspendidosPage'))
+const ConsultaReservaPage = lazy(() => import('./features/reservas/ConsultaReservaPage'))
+const ReservasParaAtencionPage = lazy(() => import('./features/reservas/ReservasParaAtencionPage'))
+const PublicarAnuncioPage = lazy(() => import('./features/anuncios/PublicarAnuncioPage'))
+const EliminarAnuncioPage = lazy(() => import('./features/anuncios/EliminarAnuncioPage'))
+const PacientesPorTurnoPage = lazy(() => import('./features/consultas/PacientesPorTurnoPage'))
+const HistoriaClinicaAtencionPage = lazy(() => import('./features/consultas/HistoriaClinicaAtencionPage'))
+const RegistrarConsultaPage = lazy(() => import('./features/consultas/RegistrarConsultaPage'))
+const EmitirPasePage = lazy(() => import('./features/pases/EmitirPasePage'))
+const HabilitarReconsultaPage = lazy(() => import('./features/pases/HabilitarReconsultaPage'))
+const HistorialAtencionesPage = lazy(() => import('./features/consultas/HistorialAtencionesPage'))
+const PasesEmitidosPage = lazy(() => import('./features/pases/PasesEmitidosPage'))
+const AltaEspecialidadPage = lazy(() => import('./features/especialidades/AltaEspecialidadPage'))
+const AltaMasivaEspecialidadesPage = lazy(() => import('./features/especialidades/AltaMasivaEspecialidadesPage'))
+const ListadoEspecialidadesPage = lazy(() => import('./features/especialidades/ListadoEspecialidadesPage'))
+const ModificarEspecialidadPage = lazy(() => import('./features/especialidades/ModificarEspecialidadPage'))
+const AltaPacientePage = lazy(() => import('./features/pacientes/AltaPacientePage'))
+const AltaMasivaPacientesPage = lazy(() => import('./features/pacientes/AltaMasivaPacientesPage'))
+const ListadoPacientesPage = lazy(() => import('./features/pacientes/ListadoPacientesPage'))
+const ModificarPacientePage = lazy(() => import('./features/pacientes/ModificarPacientePage'))
+const AltaUsuarioInternoPage = lazy(() => import('./features/usuarios/AltaUsuarioInternoPage'))
+const AltaMasivaUsuariosPage = lazy(() => import('./features/usuarios/AltaMasivaUsuariosPage'))
+const ListadoUsuariosPage = lazy(() => import('./features/usuarios/ListadoUsuariosPage'))
+const ModificarUsuarioPage = lazy(() => import('./features/usuarios/ModificarUsuarioPage'))
+const EstadoUsuarioPage = lazy(() => import('./features/usuarios/EstadoUsuarioPage'))
+const AltaConsultorioPage = lazy(() => import('./features/consultorios/AltaConsultorioPage'))
+const AltaMasivaConsultoriosPage = lazy(() => import('./features/consultorios/AltaMasivaConsultoriosPage'))
+const ListadoConsultoriosPage = lazy(() => import('./features/consultorios/ListadoConsultoriosPage'))
+const ModificarConsultorioPage = lazy(() => import('./features/consultorios/ModificarConsultorioPage'))
+const ReservasPorEspecialidadPage = lazy(() => import('./features/estadisticas/ReservasPorEspecialidadPage'))
+const TurnosMasDemandadosPage = lazy(() => import('./features/estadisticas/TurnosMasDemandadosPage'))
+const OcupacionTurnosPage = lazy(() => import('./features/estadisticas/OcupacionTurnosPage'))
+const CarteleraPage = lazy(() => import('./features/anuncios/CarteleraPage'))
+const PerfilPage = lazy(() => import('./features/cuenta/PerfilPage'))
+const CambiarContrasenaPage = lazy(() => import('./features/cuenta/CambiarContrasenaPage'))
 
 // Fuente única de las pantallas autenticadas: de acá salen el menú lateral y las rutas.
 //   roles:  quiénes ven la pantalla      grupo: título que agrupa ítems del menú (opcional)
