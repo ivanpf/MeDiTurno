@@ -236,6 +236,25 @@ class EstadisticasIntegracionTest extends PostgresIntegracionTest {
     // ---------------------------------------------------------------- CU-42
 
     @Test
+    void ocupacionIgnoraLasReservasDeFechasSuspendidas() {
+        // Una fecha suspendida que conserva una reserva atendida: no ofrece cupos, así que tampoco debe contar como reservada.
+        long suspendida = ocurrencia(t3, LocalDate.of(2031, 3, 12), 5, "SUSPENDIDA");
+        reserva(suspendida, 1, "ATENDIDA");
+
+        EstadisticaOcupacionDTO tres = servicio.estadisticaOcupacionTurnos(marzo()).stream()
+            .filter(o -> o.idTurnoSemanal().equals(t3.getIdTurnoSemanal())).findFirst().orElseThrow();
+        assertEquals(10, tres.cuposOfrecidos());
+        assertEquals(0, tres.cuposReservados());
+        assertEquals(10, tres.cuposNoReservados());
+        assertEquals(0.0, tres.porcentajeOcupacion());
+
+        // El ranking de demanda (CU-41) sí cuenta esa reserva: incluye las reservas de cualquier estado y fecha del período.
+        EstadisticaTurnoDTO demanda = servicio.estadisticaTurnosMasDemandados(marzo()).stream()
+            .filter(o -> o.idTurnoSemanal().equals(t3.getIdTurnoSemanal())).findFirst().orElseThrow();
+        assertEquals(1, demanda.cantidadReservas());
+    }
+
+    @Test
     void ocupacionCalculaCuposReservasYPorcentaje() {
         List<EstadisticaOcupacionDTO> lista = servicio.estadisticaOcupacionTurnos(marzo());
 

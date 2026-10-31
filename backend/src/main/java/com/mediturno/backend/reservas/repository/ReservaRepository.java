@@ -1,7 +1,10 @@
 package com.mediturno.backend.reservas.repository;
 
+import com.mediturno.backend.reservas.model.EstadoReserva;
 import com.mediturno.backend.reservas.model.Reserva;
 import jakarta.persistence.LockModeType;
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -117,13 +120,14 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long>, JpaSpec
         where o.fecha between :desde and :hasta and r.reservaEstado in :estados
         group by e.codigo, e.nombre
         """)
-    List<Object[]> contarPorEspecialidad(@Param("desde") java.time.LocalDate desde, @Param("hasta") java.time.LocalDate hasta,
-            @Param("estados") java.util.Collection<com.mediturno.backend.reservas.model.EstadoReserva> estados);
+    List<Object[]> contarPorEspecialidad(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta,
+            @Param("estados") Collection<EstadoReserva> estados);
 
     /**
      * CU-41 y CU-42: reservas por turno semanal con fecha de atención entre las dos fechas (inclusive). Cada fila es el id del
      * turno, todas sus reservas, las que todavía no se atendieron (vigentes o con orden emitida) y las que conservan su número
-     * (todas menos las canceladas y anuladas). Un filtro nulo no filtra.
+     * (todas menos las canceladas y anuladas). Un filtro nulo no filtra; sin {@code incluirSuspendidas} se ignoran las fechas
+     * suspendidas.
      */
     @Query("""
         select t.idTurnoSemanal, count(r),
@@ -136,9 +140,12 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long>, JpaSpec
           and (:codigoEspecialidad is null or t.especialidad.codigo = :codigoEspecialidad)
           and (:idMedico is null or t.medico.idUsuario = :idMedico)
           and (:codigoConsultorio is null or t.consultorio.codigo = :codigoConsultorio)
+          and (:incluirSuspendidas = true
+            or o.ocurrenciaTurnoEstado <> com.mediturno.backend.turnos.model.EstadoOcurrenciaTurno.SUSPENDIDA)
         group by t.idTurnoSemanal
         """)
-    List<Object[]> contarPorTurno(@Param("desde") java.time.LocalDate desde, @Param("hasta") java.time.LocalDate hasta,
+    List<Object[]> contarPorTurno(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta,
             @Param("codigoEspecialidad") String codigoEspecialidad, @Param("idMedico") Long idMedico,
-            @Param("codigoConsultorio") String codigoConsultorio);
+            @Param("codigoConsultorio") String codigoConsultorio,
+            @Param("incluirSuspendidas") boolean incluirSuspendidas);
 }

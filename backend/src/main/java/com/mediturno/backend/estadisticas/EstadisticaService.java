@@ -3,7 +3,6 @@ package com.mediturno.backend.estadisticas;
 import java.text.Collator;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -18,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.mediturno.backend.common.busqueda.FiltrosBusqueda;
 import com.mediturno.backend.common.dto.PeriodoDTO;
 import com.mediturno.backend.estadisticas.dto.EstadisticaOcupacionDTO;
 import com.mediturno.backend.estadisticas.dto.EstadisticaReservaDTO;
@@ -39,6 +39,15 @@ public class EstadisticaService {
     // Sin límite de un lado del período: las fechas extremas que acepta PostgreSQL sirven de tope.
     private static final LocalDate SIN_LIMITE_DESDE = LocalDate.of(1900, 1, 1);
     private static final LocalDate SIN_LIMITE_HASTA = LocalDate.of(9999, 12, 31);
+
+    // Un solo Collator: crearlo en cada comparación del ordenamiento es trabajo de más.
+    private static final Collator ALFABETICO = Collator.getInstance(Locale.forLanguageTag("es"));
+
+    /** Las reservas de un turno: todas, las que todavía no se atendieron (vigentes o con orden emitida) y las que conservan su número. */
+    private record ReservasDeTurno(long total, long vigentes, long conservan) {
+    }
+
+    private static final ReservasDeTurno SIN_RESERVAS = new ReservasDeTurno(0, 0, 0);
 
     private final ReservaRepository reservaRepository;
     private final OcurrenciaTurnoRepository ocurrenciaTurnoRepository;
@@ -62,11 +71,10 @@ public class EstadisticaService {
 
         List<Object[]> filas = reservaRepository.contarPorEspecialidad(desde, hasta, estados);
         long total = filas.stream().mapToLong(f -> (Long) f[2]).sum();
-        Collator alfabetico = Collator.getInstance(Locale.forLanguageTag("es"));
         Comparator<EstadisticaReservaDTO> orden = porNombre
-            ? Comparator.comparing(EstadisticaReservaDTO::nombreEspecialidad, alfabetico)
+            ? Comparator.comparing(EstadisticaReservaDTO::nombreEspecialidad, ALFABETICO)
             : Comparator.comparingLong(EstadisticaReservaDTO::cantidadReservas)
-                .thenComparing(EstadisticaReservaDTO::nombreEspecialidad, alfabetico.reversed());
+                .thenComparing(EstadisticaReservaDTO::nombreEspecialidad, ALFABETICO.reversed());
         return filas.stream()
             .map(f -> convertirAEstadisticaReservaDTO((String) f[0], (String) f[1], (Long) f[2], total))
             .sorted(descendente ? orden.reversed() : orden)
@@ -79,9 +87,9 @@ public class EstadisticaService {
         LocalDate hasta = hasta(periodo);
         validarRango(desde, hasta);
         boolean descendente = periodo.descendente() == null || periodo.descendente();
-        validarOrden(periodo.ordenarPor(), "reservas");
+        FiltrosBusqueda.elegirOrden(periodo.ordenarPor(), "reservas");
 
-        Map<Long, long[]> reservas = reservasPorTurno(desde, hasta, periodo.codigoEspecialidad(), periodo.idMedico(), null);
+        Map<Long, ReservasDeTurno> reservas = reservasPorTurno(desde, hasta, periodo.codigoEspecialidad(), periodo.idMedico(), null, true);
         Map<Long, Long> cupos = cuposPorTurno(desde, hasta, periodo.codigoEspecialidad(), periodo.idMedico(), null);
         // Un turno con fechas en el período entra al ranking aunque no haya recibido reservas (con 0), para ver los menos demandados.
         Set<Long> ids = new HashSet<>(reservas.keySet());
@@ -89,7 +97,7 @@ public class EstadisticaService {
 
         Comparator<EstadisticaTurnoDTO> orden = Comparator.comparingLong(EstadisticaTurnoDTO::cantidadReservas);
         return turnos(ids).stream()
-            .map(t -> convertirAEstadisticaTurnoDTO(t, reservas.getOrDefault(t.getIdTurnoSemanal(), CEROS)[0]))
+            .map(t -> convertirAEstadisticaTurnoDTO(t, reservas.getOrDefault(t.getIdTurnoSemanal(), SIN_RESERVAS).total()))
             .sorted((descendente ? orden.reversed() : orden).thenComparing(this::desempate))
             .toList();
     }
@@ -100,32 +108,31 @@ public class EstadisticaService {
         LocalDate hasta = hasta(periodo);
         validarRango(desde, hasta);
         boolean descendente = periodo.descendente() == null || periodo.descendente();
-        validarOrden(periodo.ordenarPor(), "porcentaje");
+        FiltrosBusqueda.elegirOrden(periodo.ordenarPor(), "porcentaje");
 
         Map<Long, Long> cupos = cuposPorTurno(desde, hasta, periodo.codigoEspecialidad(), periodo.idMedico(), periodo.codigoConsultorio());
-        Map<Long, long[]> reservas = reservasPorTurno(desde, hasta, periodo.codigoEspecialidad(), periodo.idMedico(), periodo.codigoConsultorio());
+        // Mismas fechas que los cupos ofrecidos: sin las suspendidas.
+        Map<Long, ReservasDeTurno> reservas = reservasPorTurno(desde, hasta, periodo.codigoEspecialidad(), periodo.idMedico(), periodo.codigoConsultorio(), false);
 
         List<EstadisticaOcupacionDTO> resultado = new ArrayList<>();
         for (TurnoSemanal t : turnos(cupos.keySet())) {
-            long[] r = reservas.getOrDefault(t.getIdTurnoSemanal(), CEROS);
-            resultado.add(convertirAEstadisticaOcupacionDTO(t, cupos.get(t.getIdTurnoSemanal()), r[1], r[2]));
+            ReservasDeTurno r = reservas.getOrDefault(t.getIdTurnoSemanal(), SIN_RESERVAS);
+            resultado.add(convertirAEstadisticaOcupacionDTO(t, cupos.get(t.getIdTurnoSemanal()), r.vigentes(), r.conservan()));
         }
         Comparator<EstadisticaOcupacionDTO> orden = Comparator.comparingDouble(EstadisticaOcupacionDTO::porcentajeOcupacion);
         Comparator<EstadisticaOcupacionDTO> ordenFinal = (descendente ? orden.reversed() : orden)
-            .thenComparing(o -> o.nombreMedico(), Collator.getInstance(Locale.forLanguageTag("es")))
+            .thenComparing(EstadisticaOcupacionDTO::nombreMedico, ALFABETICO)
             .thenComparing(EstadisticaOcupacionDTO::dia)
             .thenComparing(EstadisticaOcupacionDTO::horaInicio);
         resultado.sort(ordenFinal);
         return resultado;
     }
 
-    // Reservas totales, vigentes y que conservan su número, en ese orden.
-    private static final long[] CEROS = {0, 0, 0};
-
-    private Map<Long, long[]> reservasPorTurno(LocalDate desde, LocalDate hasta, String especialidad, Long medico, String consultorio) {
-        Map<Long, long[]> porTurno = new HashMap<>();
-        for (Object[] f : reservaRepository.contarPorTurno(desde, hasta, vacioANulo(especialidad), medico, vacioANulo(consultorio))) {
-            porTurno.put((Long) f[0], new long[] {(Long) f[1], (Long) f[2], (Long) f[3]});
+    private Map<Long, ReservasDeTurno> reservasPorTurno(LocalDate desde, LocalDate hasta, String especialidad, Long medico,
+            String consultorio, boolean incluirSuspendidas) {
+        Map<Long, ReservasDeTurno> porTurno = new HashMap<>();
+        for (Object[] f : reservaRepository.contarPorTurno(desde, hasta, vacioANulo(especialidad), medico, vacioANulo(consultorio), incluirSuspendidas)) {
+            porTurno.put((Long) f[0], new ReservasDeTurno((Long) f[1], (Long) f[2], (Long) f[3]));
         }
         return porTurno;
     }
@@ -144,7 +151,7 @@ public class EstadisticaService {
 
     /** Ante igual demanda: médico, día y hora de inicio. */
     private int desempate(EstadisticaTurnoDTO a, EstadisticaTurnoDTO b) {
-        int porMedico = Collator.getInstance(Locale.forLanguageTag("es")).compare(a.nombreMedico(), b.nombreMedico());
+        int porMedico = ALFABETICO.compare(a.nombreMedico(), b.nombreMedico());
         if (porMedico != 0) {
             return porMedico;
         }
@@ -188,34 +195,14 @@ public class EstadisticaService {
         }
     }
 
-    /** Estas estadísticas se ordenan por un solo criterio: si piden otro, 400. */
-    private static void validarOrden(String ordenarPor, String valido) {
-        if (ordenarPor != null && !ordenarPor.isBlank() && !valido.equalsIgnoreCase(ordenarPor.trim())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El orden indicado no es válido (use " + valido + ").");
-        }
-    }
-
     private static boolean ordenPorNombre(String ordenarPor) {
-        if (ordenarPor == null || ordenarPor.isBlank() || "cantidad".equalsIgnoreCase(ordenarPor.trim())) {
-            return false;
-        }
-        if ("nombre".equalsIgnoreCase(ordenarPor.trim())) {
-            return true;
-        }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El orden indicado no es válido (use cantidad o nombre).");
+        return "nombre".equals(FiltrosBusqueda.elegirOrden(ordenarPor, "cantidad", "nombre"));
     }
 
     /** El estado pedido, o todos si no se indicó; 400 si no existe. */
     private static Collection<EstadoReserva> interpretarEstadoReserva(String texto) {
-        if (texto == null || texto.isBlank()) {
-            return Arrays.asList(EstadoReserva.values());
-        }
-        try {
-            return List.of(EstadoReserva.valueOf(texto.trim().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "El estado de la reserva indicado no es válido (use " + String.join(", ", Arrays.stream(EstadoReserva.values()).map(Enum::name).toList()) + ").");
-        }
+        EstadoReserva estado = FiltrosBusqueda.interpretarEstado(EstadoReserva.class, texto);
+        return estado == null ? List.of(EstadoReserva.values()) : List.of(estado);
     }
 
     private static String vacioANulo(String texto) {
