@@ -1,3 +1,4 @@
+/* oxlint-disable react/only-export-components -- las pantallas con lazy se declaran acá; el archivo exporta RUTAS (no un componente) y solo afecta la recarga en caliente */
 import { lazy } from 'react'
 import { ROLES } from './auth/roles'
 const ReservarConsultaPage = lazy(() => import('./features/reservas/ReservarConsultaPage'))
