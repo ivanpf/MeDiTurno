@@ -13,6 +13,8 @@ import java.time.LocalDate;
  *       {@code ordenarPor} puede ser fecha.</li>
  *   <li>CU-26 (atenciones propias del médico): {@code fechaDesde}, {@code fechaHasta} y {@code codigoEspecialidad};
  *       {@code ordenarPor} puede ser fecha.</li>
+ *   <li>CU-27 (pases emitidos por el médico): {@code texto} (busca datos del paciente), {@code fechaDesde},
+ *       {@code fechaHasta}, {@code codigoEspecialidad} (destino) y {@code estado}; {@code ordenarPor} puede ser fecha.</li>
  *   <li>CU-20 (turnos semanales): {@code idMedico}, {@code codigoEspecialidad}, {@code dia} (LUNES...DOMINGO),
  *       {@code codigoConsultorio} y {@code estado} (ACTIVO o SUSPENDIDO); {@code ordenarPor} puede ser medico,
  *       especialidad, dia, horario, consultorio o estado.</li>

@@ -1,7 +1,12 @@
 package com.mediturno.backend.pases;
 
+import com.mediturno.backend.common.busqueda.FiltrosBusqueda;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.exception.NoImplementadoException;
+import com.mediturno.backend.consultas.model.Consulta;
+import com.mediturno.backend.consultas.repository.ConsultaRepository;
+import com.mediturno.backend.especialidades.model.Especialidad;
+import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
 import com.mediturno.backend.pases.dto.EmitirPaseDTO;
 import com.mediturno.backend.pases.dto.PaseResponseDTO;
 import com.mediturno.backend.pases.dto.ReconsultaDTO;
@@ -9,13 +14,13 @@ import com.mediturno.backend.pases.model.EstadoPase;
 import com.mediturno.backend.pases.model.Pase;
 import com.mediturno.backend.pases.model.VigenciaPase;
 import com.mediturno.backend.pases.repository.PaseRepository;
-import com.mediturno.backend.consultas.model.Consulta;
-import com.mediturno.backend.especialidades.model.Especialidad;
-import com.mediturno.backend.consultas.repository.ConsultaRepository;
-import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
+import jakarta.persistence.criteria.Predicate;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,7 +29,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-8, CU-24, CU-25, CU-27.
- * La verificación de pases para CU-8 está implementada; los demás casos siguen pendientes.
+ * La verificación de pases para CU-8 y la búsqueda de pases emitidos (CU-27) están implementadas;
+ * CU-25 sigue pendiente.
  */
 @Service
 public class PaseService {
@@ -101,9 +107,59 @@ public class PaseService {
         throw new NoImplementadoException();
     }
 
-    /** CU-27. */
+    /** CU-27. Devuelve únicamente los pases emitidos por el médico autenticado. */
+    @Transactional(readOnly = true)
     public List<PaseResponseDTO> buscarPasesEmitidos(Long idMedico, CriteriosBusquedaDTO criterios) {
-        throw new NoImplementadoException();
+        if (criterios.fechaDesde() != null && criterios.fechaHasta() != null
+                && criterios.fechaDesde().isAfter(criterios.fechaHasta())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El período indicado no es válido.");
+        }
+        if (criterios.ordenarPor() != null && !criterios.ordenarPor().isBlank()
+                && !criterios.ordenarPor().trim().equalsIgnoreCase("fecha")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El ordenamiento debe ser por fecha.");
+        }
+
+        EstadoPase estado = FiltrosBusqueda.interpretarEstado(EstadoPase.class, criterios.estado());
+        LocalDateTime desde = criterios.fechaDesde() == null ? null : criterios.fechaDesde().atStartOfDay();
+        LocalDateTime hasta = criterios.fechaHasta() == null ? null
+            : criterios.fechaHasta().atTime(23, 59, 59, 999_999_999);
+        String codigoEspecialidad = criterios.codigoEspecialidad() == null || criterios.codigoEspecialidad().isBlank()
+            ? null : criterios.codigoEspecialidad().trim();
+        Sort.Direction direccion = Boolean.FALSE.equals(criterios.descendente()) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        Specification<Pase> filtros = (pase, consulta, cb) -> {
+            List<Predicate> condiciones = new ArrayList<>();
+            condiciones.add(cb.equal(pase.get("consulta").get("medico").get("idUsuario"), idMedico));
+            if (desde != null) {
+                condiciones.add(cb.greaterThanOrEqualTo(pase.get("fechaEmision"), desde));
+            }
+            if (hasta != null) {
+                condiciones.add(cb.lessThanOrEqualTo(pase.get("fechaEmision"), hasta));
+            }
+            if (codigoEspecialidad != null) {
+                condiciones.add(cb.equal(pase.get("especialidadDestino").get("codigo"), codigoEspecialidad));
+            }
+            if (estado != null) {
+                condiciones.add(cb.equal(pase.get("paseEstado"), estado));
+            }
+            Predicate textoPaciente = FiltrosBusqueda.coincidenciasDePersona(pase.join("paciente"), cb, criterios.texto());
+            if (textoPaciente != null) {
+                condiciones.add(textoPaciente);
+            }
+            return cb.and(condiciones.toArray(Predicate[]::new));
+        };
+
+        return paseRepository.findAll(filtros, Sort.by(direccion, "fechaEmision")
+                .and(Sort.by(Sort.Direction.DESC, "idPase")))
+            .stream()
+            .map(this::convertirAPaseResponseDTO)
+            .toList();
+    }
+
+    private PaseResponseDTO convertirAPaseResponseDTO(Pase pase) {
+        return new PaseResponseDTO(pase.getIdPase(), pase.getConsulta().getIdConsulta(),
+            pase.getEspecialidadOrigen().getCodigo(), pase.getEspecialidadDestino().getCodigo(),
+            pase.getFechaEmision(), VigenciaPase.MAXIMA.vencimiento(pase.getFechaEmision()), pase.getPaseEstado());
     }
 
     /** CU-8. Uso interno (lo usan TurnoSemanalService y ReservaService al validar una reserva). */
