@@ -17,4 +17,6 @@ export const COLORS = {
   errorClaro: '#fdecea',
   exito: '#1e7b4a',
   exitoClaro: '#e6f4ec',
+  // azulOscuro semitransparente, para leer texto sobre una foto.
+  veloAzul: 'rgba(18, 54, 107, 0.78)',
 };
