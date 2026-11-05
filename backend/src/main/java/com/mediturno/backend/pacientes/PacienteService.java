@@ -15,9 +15,11 @@ import com.mediturno.backend.auth.dto.CrearCuentaRequestDTO;
 import com.mediturno.backend.common.busqueda.FiltrosBusqueda;
 import com.mediturno.backend.common.csv.AnalizadorCsv;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
+import com.mediturno.backend.usuarios.PerfilService;
 import com.mediturno.backend.common.dto.PerfilDTO;
+import com.mediturno.backend.common.dto.PerfilResponseDTO;
+
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.common.seguridad.IdentidadVerificada;
 import com.mediturno.backend.common.validation.FormatoUsuario;
@@ -43,7 +45,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-5, CU-7, CU-31, CU-32, CU-33, CU-44.
- * Los métodos que todavía no están implementados lanzan NoImplementadoException (respuesta 501).
+ * Gestión de pacientes y contacto propio.
  */
 @Service
 public class PacienteService {
@@ -55,14 +57,16 @@ public class PacienteService {
     private final AuthService authService;
     private final AdministradorRepository administradorRepository;
     private final Clock reloj;
+    private final PerfilService perfilService;
 
     public PacienteService(PacienteRepository pacienteRepository, UsuarioRepository usuarioRepository, AuthService authService,
-            AdministradorRepository administradorRepository, Clock reloj) {
+            AdministradorRepository administradorRepository, Clock reloj, PerfilService perfilService) {
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
         this.authService = authService;
         this.administradorRepository = administradorRepository;
         this.reloj = reloj;
+        this.perfilService = perfilService;
     }
 
     /**
@@ -469,6 +473,10 @@ public class PacienteService {
 
     /** CU-5. */
     public void actualizarPerfil(Long idPaciente, PerfilDTO datos) {
-        throw new NoImplementadoException();
+        perfilService.actualizarPerfil(idPaciente, datos);
+    }
+
+    public PerfilResponseDTO consultarPerfil(Long idPaciente) {
+        return perfilService.consultarPerfil(idPaciente);
     }
 }

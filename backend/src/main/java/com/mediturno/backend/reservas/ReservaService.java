@@ -1,7 +1,6 @@
 package com.mediturno.backend.reservas;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.notificaciones.NotificacionService;
 import com.mediturno.backend.ordenes.model.EstadoOrden;
@@ -42,7 +41,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Lógica de negocio de: CU-8, CU-9, CU-10, CU-15, CU-19.
- * CU-8, CU-9, CU-10 y CU-15 implementados. CU-19 conserva su respuesta 501.
+ * CU-8, CU-9, CU-10, CU-15 y CU-19 implementados.
  */
 @Service
 public class ReservaService {
@@ -225,8 +224,55 @@ public class ReservaService {
     }
 
     /** CU-19. */
+    @Transactional(readOnly = true)
     public List<ReservaResponseDTO> listarReservasParaAtencion(CriteriosBusquedaDTO criterios) {
-        throw new NoImplementadoException();
+        if (criterios.fechaDesde() != null && criterios.fechaHasta() != null
+                && criterios.fechaDesde().isAfter(criterios.fechaHasta())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El período indicado no es válido.");
+        }
+        if (criterios.idTurnoSemanal() != null && criterios.idTurnoSemanal() < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El turno indicado no es válido.");
+        }
+        EstadoReserva estado = interpretarEstadoReserva(criterios.estado());
+        String clave = textoOpcional(criterios.ordenarPor());
+        Comparator<Reserva> orden;
+        if (clave == null || clave.equalsIgnoreCase("numero")) orden = Comparator.comparing(Reserva::getNumero);
+        else if (clave.equalsIgnoreCase("paciente")) orden = Comparator.comparing(
+            r -> r.getPaciente().nombreCompleto(), String.CASE_INSENSITIVE_ORDER);
+        else throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El orden debe ser numero o paciente.");
+        orden = orden.thenComparing(r -> r.getOcurrenciaTurno().getFecha())
+            .thenComparing(r -> r.getOcurrenciaTurno().getHoraInicio()).thenComparing(Reserva::getIdReserva);
+        if (Boolean.TRUE.equals(criterios.descendente())) orden = orden.reversed();
+        LocalDate hoy = criterios.fechaDesde() == null && criterios.fechaHasta() == null
+            && criterios.idTurnoSemanal() == null ? LocalDate.now(reloj) : null;
+        Specification<Reserva> filtros = (r, query, cb) -> {
+            List<Predicate> condiciones = new ArrayList<>();
+            var ocurrencia = r.join("ocurrenciaTurno");
+            var turno = ocurrencia.join("turnoSemanal");
+            if (hoy != null) condiciones.add(cb.equal(ocurrencia.get("fecha"), hoy));
+            if (criterios.fechaDesde() != null) condiciones.add(cb.greaterThanOrEqualTo(ocurrencia.get("fecha"), criterios.fechaDesde()));
+            if (criterios.fechaHasta() != null) condiciones.add(cb.lessThanOrEqualTo(ocurrencia.get("fecha"), criterios.fechaHasta()));
+            if (criterios.idMedico() != null) condiciones.add(cb.equal(turno.get("medico").get("idUsuario"), criterios.idMedico()));
+            if (textoOpcional(criterios.codigoEspecialidad()) != null) condiciones.add(cb.equal(turno.get("especialidad").get("codigo"), criterios.codigoEspecialidad().trim()));
+            if (criterios.idTurnoSemanal() != null) condiciones.add(cb.equal(turno.get("idTurnoSemanal"), criterios.idTurnoSemanal()));
+            if (estado != null) condiciones.add(cb.equal(r.get("reservaEstado"), estado));
+            return cb.and(condiciones.toArray(Predicate[]::new));
+        };
+        List<Reserva> resultado = reservaRepository.findAll(filtros);
+        resultado.sort(orden);
+        List<Long> ids = resultado.stream().map(Reserva::getIdReserva).toList();
+        Map<Long, Orden> ordenes = ids.isEmpty() ? Map.of() : ordenRepository.buscarPorReservas(ids).stream()
+            .collect(Collectors.toMap(o -> o.getReserva().getIdReserva(), Function.identity()));
+        return resultado.stream().map(r -> convertirAReservaHistorialResponseDTO(r, ordenes.get(r.getIdReserva()))).toList();
+    }
+
+    /** CU-10: la reserva ajena y la inexistente responden igual. */
+    @Transactional(readOnly = true)
+    public ReservaResponseDTO consultarDetalleReservaPropia(Long idPaciente, Long idReserva) {
+        Reserva reserva = reservaRepository.findByIdReservaAndPacienteIdUsuario(idReserva, idPaciente)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La reserva no existe"));
+        return convertirAReservaHistorialResponseDTO(reserva,
+            ordenRepository.findByReservaIdReserva(idReserva).orElse(null));
     }
 
     /** CU-10. */
@@ -278,7 +324,8 @@ public class ReservaService {
             paciente.getIdUsuario(), paciente.nombreCompleto(), paciente.getCedula(), turno.getMedico().nombreCompleto(),
             turno.getEspecialidad().getNombre(), ocurrencia.getFecha(), ocurrencia.getHoraInicio(), ocurrencia.getHoraFin(),
             turno.getConsultorio().getNombre(), orden == null ? null : orden.getNumeroOrden(),
-            orden == null ? null : orden.getOrdenEstado());
+            orden == null ? null : orden.getOrdenEstado(), turno.getMedico().getIdUsuario(),
+            turno.getEspecialidad().getCodigo(), turno.getIdTurnoSemanal());
     }
 
     private static EstadoReserva interpretarEstadoReserva(String texto) {

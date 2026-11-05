@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.PerfilDTO;
+import com.mediturno.backend.common.dto.PerfilResponseDTO;
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
 import com.mediturno.backend.common.seguridad.UsuarioActual;
 import com.mediturno.backend.pacientes.dto.AltaPacienteDTO;
@@ -92,9 +93,15 @@ public class PacienteController {
     }
 
     @RolesPermitidos(Paciente.class)
+    @GetMapping("/me/perfil")
+    public PerfilResponseDTO consultarPerfil() {
+        return pacienteService.consultarPerfil(usuarioActual.obtenerIdPacienteAutenticado());
+    }
+
+    @RolesPermitidos(Paciente.class)
     @PutMapping("/me/perfil")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void actualizarPerfil(@RequestBody PerfilDTO datos) {
+    public void actualizarPerfil(@Valid @RequestBody PerfilDTO datos) {
         pacienteService.actualizarPerfil(usuarioActual.obtenerIdPacienteAutenticado(), datos);
     }
 }

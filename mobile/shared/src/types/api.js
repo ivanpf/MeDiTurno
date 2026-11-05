@@ -143,6 +143,7 @@
 
 /**
  * @typedef {Object} PerfilDTO
+ * @property {string} correo
  * @property {string} [telefono]
  * @property {string} [domicilio]
  */

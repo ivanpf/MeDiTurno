@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.PerfilDTO;
+import com.mediturno.backend.common.dto.PerfilResponseDTO;
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
 import com.mediturno.backend.common.seguridad.UsuarioActual;
 import com.mediturno.backend.usuarios.dto.AltaUsuarioInternoDTO;
@@ -88,9 +89,15 @@ public class UsuarioInternoController {
     }
 
     @RolesPermitidos({Funcionario.class, Medico.class, Administrador.class})
+    @GetMapping("/me/perfil")
+    public PerfilResponseDTO consultarPerfil() {
+        return usuarioInternoService.consultarPerfil(usuarioActual.obtenerIdUsuarioAutenticado());
+    }
+
+    @RolesPermitidos({Funcionario.class, Medico.class, Administrador.class})
     @PutMapping("/me/perfil")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void actualizarPerfil(@RequestBody PerfilDTO datos) {
+    public void actualizarPerfil(@Valid @RequestBody PerfilDTO datos) {
         usuarioInternoService.actualizarPerfil(usuarioActual.obtenerIdUsuarioAutenticado(), datos);
     }
 }

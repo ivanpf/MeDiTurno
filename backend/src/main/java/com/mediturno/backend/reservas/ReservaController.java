@@ -70,6 +70,11 @@ public class ReservaController {
         return reservaService.listarReservasParaAtencion(criterios);
     }
 
+    @GetMapping("/mias/{idReserva}")
+    public ReservaResponseDTO consultarDetalleReservaPropia(@PathVariable Long idReserva) {
+        return reservaService.consultarDetalleReservaPropia(usuarioActual.obtenerIdPacienteAutenticado(), idReserva);
+    }
+
     @GetMapping("/mias")
     public List<ReservaResponseDTO> consultarHistorialReservas(CriteriosBusquedaDTO criterios) {
         return reservaService.consultarHistorialReservas(usuarioActual.obtenerIdPacienteAutenticado(), criterios);

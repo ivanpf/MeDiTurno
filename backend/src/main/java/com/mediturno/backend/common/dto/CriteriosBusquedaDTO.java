@@ -11,8 +11,10 @@ import java.time.LocalDate;
  *       especialidad, estado o numero.</li>
  *   <li>CU-11 (historia clínica): {@code fechaDesde}, {@code fechaHasta}, {@code codigoEspecialidad} e {@code idMedico};
  *       {@code ordenarPor} puede ser fecha.</li>
- *   <li>CU-26 (atenciones propias del médico): {@code fechaDesde}, {@code fechaHasta} y {@code codigoEspecialidad};
+ *   <li>CU-26 (atenciones propias del médico): {@code fechaDesde}, {@code fechaHasta}, {@code texto} (nombre o cédula del paciente) y {@code codigoEspecialidad};
  *       {@code ordenarPor} puede ser fecha.</li>
+ *   <li>CU-19 (ventanilla): período, médico, especialidad, estado e {@code idTurnoSemanal};
+ *       orden por numero o paciente. Sin fechas ni turno consulta hoy en Montevideo.</li>
  *   <li>CU-20 (turnos semanales): {@code idMedico}, {@code codigoEspecialidad}, {@code dia} (LUNES...DOMINGO),
  *       {@code codigoConsultorio} y {@code estado} (ACTIVO o SUSPENDIDO); {@code ordenarPor} puede ser medico,
  *       especialidad, dia, horario, consultorio o estado.</li>
@@ -45,7 +47,15 @@ public record CriteriosBusquedaDTO(
         Boolean requierePase,
         String ubicacion,
         Boolean tieneCuenta,
-        String rol) {
+        String rol,
+        Long idTurnoSemanal) {
+
+    public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,
+            String estado, String ordenarPor, Boolean descendente, LocalDate fechaDesde, LocalDate fechaHasta,
+            String texto, Boolean requierePase, String ubicacion, Boolean tieneCuenta, String rol) {
+        this(idMedico, codigoEspecialidad, dia, codigoConsultorio, estado, ordenarPor, descendente, fechaDesde,
+            fechaHasta, texto, requierePase, ubicacion, tieneCuenta, rol, null);
+    }
 
     /** Conserva la forma usada por los casos de uso que no filtran por rol (CU-33). */
     public CriteriosBusquedaDTO(Long idMedico, String codigoEspecialidad, String dia, String codigoConsultorio,

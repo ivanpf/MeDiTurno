@@ -1,4 +1,6 @@
-import { useState } from 'react'
+/* oxlint-disable react/set-state-in-effect -- sincroniza carga, errores y selección con la consulta al servidor */
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Confirmacion from '../../components/Confirmacion'
 import { api, ApiError } from '../../services/api'
 import estilos from './ConsultaReservaPage.module.css'
@@ -27,7 +29,9 @@ const hora = (texto) => texto.slice(0, 5)
 const comoError = (err, mensaje) => (err instanceof ApiError ? err : new ApiError(0, mensaje))
 
 export default function ConsultaReservaPage() {
-  const [identificador, setIdentificador] = useState('')
+  const [parametros] = useSearchParams()
+  const idInicial = parametros.get('idReserva') ?? ''
+  const [identificador, setIdentificador] = useState(idInicial)
   const [reserva, setReserva] = useState(null)
   const [error, setError] = useState(null)
   const [aviso, setAviso] = useState('')
@@ -49,6 +53,19 @@ export default function ConsultaReservaPage() {
       setBuscando(false)
     }
   }
+
+  useEffect(() => {
+    if (!/^[1-9]\d*$/.test(idInicial)) return
+    let vigente = true
+    setIdentificador(idInicial)
+    setBuscando(true)
+    setReserva(null)
+    setError(null)
+    api.get(`/reservas/${idInicial}`).then((r) => { if (vigente) setReserva(r) })
+      .catch((err) => { if (vigente) setError(comoError(err, 'No se pudo consultar la reserva.')) })
+      .finally(() => { if (vigente) setBuscando(false) })
+    return () => { vigente = false }
+  }, [idInicial])
 
   const buscar = (e) => {
     e.preventDefault()

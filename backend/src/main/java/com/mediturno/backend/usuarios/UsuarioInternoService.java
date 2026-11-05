@@ -25,8 +25,9 @@ import com.mediturno.backend.common.csv.AnalizadorCsv;
 import com.mediturno.backend.common.csv.LectorCsv;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
 import com.mediturno.backend.common.dto.PerfilDTO;
+import com.mediturno.backend.common.dto.PerfilResponseDTO;
+
 import com.mediturno.backend.common.dto.ResultadoImportacionDTO;
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.common.validation.FormatoUsuario;
 import com.mediturno.backend.especialidades.model.Especialidad;
@@ -65,7 +66,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Lógica de negocio de: CU-5, CU-34, CU-35, CU-36, CU-45, CU-46.
- * Los métodos que todavía no están implementados lanzan NoImplementadoException (respuesta 501).
+ * Gestión de pacientes y contacto propio.
  */
 @Service
 public class UsuarioInternoService {
@@ -82,10 +83,11 @@ public class UsuarioInternoService {
     private final AuthService authService;
     private final EmailService emailService;
     private final Clock reloj;
+    private final PerfilService perfilService;
 
     public UsuarioInternoService(UsuarioRepository usuarioRepository, EspecialidadRepository especialidadRepository,
             MedicoRepository medicoRepository, AdministradorRepository administradorRepository,
-            TurnoSemanalRepository turnoSemanalRepository, AuthService authService, EmailService emailService, Clock reloj) {
+            TurnoSemanalRepository turnoSemanalRepository, AuthService authService, EmailService emailService, Clock reloj, PerfilService perfilService) {
         this.usuarioRepository = usuarioRepository;
         this.especialidadRepository = especialidadRepository;
         this.medicoRepository = medicoRepository;
@@ -94,6 +96,7 @@ public class UsuarioInternoService {
         this.authService = authService;
         this.emailService = emailService;
         this.reloj = reloj;
+        this.perfilService = perfilService;
     }
 
     /** CU-34. Registra un usuario interno activo y, si es médico, sus especialidades. */
@@ -851,6 +854,10 @@ public class UsuarioInternoService {
 
     /** CU-5. */
     public void actualizarPerfil(Long idUsuarioInterno, PerfilDTO datos) {
-        throw new NoImplementadoException();
+        perfilService.actualizarPerfil(idUsuarioInterno, datos);
+    }
+
+    public PerfilResponseDTO consultarPerfil(Long idUsuarioInterno) {
+        return perfilService.consultarPerfil(idUsuarioInterno);
     }
 }

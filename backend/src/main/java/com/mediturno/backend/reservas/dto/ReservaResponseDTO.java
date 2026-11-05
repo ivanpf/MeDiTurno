@@ -26,7 +26,17 @@ public record ReservaResponseDTO(
         LocalTime horaFin,
         String consultorio,
         Long numeroOrden,
-        EstadoOrden estadoOrden) {
+        EstadoOrden estadoOrden,
+        Long idMedico,
+        String codigoEspecialidad,
+        Long idTurnoSemanal) {
+
+    public ReservaResponseDTO(Long idReserva, Integer numero, LocalTime horaEstimada, EstadoReserva estado,
+            Long idPaciente, String nombrePaciente, String cedulaPaciente, String nombreMedico, String especialidad,
+            LocalDate fecha, LocalTime horaInicio, LocalTime horaFin, String consultorio, Long numeroOrden, EstadoOrden estadoOrden) {
+        this(idReserva, numero, horaEstimada, estado, idPaciente, nombrePaciente, cedulaPaciente, nombreMedico,
+            especialidad, fecha, horaInicio, horaFin, consultorio, numeroOrden, estadoOrden, null, null, null);
+    }
 
     /** CU-8 y CU-15: datos completos de la reserva. */
     public ReservaResponseDTO(Long idReserva, Integer numero, LocalTime horaEstimada, EstadoReserva estado,

@@ -282,6 +282,10 @@ public class ConsultaService {
                 var turno = consulta.join("reserva").join("ocurrenciaTurno").join("turnoSemanal");
                 condiciones.add(cb.equal(turno.get("especialidad").get("codigo"), codigoEspecialidad));
             }
+            if (criterios.texto() != null && !criterios.texto().isBlank()) {
+                condiciones.add(com.mediturno.backend.common.busqueda.FiltrosBusqueda.coincidenciasDePersona(
+                    consulta.join("paciente"), cb, criterios.texto()));
+            }
             return cb.and(condiciones.toArray(Predicate[]::new));
         };
 
@@ -291,4 +295,12 @@ public class ConsultaService {
                 .getTurnoSemanal().getEspecialidad().getNombre()))
             .toList();
     }
+    @Transactional(readOnly = true)
+    public ConsultaResponseDTO consultarDetalleAtencionPropia(Long idMedico, Long idConsulta) {
+        Consulta consulta = consultas.findByIdConsultaAndMedicoIdUsuario(idConsulta, idMedico)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La atención no existe"));
+        return convertirAConsultaResponseDTO(consulta,
+            consulta.getReserva().getOcurrenciaTurno().getTurnoSemanal().getEspecialidad().getNombre());
+    }
+
 }

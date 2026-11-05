@@ -48,7 +48,7 @@ class AltaPacienteTest {
     void preparar() {
         pacientes = mock(PacienteRepository.class);
         usuarios = mock(UsuarioRepository.class);
-        servicio = new PacienteService(pacientes, usuarios, mock(AuthService.class), mock(AdministradorRepository.class), Clock.systemDefaultZone());
+        servicio = new PacienteService(pacientes, usuarios, mock(AuthService.class), mock(AdministradorRepository.class), Clock.systemDefaultZone(), mock(com.mediturno.backend.usuarios.PerfilService.class));
     }
 
     private AltaPacienteDTO datos(String cedula, String correo) {
