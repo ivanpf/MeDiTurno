@@ -2,7 +2,6 @@ package com.mediturno.backend.pases;
 
 import com.mediturno.backend.common.busqueda.FiltrosBusqueda;
 import com.mediturno.backend.common.dto.CriteriosBusquedaDTO;
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.consultas.model.Consulta;
 import com.mediturno.backend.consultas.repository.ConsultaRepository;
 import com.mediturno.backend.especialidades.model.Especialidad;
@@ -30,7 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Lógica de negocio de: CU-8, CU-24, CU-25, CU-27.
  * La verificación de pases para CU-8 y la búsqueda de pases emitidos (CU-27) están implementadas;
- * CU-25 sigue pendiente.
+ * CU-25 (reconsulta) es un pase a la misma especialidad.
  */
 @Service
 public class PaseService {
@@ -103,9 +102,19 @@ public class PaseService {
         );
     }
 
-    /** CU-25. */
+    /**
+     * CU-25. Una reconsulta es un pase a la misma especialidad de la consulta: el médico autoriza al paciente a volver a
+     * reservar en esa especialidad (aunque exija pase previo) durante 60 días, con las mismas reglas de CU-24 (consulta propia,
+     * especialidad activa, sin reserva automática). No lleva datos: la especialidad sale de la consulta.
+     * Se registra como un pase más, así que CU-8 y CU-27 lo tratan igual. Cualquier médico de esa especialidad sirve para
+     * reservar (el pase no guarda a qué médico se habilitó).
+     */
+    @Transactional
     public PaseResponseDTO habilitarReconsulta(Long idMedico, Long idConsulta, ReconsultaDTO datos) {
-        throw new NoImplementadoException();
+        Consulta consulta = consultaRepository.findById(idConsulta)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La consulta no existe"));
+        String especialidad = consulta.getReserva().getOcurrenciaTurno().getTurnoSemanal().getEspecialidad().getCodigo();
+        return emitirPase(idMedico, idConsulta, new EmitirPaseDTO(especialidad));
     }
 
     /** CU-27. Devuelve únicamente los pases emitidos por el médico autenticado. */

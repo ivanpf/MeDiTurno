@@ -15,7 +15,6 @@ const PacientesPorTurnoPage = lazy(() => import('./features/consultas/PacientesP
 const HistoriaClinicaAtencionPage = lazy(() => import('./features/consultas/HistoriaClinicaAtencionPage'))
 const RegistrarConsultaPage = lazy(() => import('./features/consultas/RegistrarConsultaPage'))
 const EmitirPasePage = lazy(() => import('./features/pases/EmitirPasePage'))
-const HabilitarReconsultaPage = lazy(() => import('./features/pases/HabilitarReconsultaPage'))
 const HistorialAtencionesPage = lazy(() => import('./features/consultas/HistorialAtencionesPage'))
 const PasesEmitidosPage = lazy(() => import('./features/pases/PasesEmitidosPage'))
 const AltaEspecialidadPage = lazy(() => import('./features/especialidades/AltaEspecialidadPage'))
@@ -61,8 +60,7 @@ export const RUTAS = [
   { roles: [ROLES.MEDICO], path: '/medico/pacientes', etiqueta: 'Mis pacientes', cu: 'CU-21', Componente: PacientesPorTurnoPage },
   { roles: [ROLES.MEDICO], path: '/medico/historia-clinica', etiqueta: 'Historia clínica', cu: 'CU-22', Componente: HistoriaClinicaAtencionPage },
   { roles: [ROLES.MEDICO], path: '/medico/consulta', etiqueta: 'Registrar consulta', cu: 'CU-23', Componente: RegistrarConsultaPage },
-  { roles: [ROLES.MEDICO], path: '/medico/pase', etiqueta: 'Emitir pase', cu: 'CU-24', Componente: EmitirPasePage },
-  { roles: [ROLES.MEDICO], path: '/medico/reconsulta', etiqueta: 'Habilitar reconsulta', cu: 'CU-25', Componente: HabilitarReconsultaPage },
+  { roles: [ROLES.MEDICO], path: '/medico/pase', etiqueta: 'Emitir pase', cu: 'CU-24 / CU-25', Componente: EmitirPasePage },
   { roles: [ROLES.MEDICO], path: '/medico/atenciones', etiqueta: 'Historial de atenciones', cu: 'CU-26', Componente: HistorialAtencionesPage },
   { roles: [ROLES.MEDICO], path: '/medico/pases', etiqueta: 'Pases emitidos', cu: 'CU-27', Componente: PasesEmitidosPage },
   { roles: [ROLES.ADMIN], path: '/admin/especialidades', etiqueta: 'Alta', cu: 'CU-28', grupo: 'Especialidades', Componente: AltaEspecialidadPage },
