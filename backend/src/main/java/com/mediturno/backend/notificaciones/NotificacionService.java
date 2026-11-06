@@ -17,7 +17,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.mediturno.backend.common.exception.NoImplementadoException;
 import com.mediturno.backend.turnos.DisponibilidadService;
 import com.mediturno.backend.consultas.model.Consulta;
 import com.mediturno.backend.consultas.repository.ConsultaRepository;
@@ -37,7 +36,8 @@ import com.mediturno.backend.turnos.repository.SuspensionTurnoRepository;
 /**
  * Lógica de negocio de: CU-6, CU-8, CU-13, CU-23.
  * Implementados: el aviso de suspensión de un turno (CU-13) y el de consulta registrada (CU-23), en la aplicación, por correo y push, y el de
- * reserva confirmada (CU-8), en la aplicación y push. Cada push queda registrado en el canal PUSH (ENVIADA o FALLIDA). Los demás métodos todavía lanzan NoImplementadoException.
+ * reserva confirmada (CU-8), en la aplicación y push, y el recordatorio 24 horas antes de la consulta (CU-8), en la aplicación, por correo y push.
+ * Cada push queda registrado en el canal PUSH (ENVIADA o FALLIDA).
  */
 @Service
 public class NotificacionService {
@@ -74,9 +74,53 @@ public class NotificacionService {
         this.reloj = reloj;
     }
 
-    /** CU-8. Uso interno. */
+    /**
+     * CU-8. Uso interno (lo llama {@link RecordatoriosService}, que decide a quién y cuándo). Recuerda al paciente su consulta
+     * (fecha, hora estimada, médico y consultorio): una notificación en la aplicación, un correo y, si tiene dispositivos, un
+     * push. El correo se manda fuera de la transacción y, si falla, esa notificación queda FALLIDA sin afectar a las demás.
+     * Si la reserva ya tiene su recordatorio, no hace nada.
+     */
     public void enviarRecordatorioConsulta(Long idReserva) {
-        throw new NoImplementadoException();
+        AvisoConCorreo aviso = transaccion.execute(estado -> {
+            Reserva reserva = reservaRepository.findById(idReserva)
+                .orElseThrow(() -> new IllegalArgumentException("No existe la reserva " + idReserva));
+            if (notificacionRepository.existsByReservaIdReservaAndTipo(idReserva, TipoNotificacion.RECORDATORIO_CONSULTA)) {
+                return null;
+            }
+            OcurrenciaTurno ocurrencia = reserva.getOcurrenciaTurno();
+            var turno = ocurrencia.getTurnoSemanal();
+            var medico = turno.getMedico();
+            String mensaje = "Le recordamos su consulta de " + turno.getEspecialidad().getNombre() + " con " + medico.getNombre()
+                + " " + medico.getApellido() + " el " + ocurrencia.getFecha().format(FECHA) + ", número " + reserva.getNumero()
+                + ", hora estimada de atención ~" + disponibilidadService.horaEstimada(ocurrencia, reserva.getNumero()).format(HORA)
+                + ", en " + turno.getConsultorio().getNombre() + ".";
+            LocalDateTime ahora = LocalDateTime.now(reloj);
+
+            Notificacion enLaAplicacion = nueva(reserva, CanalNotificacion.APLICACION, mensaje, ahora);
+            enLaAplicacion.setTipo(TipoNotificacion.RECORDATORIO_CONSULTA);
+            enLaAplicacion.setEstado(EstadoNotificacion.ENVIADA);
+            enLaAplicacion.setFechaEnvio(ahora);
+            notificacionRepository.save(enLaAplicacion);
+
+            Notificacion porCorreo = nueva(reserva, CanalNotificacion.EMAIL, mensaje, ahora);
+            porCorreo.setTipo(TipoNotificacion.RECORDATORIO_CONSULTA);
+            Long idCorreo = notificacionRepository.save(porCorreo).getIdNotificacion();
+
+            Long idUsuario = reserva.getPaciente().getIdUsuario();
+            Long idPush = null;
+            if (pushService.tieneDispositivos(idUsuario)) {
+                Notificacion porPush = nueva(reserva, CanalNotificacion.PUSH, mensaje, ahora);
+                porPush.setTipo(TipoNotificacion.RECORDATORIO_CONSULTA);
+                idPush = notificacionRepository.save(porPush).getIdNotificacion();
+            }
+            return new AvisoConCorreo(idCorreo, idPush, idUsuario, mensaje);
+        });
+        if (aviso != null) {
+            enviarCorreo(aviso.idCorreo());
+            if (aviso.idPush() != null) {
+                pushService.enviarYRegistrar(aviso.idPush(), aviso.idUsuario(), "Recordatorio de consulta", aviso.mensaje());
+            }
+        }
     }
 
     /**
@@ -163,6 +207,8 @@ public class NotificacionService {
             CorreoPendiente correo = transaccion.execute(estado -> prepararCorreo(idNotificacion));
             if (correo.tipo() == TipoNotificacion.CONSULTA_REGISTRADA) {
                 emailService.enviarAvisoHistoriaClinica(correo.destino());
+            } else if (correo.tipo() == TipoNotificacion.RECORDATORIO_CONSULTA) {
+                emailService.enviarRecordatorioConsulta(correo.destino(), correo.datos());
             } else {
                 emailService.enviarAvisoSuspensionTurno(correo.destino(), correo.datos());
             }

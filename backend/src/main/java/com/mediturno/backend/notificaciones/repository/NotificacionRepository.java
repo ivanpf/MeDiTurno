@@ -18,6 +18,9 @@ public interface NotificacionRepository extends JpaRepository<Notificacion, Long
     /** Las últimas 50 notificaciones de una persona en un canal, la más nueva primero. */
     List<Notificacion> findTop50ByUsuarioIdUsuarioAndCanalOrderByFechaDescIdNotificacionDesc(Long idUsuario, CanalNotificacion canal);
 
+    /** ¿Ya se avisó esa reserva con ese tipo de notificación? (evita repetir el recordatorio). */
+    boolean existsByReservaIdReservaAndTipo(Long idReserva, com.mediturno.backend.notificaciones.model.TipoNotificacion tipo);
+
     /** Deja registrado cómo salió un aviso (se usa desde un hilo aparte, sin transacción previa). */
     @Transactional
     @Modifying
