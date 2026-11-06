@@ -1,7 +1,7 @@
 // CU-6 Consulta de la cartelera de novedades: carrusel con las fotos de los anuncios y, debajo, cada anuncio.
 // La pantalla describe qué mostrar; useCarteleraNovedades maneja el estado y la fuente de datos.
-import React from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from '../../shared/src/components/Button';
 import { ErrorBanner } from '../../shared/src/components/ErrorBanner';
 import { COLORS } from '../../shared/src/theme/colors';
@@ -30,22 +30,37 @@ const estilos = StyleSheet.create({
   contenidoAnuncio: { fontSize: 15, lineHeight: 22, color: COLORS.texto, marginTop: 4 },
 });
 
-function Anuncio({ anuncio }) {
-  return (
-    <View style={estilos.anuncio}>
+function Anuncio({ anuncio, alTocar }) {
+  const contenido = (
+    <>
       <Text style={estilos.tituloAnuncio} accessibilityRole="header">{anuncio.titulo}</Text>
       <Text style={estilos.datosAnuncio}>
         Publicado el {formatearFecha(anuncio.fechaPublicacion)}
         {anuncio.fechaFin ? ` · Vigente hasta el ${formatearFecha(`${anuncio.fechaFin}T00:00:00`)}` : ''}
       </Text>
       <Text style={estilos.contenidoAnuncio}>{anuncio.contenido}</Text>
-    </View>
+    </>
   );
+  if (alTocar) {
+    return (
+      <TouchableOpacity style={estilos.anuncio} activeOpacity={0.7} onPress={alTocar}
+        accessibilityRole="button" accessibilityLabel={`Ver fotos de ${anuncio.titulo}`}>
+        {contenido}
+      </TouchableOpacity>
+    );
+  }
+  return <View style={estilos.anuncio}>{contenido}</View>;
 }
 
 export default function CarteleraScreen() {
   const { anuncios, fotos, cargando, error, recargar, limpiarError } = useCarteleraNovedades();
+  const carruselRef = useRef(null);
   const cargado = !cargando || anuncios.length > 0;
+
+  const saltarASlide = (anuncio) => {
+    const indice = fotos.findIndex((foto) => foto.idAnuncio === anuncio.id);
+    if (indice >= 0) carruselRef.current?.irA(indice);
+  };
 
   return (
     <ScrollView style={estilos.contenedor} contentContainerStyle={estilos.contenido}
@@ -74,9 +89,12 @@ export default function CarteleraScreen() {
           </View>
         )}
 
-        {fotos.length > 0 && <CarruselFotos fotos={fotos} />}
+        {fotos.length > 0 && <CarruselFotos ref={carruselRef} fotos={fotos} />}
 
-        {anuncios.map((anuncio) => <Anuncio key={anuncio.id} anuncio={anuncio} />)}
+        {anuncios.map((anuncio) => (
+          <Anuncio key={anuncio.id} anuncio={anuncio} alTocar={fotos.some((f) => f.idAnuncio === anuncio.id)
+            ? () => saltarASlide(anuncio) : undefined} />
+        ))}
       </View>
     </ScrollView>
   );

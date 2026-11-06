@@ -20,10 +20,13 @@ export const RUTAS = [
   { roles: [ROLES.PACIENTE], path: '/(app)/reservar', etiqueta: 'Reservar consulta', cu: 'CU-8' },
   { roles: [ROLES.PACIENTE], path: '/(app)/reservas', etiqueta: 'Mis reservas', cu: 'CU-9 / CU-10' },
   { roles: [ROLES.PACIENTE], path: '/(app)/historia-clinica', etiqueta: 'Historia clínica', cu: 'CU-11' },
-  { roles: [ROLES.PACIENTE, ROLES.FUNCIONARIO, ROLES.MEDICO, ROLES.ADMIN], path: '/(app)/cartelera', etiqueta: 'Cartelera de novedades', cu: 'CU-6' },
+  { roles: [ROLES.PACIENTE, ROLES.FUNCIONARIO, ROLES.MEDICO, ROLES.ADMIN], path: '/(app)/cartelera', etiqueta: 'Cartelera de novedades', cu: 'CU-6', inicio: true },
   { roles: [ROLES.PACIENTE, ROLES.FUNCIONARIO, ROLES.MEDICO, ROLES.ADMIN], path: '/(app)/perfil', etiqueta: 'Mi perfil', cu: 'CU-5', grupo: 'Mi cuenta' },
   { roles: [ROLES.PACIENTE, ROLES.FUNCIONARIO, ROLES.MEDICO, ROLES.ADMIN], path: '/(app)/cambiar-contrasena', etiqueta: 'Cambiar contraseña', cu: 'CU-3', grupo: 'Mi cuenta' },
 ];
 
-// Pantalla a la que se va después de iniciar sesión: la primera del menú del rol.
-export const rutaInicio = (rol) => RUTAS.find((r) => r.roles.includes(rol))?.path ?? '/(auth)/login';
+// Pantalla inicial del rol: la marcada con `inicio: true`; si ninguna, la primera del menú.
+export const rutaInicio = (rol) =>
+  RUTAS.find((r) => r.roles.includes(rol) && r.inicio)?.path
+  ?? RUTAS.find((r) => r.roles.includes(rol))?.path
+  ?? '/(auth)/login';
