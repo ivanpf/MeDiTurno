@@ -7,10 +7,10 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47**. Los demás casos pendientes responden `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-25, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47**. Los demás casos pendientes responden `501`.
 
 - **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
-- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47; el resto conserva `PaginaPendiente`.
+- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-25, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47; el resto conserva `PaginaPendiente`.
 - **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2 y CU-7 (ver «Autenticación (Firebase)»). Faltan CU-3 y CU-4.
 
 ## Comandos
@@ -208,6 +208,14 @@ Especialidades (CU-28 a CU-30 y CU-43), consultorios (CU-37 a CU-39 y CU-47) pac
 
 - `GET /api/pases` (solo médico) lista **solo los pases emitidos por el médico con sesión**, con filtros opcionales: `texto` (nombre o cédula del paciente), `fechaDesde` y `fechaHasta` (sobre la fecha de emisión, inclusive), `codigoEspecialidad` (destino) y `estado` (`VIGENTE`, `USADO` o `VENCIDO`). Ordena por fecha de emisión, de más reciente a más antigua por defecto (`descendente=false` lo invierte). Rango invertido, estado u orden inválidos: `400`. `PaseResponseDTO` trae los códigos de las especialidades y la fecha de vencimiento calculada (60 días), sin el nombre del paciente.
 - Pantalla: `features/pases/PasesEmitidosPage.jsx` (filtros, tabla y los nombres de las especialidades desde `GET /api/especialidades`). El estado guardado puede seguir en `VIGENTE` pasados los 60 días (nada lo actualiza): la pantalla lo muestra como «Vencido» según la fecha de vencimiento, pero el filtro por estado usa el valor guardado. Backend integrado desde `feature/cu27BusquedaYListadoDePasesMediosEmitidos`. Tests: `BusquedaPasesEmitidosTest`.
+
+### Reconsulta (CU-25)
+
+- **Decisión del equipo:** una reconsulta no es una entidad aparte, es un **pase a la misma especialidad** de la consulta. Así CU-8 (reserva con pase), CU-27 (listado de pases) y la vigencia de 60 días funcionan sin cambios ni migraciones.
+- `POST /api/consultas/{idConsulta}/reconsultas` (solo médico; cuerpo vacío o `{}`) llama a `PaseService.habilitarReconsulta`, que toma la especialidad de la consulta y emite el pase con las mismas reglas de CU-24 (consulta propia: `403` si es ajena, `404` si no existe; especialidad activa; sin reserva automática). Responde `201` con `PaseResponseDTO`, con origen y destino iguales.
+- **Diferencia con el requerimiento:** el pase no guarda a qué médico se habilita, así que la reserva vale con cualquier médico de esa especialidad (CU-8 siempre validó el pase por especialidad, no por médico). Si se quisiera atarlo al médico, habría que agregar una columna a `pase` y ajustar `PaseService.tienePaseVigente` / `obtenerPaseParaReserva`.
+- Pantalla: no tiene una propia. Es un botón **«Reconsulta (especialidad)»** dentro de «Emitir pase» (`EmitirPasePage`, que se abre al terminar de registrar la consulta, CU-23): emite el pase a la misma especialidad directamente, sin elegir nada ni confirmar, para ahorrar pasos. No hay entrada de menú aparte para CU-25 (`routes.jsx` la cubre con la de CU-24). Tests: `EmisionPaseTest`.
+- **Pendiente (UX):** «Emitir pase» (y la reconsulta) solo se alcanza **justo al terminar de registrar la consulta**: la pantalla recibe el `idConsulta` por el estado de la navegación y no hay otro acceso. Si el médico no lo emite en ese momento, no puede hacerlo después. Cuando se integre la pantalla del historial de atenciones (CU-26, rama `santi/cu10-cu26-cu5-cu19`), hay que agregar en cada atención los botones «Emitir pase» y «Reconsulta», que lleven a `EmitirPasePage` con esa consulta (el backend ya valida que sea del médico y cualquier consulta propia sirve). No se hizo antes porque esa pantalla es de otro caso de uso y todavía no está en `main`.
 
 ### Historial de atenciones propias (CU-26)
 
@@ -505,7 +513,7 @@ Paginación y estados de carga. Quien primero los necesite los agrega a `styles/
 - **Reserva (CU-8):** el paciente elige el turno y después su número entre los libres. Si otro lo ocupa antes de confirmar, se informa y puede elegir otro.
 - **Cancelación (CU-9):** solo si la reserva está vigente y faltan **48 horas o más para el inicio del turno**, inclusive.
 - **Orden (CU-16):** se emite el día del turno, desde **1 hora antes** de que empieza hasta que **termina** (hora de fin del turno).
-- **Pase (CU-24) y reconsulta (CU-25):** vigencia máxima de **60 días**.
+- **Pase (CU-24) y reconsulta (CU-25):** vigencia máxima de **60 días**. **Una reconsulta es un pase a la misma especialidad de la consulta** (definido por el equipo; difiere del requerimiento, que la describe como una habilitación para reservar con ese médico).
 - **Registro (CU-7):** el paciente debe estar en el padrón (lo carga el administrador, CU-31) y no tener cuenta.
 - **Inicio de sesión (CU-1):** el mensaje de error es genérico y no revela si la cuenta existe ni su estado.
 
