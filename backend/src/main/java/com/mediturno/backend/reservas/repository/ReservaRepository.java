@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,6 +35,42 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long>, JpaSpec
         """)
     boolean existeAtencionAutorizada(@Param("idMedico") Long idMedico, @Param("idPaciente") Long idPaciente,
             @Param("fecha") java.time.LocalDate fecha);
+
+    /**
+     * Recordatorios: reservas vigentes de fechas habilitadas entre las dos fechas que todavía no recibieron su recordatorio.
+     * La hora exacta (la estimada del número) se comprueba después, en el servicio.
+     */
+    @Query("""
+        select r from Reserva r
+        join fetch r.ocurrenciaTurno o
+        join fetch r.paciente
+        where r.reservaEstado = com.mediturno.backend.reservas.model.EstadoReserva.VIGENTE
+          and o.fecha between :desde and :hasta
+          and o.ocurrenciaTurnoEstado = com.mediturno.backend.turnos.model.EstadoOcurrenciaTurno.HABILITADA
+          and not exists (select n.idNotificacion from Notificacion n where n.reserva = r
+            and n.tipo = com.mediturno.backend.notificaciones.model.TipoNotificacion.RECORDATORIO_CONSULTA)
+        """)
+    List<Reserva> listarSinRecordatorio(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
+
+    /** Vencimiento: pasa a VENCIDA las vigentes cuyo turno ya terminó (día anterior, o de hoy con la hora de fin cumplida). */
+    @Modifying
+    @Query("""
+        update Reserva r set r.reservaEstado = com.mediturno.backend.reservas.model.EstadoReserva.VENCIDA
+        where r.reservaEstado = com.mediturno.backend.reservas.model.EstadoReserva.VIGENTE
+          and r.ocurrenciaTurno.idOcurrenciaTurno in (
+            select o.idOcurrenciaTurno from OcurrenciaTurno o
+            where o.fecha < :hoy or (o.fecha = :hoy and o.horaFin <= :hora))
+        """)
+    int vencerVigentes(@Param("hoy") LocalDate hoy, @Param("hora") java.time.LocalTime hora);
+
+    /** Vencimiento: pasa a VENCIDA las de orden emitida cuya fecha ya pasó sin que se registrara la atención. */
+    @Modifying
+    @Query("""
+        update Reserva r set r.reservaEstado = com.mediturno.backend.reservas.model.EstadoReserva.VENCIDA
+        where r.reservaEstado = com.mediturno.backend.reservas.model.EstadoReserva.ORDEN_EMITIDA
+          and r.ocurrenciaTurno.idOcurrenciaTurno in (select o.idOcurrenciaTurno from OcurrenciaTurno o where o.fecha < :hoy)
+        """)
+    int vencerConOrdenEmitida(@Param("hoy") LocalDate hoy);
 
     Optional<Reserva> findByIdReservaAndPacienteIdUsuario(Long idReserva, Long idPaciente);
 

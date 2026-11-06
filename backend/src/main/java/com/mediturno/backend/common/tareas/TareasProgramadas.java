@@ -10,6 +10,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.mediturno.backend.notificaciones.RecordatoriosService;
+import com.mediturno.backend.reservas.ReservasVencidasService;
 import com.mediturno.backend.turnos.ActualizadorEstadosPorSuspensionService;
 import com.mediturno.backend.turnos.DisponibilidadService;
 import com.mediturno.backend.turnos.GeneradorOcurrenciasService;
@@ -27,14 +29,42 @@ public class TareasProgramadas {
     private final GeneradorOcurrenciasService generadorOcurrenciasService;
     private final DisponibilidadService disponibilidadService;
     private final ActualizadorEstadosPorSuspensionService actualizadorEstadosPorSuspensionService;
+    private final ReservasVencidasService reservasVencidasService;
+    private final RecordatoriosService recordatoriosService;
     private final Clock reloj;
 
     public TareasProgramadas(GeneradorOcurrenciasService generadorOcurrenciasService, DisponibilidadService disponibilidadService,
-            ActualizadorEstadosPorSuspensionService actualizadorEstadosPorSuspensionService, Clock reloj) {
+            ActualizadorEstadosPorSuspensionService actualizadorEstadosPorSuspensionService,
+            ReservasVencidasService reservasVencidasService, RecordatoriosService recordatoriosService, Clock reloj) {
         this.generadorOcurrenciasService = generadorOcurrenciasService;
         this.disponibilidadService = disponibilidadService;
         this.actualizadorEstadosPorSuspensionService = actualizadorEstadosPorSuspensionService;
+        this.reservasVencidasService = reservasVencidasService;
+        this.recordatoriosService = recordatoriosService;
         this.reloj = reloj;
+    }
+
+    /** Cada 15 minutos (configurable con mediturno.reservas.vencimiento.cron): las reservas que pasaron sin atención vencen. */
+    @Scheduled(cron = "${mediturno.reservas.vencimiento.cron:0 */15 * * * *}")
+    public void marcarReservasVencidas() {
+        try {
+            reservasVencidasService.marcarVencidas();
+        } catch (RuntimeException e) {
+            log.error("Falló el vencimiento de reservas: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Cada 15 minutos (configurable con mediturno.recordatorios.cron): recordatorio de las consultas que están a 24 horas o
+     * menos. Repetirla no duplica avisos; no corre al arrancar, el siguiente ciclo recupera los que faltaran.
+     */
+    @Scheduled(cron = "${mediturno.recordatorios.cron:0 */15 * * * *}")
+    public void enviarRecordatorios() {
+        try {
+            recordatoriosService.enviarRecordatoriosPendientes();
+        } catch (RuntimeException e) {
+            log.error("Falló el envío de recordatorios: {}", e.getMessage(), e);
+        }
     }
 
     /** Todos los días a las 2 de la mañana (configurable con mediturno.ocurrencias.cron). */

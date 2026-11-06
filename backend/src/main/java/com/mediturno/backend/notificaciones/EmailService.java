@@ -40,9 +40,15 @@ public class EmailService {
         this.remitente = remitente;
     }
 
-    /** CU-8. */
+    /**
+     * CU-8. Recuerda al paciente su consulta. {@code datos} lleva el nombre del paciente ({@code paciente}) y el texto del
+     * recordatorio con fecha, hora, médico y consultorio ({@code mensaje}). Si no se puede enviar, lanza una excepción: quien
+     * lo llama decide qué hacer (el aviso queda registrado como fallido). Devuelve el asunto.
+     */
     public String enviarRecordatorioConsulta(String destino, Map<String, Object> datos) {
-        throw new NoImplementadoException();
+        String asunto = "MeDiTurno: recordatorio de su consulta";
+        String texto = "Estimado/a " + datos.get("paciente") + ":\n\n" + datos.get("mensaje") + "\n\nMeDiTurno";
+        return enviar(destino, asunto, texto);
     }
 
     /**

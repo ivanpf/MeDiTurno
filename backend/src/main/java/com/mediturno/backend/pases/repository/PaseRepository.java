@@ -7,11 +7,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface PaseRepository extends JpaRepository<Pase, Long> {
+public interface PaseRepository extends JpaRepository<Pase, Long>, JpaSpecificationExecutor<Pase> {
     /** Pases del paciente para esa especialidad, en ese estado y emitidos entre las dos fechas, del más antiguo al más nuevo. */
     @Query("""
         select p from Pase p
