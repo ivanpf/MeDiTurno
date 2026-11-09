@@ -69,7 +69,12 @@ public class FirebaseProveedorIdentidad implements ProveedorIdentidad {
         }
         try {
             FirebaseToken verificado = firebaseAuth.verifyIdToken(token);
-            return Optional.of(new IdentidadVerificada(verificado.getUid(), verificado.getEmail()));
+            var claims = verificado.getClaims();
+            Object datosFirebase = claims.get("firebase");
+            String proveedor = datosFirebase instanceof java.util.Map<?, ?> mapa
+                ? java.util.Objects.toString(mapa.get("sign_in_provider"), null) : null;
+            return Optional.of(new IdentidadVerificada(verificado.getUid(), verificado.getEmail(),
+                Boolean.TRUE.equals(claims.get("email_verified")), proveedor));
         } catch (FirebaseAuthException | IllegalArgumentException e) {
             log.warn("Token rechazado: {}", e.getMessage());
             return Optional.empty();

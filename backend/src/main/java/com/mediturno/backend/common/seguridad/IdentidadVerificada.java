@@ -1,5 +1,9 @@
 package com.mediturno.backend.common.seguridad;
 
-/** Identidad que el proveedor confirmó a partir de un token: su uid y el correo de la cuenta. */
-public record IdentidadVerificada(String uid, String correo) {
+/** Identidad y claims de autenticación confirmados por Firebase a partir de un token. */
+public record IdentidadVerificada(String uid, String correo, boolean correoVerificado, String proveedor) {
+
+	public IdentidadVerificada(String uid, String correo) {
+		this(uid, correo, false, null);
+	}
 }

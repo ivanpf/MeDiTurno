@@ -10,11 +10,14 @@ import com.mediturno.backend.common.seguridad.CorreoYaRegistradoEnProveedorExcep
 import com.mediturno.backend.common.seguridad.IdentidadVerificada;
 import com.mediturno.backend.common.seguridad.ProveedorIdentidad;
 import com.mediturno.backend.common.seguridad.ProveedorIdentidadException;
+import com.mediturno.backend.common.model.EstadoActivacion;
 import com.mediturno.backend.pacientes.model.Paciente;
 import com.mediturno.backend.usuarios.model.Funcionario;
 import com.mediturno.backend.usuarios.model.Medico;
 import com.mediturno.backend.usuarios.model.Usuario;
+import com.mediturno.backend.usuarios.model.ProveedorAcceso;
 import com.mediturno.backend.usuarios.repository.UsuarioRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -53,6 +56,40 @@ public class AuthService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No fue posible iniciar sesión. Verifique sus datos e intente nuevamente."));
         usuario.setUltimoAcceso(LocalDateTime.now(reloj));
         return new LoginResponseDTO(usuario.getIdUsuario(), usuario.getNombre() + " " + usuario.getApellido(), identificarRol(usuario));
+    }
+
+    /** Vincula una cuenta email/password ya autenticada con el perfil local del mismo correo. */
+    @Transactional
+    public void vincularCuentaExistente(String tokenAcceso) {
+        IdentidadVerificada identidad = proveedorIdentidad.verificarIdentidad(tokenAcceso)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                "No se pudo verificar la sesión de Firebase. Inicie sesión nuevamente."));
+        if (!"password".equals(identidad.proveedor())
+                || identidad.correo() == null || identidad.uid() == null) {
+            throw errorVinculacion();
+        }
+
+        Usuario usuario = usuarioRepository.buscarPorCorreoConLock(identidad.correo())
+            .orElseThrow(AuthService::errorVinculacion);
+
+        if (usuario.getEstado() != EstadoActivacion.ACTIVO) throw errorVinculacion();
+        if (identidad.uid().equals(usuario.getFirebaseUid())) return;
+        if (usuario.getFirebaseUid() != null || usuarioRepository.findByFirebaseUid(identidad.uid()).isPresent()) {
+            throw errorVinculacion();
+        }
+
+        usuario.setFirebaseUid(identidad.uid());
+        usuario.setProveedorAcceso(ProveedorAcceso.PASSWORD);
+        try {
+            usuarioRepository.saveAndFlush(usuario);
+        } catch (DataIntegrityViolationException e) {
+            throw errorVinculacion();
+        }
+    }
+
+    private static ResponseStatusException errorVinculacion() {
+        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+            "No se pudo asociar esta cuenta con un perfil activo de MeDiTurno.");
     }
 
     /** CU-2. Revoca las sesiones de la persona en Firebase; el front además cierra la sesión local. */

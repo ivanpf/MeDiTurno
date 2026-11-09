@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import com.mediturno.backend.common.seguridad.RolesPermitidos;
@@ -42,6 +43,17 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cerrarSesion() {
         authService.cerrarSesion(usuarioActual.obtenerIdUsuarioAutenticado());
+    }
+
+    /** Vincula una cuenta Firebase email/password con el perfil local del correo autenticado. */
+    @RolesPermitidos
+    @PostMapping("/vinculacion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void vincularCuenta(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        String token = authorization != null && authorization.startsWith("Bearer ")
+            ? authorization.substring("Bearer ".length()).trim() : null;
+        authService.vincularCuentaExistente(token);
     }
 
     @PostMapping("/contrasena")

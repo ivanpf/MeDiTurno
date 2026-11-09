@@ -1,18 +1,30 @@
 import { useState } from 'react'
-import { api, ApiError } from '../../services/api'
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
+import { auth } from '../../services/firebase'
 import estilos from './CambiarContrasenaPage.module.css'
 
 const MINIMO_CONTRASENA = 6
 const VACIO = { actual: '', nueva: '', repetirNueva: '' }
 
-// El backend informa los datos inválidos como «campo: mensaje»; a la persona solo le interesa el mensaje.
-const soloMensaje = (detalle) => detalle.split(': ').slice(1).join(': ') || detalle
+const mensajeDeError = (codigo) => {
+  switch (codigo) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+      return 'La contraseña actual no es correcta.'
+    case 'auth/weak-password':
+      return `La nueva contraseña debe tener al menos ${MINIMO_CONTRASENA} caracteres.`
+    case 'auth/requires-recent-login':
+      return 'Por seguridad, cierre sesión e inicie sesión nuevamente antes de cambiar la contraseña.'
+    case 'auth/too-many-requests':
+      return 'Se realizaron demasiados intentos. Espere un momento e inténtelo nuevamente.'
+    case 'auth/network-request-failed':
+      return 'No se pudo conectar con el servicio de autenticación. Verifique su conexión e inténtelo nuevamente.'
+    default:
+      return 'No fue posible cambiar la contraseña. Intente nuevamente.'
+  }
+}
 
-// CU-3 Cambio de contraseña (con sesión iniciada).
-// Las contraseñas las guarda Firebase: el backend valida la actual y le pide el cambio al
-// ProveedorIdentidad. Al terminar, la sesión sigue abierta: no hace falta volver a ingresar.
-// TODO (CU-3): el backend responde 501 hasta que se implemente AuthService.cambiarContrasena;
-// la pantalla queda lista para cuando se active (mismo contrato, sin cambios acá).
+// CU-3: Firebase Auth valida la contraseña actual y actualiza la nueva sin enviar contraseñas al backend.
 export default function CambiarContrasenaPage() {
   const [datos, setDatos] = useState(VACIO)
   const [error, setError] = useState(null)
@@ -34,19 +46,31 @@ export default function CambiarContrasenaPage() {
     e.preventDefault()
     setError(null)
     setModificada(false)
+
+    if (datos.nueva.length < MINIMO_CONTRASENA) {
+      setError({ mensaje: `La nueva contraseña debe tener al menos ${MINIMO_CONTRASENA} caracteres.`, detalles: [] })
+      return
+    }
+    if (datos.nueva !== datos.repetirNueva) {
+      setError({ mensaje: 'Las contraseñas no coinciden.', detalles: [] })
+      return
+    }
+
+    const usuario = auth.currentUser
+    if (!usuario?.email) {
+      setError({ mensaje: 'Su sesión venció. Inicie sesión nuevamente para cambiar la contraseña.', detalles: [] })
+      return
+    }
+
     setEnviando(true)
     try {
-      if (!datos.actual) throw new ApiError(0, 'Ingrese la contraseña actual.')
-      if (datos.nueva.length < MINIMO_CONTRASENA)
-        throw new ApiError(0, `La nueva contraseña debe tener al menos ${MINIMO_CONTRASENA} caracteres.`)
-      if (datos.nueva !== datos.repetirNueva) throw new ApiError(0, 'Las contraseñas no coinciden.')
-
-      await api.post('/auth/contrasena', { actual: datos.actual, nueva: datos.nueva })
+      const credencial = EmailAuthProvider.credential(usuario.email, datos.actual)
+      await reauthenticateWithCredential(usuario, credencial)
+      await updatePassword(usuario, datos.nueva)
       setDatos(VACIO)
       setModificada(true)
     } catch (err) {
-      // Con un error del backend el formulario conserva los datos ingresados.
-      setError(err instanceof ApiError ? err : new ApiError(0, 'No fue posible cambiar la contraseña. Intente nuevamente.'))
+      setError({ mensaje: mensajeDeError(err?.code), detalles: [] })
     } finally {
       setEnviando(false)
     }

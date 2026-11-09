@@ -3,6 +3,8 @@ package com.mediturno.backend.usuarios.repository;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -14,6 +16,10 @@ import com.mediturno.backend.usuarios.model.Usuario;
 public interface UsuarioRepository extends JpaRepository<Usuario, Long>, JpaSpecificationExecutor<Usuario> {
 
     Optional<Usuario> findByFirebaseUid(String firebaseUid);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from Usuario u where lower(u.correo) = lower(:correo)")
+    Optional<Usuario> buscarPorCorreoConLock(@Param("correo") String correo);
 
     boolean existsByCedula(String cedula);
 

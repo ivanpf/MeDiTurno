@@ -4,7 +4,7 @@ import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOu
 import { useAuth } from '../../auth/useAuth'
 import PantallaAcceso from '../../components/PantallaAcceso'
 import { rutaInicio } from '../../routes'
-import { api } from '../../services/api'
+import { api, ApiError } from '../../services/api'
 import { auth } from '../../services/firebase'
 
 // Mensaje único para cualquier fallo: no revela si la cuenta existe ni su estado (CU-1).
@@ -21,17 +21,33 @@ export default function LoginPage() {
 
   if (rol) return <Navigate to={rutaInicio(rol)} replace />
 
-  const ingresarCon = async (autenticar) => {
+  const guardarSesion = (sesion) => {
+    iniciarSesion(sesion.rol, sesion.nombre)
+    navigate(rutaInicio(sesion.rol))
+  }
+
+  const ingresarCon = async (autenticar, puedeVincular = false) => {
     setError('')
     setCargando(true)
     try {
       await autenticar()
-      const sesion = await api.post('/auth/login')
-      iniciarSesion(sesion.rol, sesion.nombre)
-      navigate(rutaInicio(sesion.rol))
-    } catch {
-      await signOut(auth) // si el backend rechazó a la persona, no queda sesión abierta en Firebase
-      setError(MENSAJE_ERROR)
+      try {
+        const sesion = await api.post('/auth/login')
+        guardarSesion(sesion)
+      } catch (err) {
+        if (!puedeVincular || !(err instanceof ApiError) || err.estado !== 401) throw err
+        await api.post('/auth/vinculacion')
+        const sesion = await api.post('/auth/login')
+        guardarSesion(sesion)
+      }
+    } catch (err) {
+      if (puedeVincular && err instanceof ApiError && err.estado === 401 && auth.currentUser) {
+        await signOut(auth)
+        setError('No se pudo asociar esta cuenta con un perfil activo de MeDiTurno. Contacte al administrador de la institución.')
+      } else {
+        await signOut(auth) // si el backend rechazó a la persona, no queda sesión abierta en Firebase
+        setError(MENSAJE_ERROR)
+      }
     } finally {
       setCargando(false)
     }
@@ -39,7 +55,7 @@ export default function LoginPage() {
 
   const ingresar = (e) => {
     e.preventDefault()
-    ingresarCon(() => signInWithEmailAndPassword(auth, correo, contrasena))
+    ingresarCon(() => signInWithEmailAndPassword(auth, correo, contrasena), true)
   }
 
   const ingresarConGoogle = () => ingresarCon(() => signInWithPopup(auth, new GoogleAuthProvider()))
