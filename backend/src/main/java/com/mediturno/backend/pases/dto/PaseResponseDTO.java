@@ -10,5 +10,6 @@ public record PaseResponseDTO(
     String especialidadDestino,
     LocalDateTime fechaEmision,
     LocalDateTime fechaVigenciaCalculada, 
-    EstadoPase paseEstado
+    EstadoPase paseEstado,
+    String paciente
 ) {}

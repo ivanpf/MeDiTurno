@@ -23,16 +23,34 @@ async function tokenAutorizacion() {
 // bajadas para no volver a pedirlas al retroceder y volver a la cartelera.
 const fotosYaBajadas = new Map();
 
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+function arrayBufferABase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let resultado = '';
+  let i = 0;
+  const len = bytes.length;
+  while (i < len) {
+    const b1 = bytes[i++];
+    const b2 = i < len ? bytes[i++] : -1;
+    const b3 = i < len ? bytes[i++] : -1;
+    const enc1 = b1 >> 2;
+    const enc2 = ((b1 & 3) << 4) | (b2 === -1 ? 0 : b2 >> 4);
+    const enc3 = b2 === -1 ? 64 : (b3 === -1 ? ((b2 & 15) << 2) : ((b2 & 15) << 2) | (b3 >> 6));
+    const enc4 = b3 === -1 ? 64 : (b3 & 63);
+    resultado += BASE64_CHARS.charAt(enc1) + BASE64_CHARS.charAt(enc2)
+      + (enc3 === 64 ? '=' : BASE64_CHARS.charAt(enc3))
+      + (enc4 === 64 ? '=' : BASE64_CHARS.charAt(enc4));
+  }
+  return resultado;
+}
+
 function bajarComoDataUri(uri, cabeceras) {
   return fetch(uri, { headers: cabeceras }).then(async (respuesta) => {
-    if (!respuesta.ok) throw new Error(`imagen ${respuesta.estado ?? respuesta.status}`);
-    const blob = await respuesta.blob();
-    return await new Promise((resuelto, rechazado) => {
-      const lector = new FileReader();
-      lector.onloadend = () => resuelto(lector.result);
-      lector.onerror = () => rechazado(lector.error);
-      lector.readAsDataURL(blob);
-    });
+    if (!respuesta.ok) throw new Error(`imagen ${respuesta.status}`);
+    const buffer = await respuesta.arrayBuffer();
+    const tipo = respuesta.headers.get('content-type') || 'image/png';
+    return `data:${tipo};base64,${arrayBufferABase64(buffer)}`;
   });
 }
 

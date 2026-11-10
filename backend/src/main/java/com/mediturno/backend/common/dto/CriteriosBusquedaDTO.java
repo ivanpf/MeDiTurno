@@ -15,6 +15,8 @@ import java.time.LocalDate;
  *       {@code ordenarPor} puede ser fecha.</li>
  *   <li>CU-19 (ventanilla): período, médico, especialidad, estado e {@code idTurnoSemanal};
  *       orden por numero o paciente. Sin fechas ni turno consulta hoy en Montevideo.</li>
+ *   <li>CU-27 (pases emitidos por el médico): {@code texto} (busca datos del paciente), {@code fechaDesde},
+ *       {@code fechaHasta}, {@code codigoEspecialidad} (destino) y {@code estado}; {@code ordenarPor} puede ser fecha.</li>
  *   <li>CU-20 (turnos semanales): {@code idMedico}, {@code codigoEspecialidad}, {@code dia} (LUNES...DOMINGO),
  *       {@code codigoConsultorio} y {@code estado} (ACTIVO o SUSPENDIDO); {@code ordenarPor} puede ser medico,
  *       especialidad, dia, horario, consultorio o estado.</li>

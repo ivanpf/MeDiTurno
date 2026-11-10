@@ -47,7 +47,7 @@ public class PaseController {
 
     @PostMapping("/consultas/{idConsulta}/reconsultas")
     @ResponseStatus(HttpStatus.CREATED)
-    public PaseResponseDTO habilitarReconsulta(@PathVariable Long idConsulta, @RequestBody ReconsultaDTO datos) {
+    public PaseResponseDTO habilitarReconsulta(@PathVariable Long idConsulta, @RequestBody(required = false) ReconsultaDTO datos) {
         return paseService.habilitarReconsulta(usuarioActual.obtenerIdMedicoAutenticado(), idConsulta, datos);
     }
 

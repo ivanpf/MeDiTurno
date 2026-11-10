@@ -16,6 +16,7 @@ import com.mediturno.backend.consultas.repository.ConsultaRepository;
 import com.mediturno.backend.especialidades.model.Especialidad;
 import com.mediturno.backend.especialidades.repository.EspecialidadRepository;
 import com.mediturno.backend.pases.dto.EmitirPaseDTO;
+import com.mediturno.backend.pases.dto.ReconsultaDTO;
 import com.mediturno.backend.pases.model.EstadoPase;
 import com.mediturno.backend.pases.model.Pase;
 import com.mediturno.backend.pases.repository.PaseRepository;
@@ -77,6 +78,33 @@ class EmisionPaseTest {
         var error = assertThrows(ResponseStatusException.class,
             () -> servicio.emitirPase(2L, 10L, new EmitirPaseDTO("TRAU")));
         assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
+        verify(pases, never()).save(any());
+    }
+
+    @Test
+    void laReconsultaEsUnPaseALaMismaEspecialidadDeLaConsulta() {
+        origen.setEstado(EstadoActivacion.ACTIVO);
+        when(especialidades.findById("CARD")).thenReturn(Optional.of(origen));
+
+        var respuesta = servicio.habilitarReconsulta(2L, 10L, new ReconsultaDTO());
+
+        assertEquals("CARD", respuesta.especialidadOrigen());
+        assertEquals("CARD", respuesta.especialidadDestino());
+        assertEquals(respuesta.fechaEmision().plusDays(60), respuesta.fechaVigenciaCalculada());
+        assertEquals(EstadoPase.VIGENTE, respuesta.paseEstado());
+        verify(pases).save(argThat(p -> p.getEspecialidadOrigen() == origen && p.getEspecialidadDestino() == origen));
+    }
+
+    @Test
+    void laReconsultaTampocoSeHabilitaSobreUnaConsultaAjenaNiInexistente() {
+        origen.setEstado(EstadoActivacion.ACTIVO);
+        when(especialidades.findById("CARD")).thenReturn(Optional.of(origen));
+        when(consultas.findById(99L)).thenReturn(Optional.empty());
+
+        assertEquals(HttpStatus.FORBIDDEN,
+            assertThrows(ResponseStatusException.class, () -> servicio.habilitarReconsulta(3L, 10L, new ReconsultaDTO())).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND,
+            assertThrows(ResponseStatusException.class, () -> servicio.habilitarReconsulta(2L, 99L, new ReconsultaDTO())).getStatusCode());
         verify(pases, never()).save(any());
     }
 }

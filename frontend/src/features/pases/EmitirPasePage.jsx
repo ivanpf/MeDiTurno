@@ -20,6 +20,7 @@ export default function EmitirPasePage() {
   const [confirmando, setConfirmando] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [pase, setPase] = useState(null)
+  const [esReconsulta, setEsReconsulta] = useState(false)
   const envioEnCurso = useRef(false)
 
   useEffect(() => {
@@ -59,6 +60,22 @@ export default function EmitirPasePage() {
     }
     setConfirmando(true)
   }
+  // Reconsulta: un pase a la misma especialidad de la consulta, sin elegir nada ni confirmar.
+  const habilitarReconsulta = async () => {
+    if (envioEnCurso.current) return
+    envioEnCurso.current = true
+    setEnviando(true)
+    setError(null)
+    try {
+      setPase(await api.post(`/consultas/${consulta.idConsulta}/reconsultas`, {}))
+      setEsReconsulta(true)
+    } catch (err) {
+      setError(comoError(err))
+    } finally {
+      setEnviando(false)
+      envioEnCurso.current = false
+    }
+  }
   const emitir = async () => {
     if (envioEnCurso.current) return
     envioEnCurso.current = true
@@ -85,7 +102,7 @@ export default function EmitirPasePage() {
       <div><dt>Fecha de atención</dt><dd>{fecha(consulta.fecha)}</dd></div>
     </dl>
     {pase ? <>
-      <p className="mensaje-exito" role="status">Pase emitido correctamente. No genera una reserva por sí mismo.</p>
+      <p className="mensaje-exito" role="status">{esReconsulta ? 'Reconsulta habilitada correctamente' : 'Pase emitido correctamente'}. No genera una reserva por sí mismo.</p>
       <dl className={estilos.resumen}>
         <div><dt>Número de pase</dt><dd>{pase.idPase}</dd></div>
         <div><dt>Especialidad de destino</dt><dd>{nombreEspecialidad(pase.especialidadDestino)}</dd></div>
@@ -109,9 +126,9 @@ export default function EmitirPasePage() {
         </label>
         <div className={estilos.acciones}>
           <button type="submit" className="principal" disabled={cargando || !!errorCarga || !especialidad || enviando}>Emitir pase</button>
+          <button type="button" onClick={habilitarReconsulta} disabled={enviando}>Reconsulta ({consulta.especialidad})</button>
           <Link to="/medico/pacientes">Cancelar</Link>
-        </div>
-      </form>
+        </div>      </form>
     </>}
     {confirmando && <Confirmacion titulo="Confirmar emisión del pase" textoConfirmar={enviando ? 'Emitiendo…' : 'Emitir pase'} ocupado={enviando} onConfirmar={emitir} onCancelar={() => setConfirmando(false)}>
       <p>Se emitirá un pase para {consulta.nombrePaciente} a {especialidad?.nombre}, con una vigencia de 60 días desde su emisión.</p>
