@@ -1,12 +1,12 @@
 // CU-3 Cambio de contraseña (con sesión iniciada, app de pacientes).
-// Las contraseñas las guarda Firebase: el backend valida la actual y le pide el cambio al
-// proveedor de identidad (mismo contrato que la web). Al terminar, la sesión sigue abierta.
-// TODO (CU-3): el backend responde 501 hasta que implemente AuthService.cambiarContrasena;
-// la pantalla queda lista para cuando el servicio se active (no hace falta tocarla de nuevo).
+// Las contraseñas las guarda Firebase: el cambio se hace directo con el SDK de Firebase Auth
+// (reautenticación con la contraseña actual + updatePassword), igual que en la web.
+// Al terminar, la sesión sigue abierta: no hace falta volver a ingresar.
 
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { cambiarContrasena } from '../../shared/src/api/endpoints';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { auth } from '../../shared/src/auth/firebase';
 import { validarCambioContrasena } from '../../shared/src/utils/validation';
 import { ErrorBanner } from '../../shared/src/components/ErrorBanner';
 import { Input } from '../../shared/src/components/Input';
@@ -33,6 +33,24 @@ const estilos = StyleSheet.create({
   mitad: { flex: 1 },
 });
 
+const mensajeDeError = (codigo) => {
+  switch (codigo) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+      return 'La contraseña actual no es correcta.';
+    case 'auth/weak-password':
+      return `La nueva contraseña debe tener al menos ${MINIMO_CONTRASENA} caracteres.`;
+    case 'auth/requires-recent-login':
+      return 'Por seguridad, cierre sesión e inicie sesión nuevamente antes de cambiar la contraseña.';
+    case 'auth/too-many-requests':
+      return 'Se realizaron demasiados intentos. Espere un momento e inténtelo nuevamente.';
+    case 'auth/network-request-failed':
+      return 'No se pudo conectar con el servicio de autenticación. Verifique su conexión e inténtelo nuevamente.';
+    default:
+      return 'No fue posible cambiar la contraseña. Intente nuevamente.';
+  }
+};
+
 export default function CambiarContrasenaScreen() {
   const [datos, setDatos] = useState({ actual: '', nueva: '', repetirNueva: '' });
   const [error, setError] = useState(null); // { mensaje, detalles }
@@ -52,21 +70,23 @@ export default function CambiarContrasenaScreen() {
     setModificada(false);
     const { valido, errores } = validarCambioContrasena(datos);
     if (!valido) {
-      setError({ mensaje: errores[0] });
+      setError({ mensaje: errores[0], detalles: [] });
+      return;
+    }
+    const usuario = auth.currentUser;
+    if (!usuario?.email) {
+      setError({ mensaje: 'Su sesión venció. Inicie sesión nuevamente para cambiar la contraseña.', detalles: [] });
       return;
     }
     setCargando(true);
     try {
-      // El DTO del backend espera { actual, nueva } (CambiarContrasenaDTO).
-      await cambiarContrasena({ actual: datos.actual, nueva: datos.nueva });
+      const credencial = EmailAuthProvider.credential(usuario.email, datos.actual);
+      await reauthenticateWithCredential(usuario, credencial);
+      await updatePassword(usuario, datos.nueva);
       setDatos({ actual: '', nueva: '', repetirNueva: '' });
       setModificada(true);
     } catch (err) {
-      // Con un error del backend el formulario conserva los datos ingresados.
-      setError({
-        mensaje: err.message ?? 'No fue posible cambiar la contraseña. Intente nuevamente.',
-        detalles: err.detalles ?? [],
-      });
+      setError({ mensaje: mensajeDeError(err?.code), detalles: [] });
     } finally {
       setCargando(false);
     }
