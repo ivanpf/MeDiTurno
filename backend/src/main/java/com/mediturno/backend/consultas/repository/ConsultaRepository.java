@@ -14,6 +14,8 @@ import com.mediturno.backend.reservas.model.EstadoReserva;
 
 public interface ConsultaRepository extends JpaRepository<Consulta, Long>, JpaSpecificationExecutor<Consulta> {
 
+    Optional<Consulta> findByIdConsultaAndMedicoIdUsuario(Long idConsulta, Long idMedico);
+
     /** CU-22: atenciones anteriores finalizadas del paciente, incluso las realizadas por otros médicos. */
     @Query("""
         select c from Consulta c

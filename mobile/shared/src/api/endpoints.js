@@ -147,6 +147,10 @@ export async function consultarHistoriaClinica(criterios = {}) {
  * @param {import('../types/api').PerfilDTO} data
  * @returns {Promise<void>}
  */
+export async function consultarPerfil() {
+  return api.get('/pacientes/me/perfil');
+}
+
 export async function actualizarPerfil(data) {
   return api.put('/pacientes/me/perfil', data);
 }

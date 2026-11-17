@@ -7,12 +7,11 @@ Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_E
 
 ## Estado actual
 
-Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-25, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47**. Los demás casos pendientes responden `501`.
+Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-5, CU-6, CU-7, CU-8, CU-9, CU-10, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-19, CU-20, CU-21, CU-22, CU-23, CU-25, CU-26, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47**. Los demás casos pendientes responden `501`.
 
-- **Backend:** todos los servicios y controladores del Documento de diseño existen. Los métodos pendientes lanzan `NoImplementadoException` (respuesta `501`) y sus DTO siguen vacíos. CU-8 consulta las ocurrencias existentes y registra reservas mediante una transacción con bloqueo; las ocurrencias (las fechas reservables) las generan CU-12 al crear un turno y una tarea programada (ver «Tareas programadas»). Los listados básicos de especialidades, consultorios y médicos sirven para llenar las listas desplegables. El modelo de datos ya existe: la migración `V1` crea las 20 tablas y hay una entidad y un repositorio por tabla.
-- **Frontend:** las pantallas tienen su opción en el menú del rol. Están hechas las de CU-1, CU-2, CU-6, CU-7, CU-8, CU-9, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-20, CU-21, CU-22, CU-23, CU-25, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47; el resto conserva `PaginaPendiente`.
-- **Autenticación:** **Firebase Authentication** (correo y Google), implementada en CU-1, CU-2, CU-4, CU-3 web y CU-7 (ver «Autenticación (Firebase)»). CU-3 y CU-4 cambian/restablecen contraseñas directamente desde el SDK cliente; los endpoints backend heredados se conservan pero las pantallas no los usan.
-
+- **Backend:** están implementados CU-1, CU-2, CU-5, CU-6, CU-7, CU-8, CU-9, CU-10, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-19, CU-20, CU-21, CU-22, CU-23, CU-25, CU-26, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47. CU-3 y CU-4 se gestionan directamente desde Firebase en el frontend; sus endpoints backend se conservan pendientes.
+- **Frontend:** están hechas las pantallas de CU-1, CU-2, CU-3, CU-4, CU-5, CU-6, CU-7, CU-8, CU-9, CU-10, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-19, CU-20, CU-21, CU-22, CU-23, CU-25, CU-26, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47; los demás conservan `PaginaPendiente`.
+- **Autenticación:** Firebase Authentication gestiona el inicio y cierre de sesión, el cambio y la recuperación de contraseña en la web, y el registro de pacientes. CU-3 reautentica y cambia la contraseña desde el SDK Firebase; CU-4 solicita el correo de restablecimiento directamente a Firebase. Los endpoints backend heredados de CU-3 y CU-4 se conservan, pero esas pantallas no los llaman.
 ## Comandos
 
 ```bash
@@ -131,7 +130,7 @@ INSERT INTO administrador (id_usuario) SELECT id_usuario FROM usuario WHERE corr
 
 ### Cancelación de una reserva (CU-9)
 
-- En la web, `MisReservasPage.jsx` muestra las reservas propias de hoy y de fechas próximas, incluidas las canceladas. Es un listado de apoyo para CU-9; CU-10 tiene su búsqueda de historial en el backend, aunque la pantalla todavía está pendiente.
+- En la web, `MisReservasPage.jsx` muestra las reservas propias de hoy y de fechas próximas, incluidas las canceladas. Es un listado de apoyo para CU-9; CU-10 agrega el historial completo con filtros y detalle en la misma pantalla.
 - `GET /api/reservas/mias` devuelve el historial completo del paciente autenticado, incluyendo todos los estados. Acepta filtros opcionales por médico, especialidad, estado y rango de fechas, y orden por fecha, médico, especialidad, estado o número. Un rango invertido, estado u orden inválidos responde `400`; el resultado incluye la orden asociada, si existe.
 - `GET /api/reservas/mias/proximas` devuelve los datos de la reserva, si puede cancelarse, el motivo si no puede y la fecha de cancelación si existe. Solo devuelve reservas del paciente autenticado.
 - Antes de mostrar la confirmación, `GET /api/reservas/{id}/cancelacion/vista-previa` valida propiedad, estado y plazo. `POST /api/reservas/{id}/cancelacion` vuelve a comprobarlos y responde 204 al cancelar.
@@ -210,6 +209,13 @@ Especialidades (CU-28 a CU-30 y CU-43), consultorios (CU-37 a CU-39 y CU-47) pac
 - Avisos: CU-13 («Turno suspendido»), CU-23 («Nueva información en su historia clínica») y CU-8 (`notificarReservaConfirmada`, «Reserva confirmada», tipo `RESERVA_CONFIRMADA`, migración `V2`; se manda al confirmarse la transacción de la reserva).
 - Probar: iniciar sesión en la app (acepta el permiso y se registra el token en `token_dispositivo`) y reservar un turno como paciente desde la web o la app; llega «Reserva confirmada». El log del backend muestra `Push enviado ...` o `FCM rechazó el push (...)`.
 
+### Perfil propio (CU-5), historial de reservas (CU-10) y ventanilla (CU-19)
+
+- CU-5: `GET` y `PUT /api/pacientes/me/perfil` y `/api/usuarios-internos/me/perfil`. Consultan y editan el contacto de la persona autenticada. Correo obligatorio y único, teléfono opcional (30 caracteres), domicilio opcional solo para pacientes (255). Cédula, rol, nombre y fecha de nacimiento se muestran sin edición. El cambio de correo se sincroniza con Firebase; si falla, se revierte el contacto local. Web y mobile precargan los datos reales y permiten descartar cambios.
+- CU-10: la web muestra el historial completo dentro de «Mis reservas», junto al listado de próximas reservas de CU-9. Permite período, médico, especialidad, estado y orden. Las opciones incluyen los médicos y especialidades históricos, aunque estén inactivos. `GET /api/reservas/mias/{idReserva}` exige que sea una reserva propia; una ajena responde 404. Una cancelación actualiza también el historial.
+- CU-19: `GET /api/reservas/para-atencion` es solo para funcionarios. Acepta período, médico, especialidad, estado y `idTurnoSemanal`; orden por `numero` o `paciente`, ascendente o descendente. Sin período ni turno usa hoy en Montevideo. Incluye todos los estados y los datos de la orden. La pantalla permite abrir el detalle y navegar a CU-15/CU-16 con la reserva precargada; la emisión conserva sus validaciones originales.
+- Pruebas específicas: `PerfilIntegracionTest` (HTTP, permisos, validación y reversión ante fallo del proveedor) e `HistorialesIntegracionTest` (filtros, orden y detalles propios de CU-10, CU-19 y CU-26).
+
 ### Pases emitidos (CU-27)
 
 - `GET /api/pases` (solo médico) lista **solo los pases emitidos por el médico con sesión**, con filtros opcionales: `texto` (nombre o cédula del paciente), `fechaDesde` y `fechaHasta` (sobre la fecha de emisión, inclusive), `codigoEspecialidad` (destino) y `estado` (`VIGENTE`, `USADO` o `VENCIDO`). Ordena por fecha de emisión, de más reciente a más antigua por defecto (`descendente=false` lo invierte). Rango invertido, estado u orden inválidos: `400`. `PaseResponseDTO` trae los códigos de las especialidades y la fecha de vencimiento calculada (60 días), sin el nombre del paciente.
@@ -227,6 +233,9 @@ Especialidades (CU-28 a CU-30 y CU-43), consultorios (CU-37 a CU-39 y CU-47) pac
 
 - `GET /api/consultas/mias` devuelve las consultas registradas por el médico autenticado, ordenadas por fecha descendente por defecto. Acepta filtros opcionales por rango de fechas y especialidad; también permite ordenar por fecha ascendente. Un rango invertido o un orden distinto de fecha responde `400`.
 - `HistorialesIntegracionTest` verifica filtros, orden, datos asociados y que cada médico solo vea sus propias atenciones.
+
+- La pantalla web «Historial de atenciones» permite buscar por período, nombre o cédula del paciente y especialidad. Las consultas registradas se muestran con estado «Registrada»; el modelo no tiene otros estados de consulta.
+- `GET /api/consultas/mias/{idConsulta}` devuelve solo una atención registrada por el médico autenticado; una ajena o inexistente responde 404.
 
 ### Tareas programadas
 

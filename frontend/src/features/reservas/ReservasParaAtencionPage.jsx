@@ -1,5 +1,5 @@
-import PaginaPendiente from '../../components/PaginaPendiente'
+import ListadoReservas from './ListadoReservas'
 
 export default function ReservasParaAtencionPage() {
-  return <PaginaPendiente cu="CU-19" titulo="Reservas para atención" archivo="src/features/reservas/ReservasParaAtencionPage.jsx" />
+  return <section className="panel"><h1>Reservas para atención</h1><p>Consulte las reservas por fecha o turno para organizar la atención de ventanilla. La búsqueda inicial muestra las de hoy.</p><ListadoReservas funcionario /></section>
 }

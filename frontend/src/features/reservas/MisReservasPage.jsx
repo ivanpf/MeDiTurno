@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Confirmacion from '../../components/Confirmacion'
+import ListadoReservas from './ListadoReservas'
 import { api, ApiError } from '../../services/api'
 import estilos from './MisReservasPage.module.css'
 
@@ -10,6 +11,7 @@ const comoError = (err) => err instanceof ApiError ? err : new ApiError(0, 'No f
 
 // CU-9. El backend decide el plazo y vuelve a validarlo antes de confirmar la cancelación.
 export default function MisReservasPage() {
+  const [revisionHistorial, setRevisionHistorial] = useState(0)
   const [reservas, setReservas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [intento, setIntento] = useState(0)
@@ -58,6 +60,7 @@ export default function MisReservasPage() {
     try {
       await api.post(`/reservas/${confirmacion.reserva.idReserva}/cancelacion`)
       setConfirmacion(null)
+      setRevisionHistorial((r) => r + 1)
       setAviso('Reserva cancelada correctamente. El número quedó disponible para una nueva reserva.')
       await recargar()
     } catch (err) {
@@ -107,6 +110,9 @@ export default function MisReservasPage() {
           </table>
         </div>
       )}
+      <h2>Historial de reservas</h2>
+      <p>Consulte sus reservas futuras y anteriores, incluidas las canceladas.</p>
+      <ListadoReservas revision={revisionHistorial} />
       {confirmacion && (
         <Confirmacion titulo="Confirmar cancelación" textoConfirmar="Confirmar cancelación" ocupado={enviando} onConfirmar={cancelar} onCancelar={() => { setConfirmacion(null); setErrorConfirmacion(null) }}>
           <p>Va a cancelar la reserva <strong>#{confirmacion.reserva.idReserva}</strong>, número <strong>{confirmacion.reserva.numero}</strong>.</p>

@@ -118,6 +118,47 @@ class HistorialesIntegracionTest extends PostgresIntegracionTest {
                 HOY.minusDays(3), HOY)).get(0).idConsulta());
     }
 
+    @Test
+    void cu10DetalleSoloDeLaPersonaAutenticada() {
+        Long id = reservas.consultarHistorialReservas(paciente, CriteriosBusquedaDTO.vacio()).get(0).idReserva();
+        assertEquals(paciente, reservas.consultarDetalleReservaPropia(paciente, id).idPaciente());
+        assertEquals(HttpStatus.NOT_FOUND, assertThrows(ResponseStatusException.class,
+            () -> reservas.consultarDetalleReservaPropia(otroPaciente, id)).getStatusCode());
+    }
+
+    @Test
+    void cu19IncluyeEstadosYOrdenesYRespetaFiltrosDeTurnoFechaYMedico() {
+        var criterios = new CriteriosBusquedaDTO(medico.getIdUsuario(), cardiologia.getCodigo(), null, null,
+            "ATENDIDA", "paciente", false, HOY.minusDays(2), HOY.minusDays(1));
+        var lista = reservas.listarReservasParaAtencion(criterios);
+        assertEquals(2, lista.size());
+        assertNotNull(lista.get(0).numeroOrden());
+        assertEquals(EstadoOrden.UTILIZADA, lista.get(0).estadoOrden());
+        Long turno = lista.get(0).idTurnoSemanal();
+        var porTurno = reservas.listarReservasParaAtencion(new CriteriosBusquedaDTO(null, null, null, null,
+            null, "numero", true, null, null, null, null, null, null, null, turno));
+        assertEquals(3, porTurno.size());
+        assertEquals(true, porTurno.stream().allMatch(r -> turno.equals(r.idTurnoSemanal())));
+        assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
+            () -> reservas.listarReservasParaAtencion(new CriteriosBusquedaDTO(null, null, null, null, null, "invalido", null))).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
+            () -> reservas.listarReservasParaAtencion(new CriteriosBusquedaDTO(null, null, null, null, "invalido", null, null))).getStatusCode());
+    }
+
+    @Test
+    void cu26BuscaPorNombreYCedulaYProtegeElDetallePropio() {
+        var filtro = new CriteriosBusquedaDTO(null, null, null, null, null, "fecha", null,
+            null, null, "Ana", null);
+        assertEquals(3, consultas.consultarHistorialAtencionesPropias(medico.getIdUsuario(), filtro).size());
+        String cedula = jdbc.queryForObject("select cedula from usuario where id_usuario = ?", String.class, paciente);
+        var porCedula = new CriteriosBusquedaDTO(null, null, null, null, null, null, null,
+            null, null, cedula, null);
+        assertEquals(2, consultas.consultarHistorialAtencionesPropias(medico.getIdUsuario(), porCedula).size());
+        assertEquals(idConsultaAntigua, consultas.consultarDetalleAtencionPropia(medico.getIdUsuario(), idConsultaAntigua).idConsulta());
+        assertEquals(HttpStatus.NOT_FOUND, assertThrows(ResponseStatusException.class,
+            () -> consultas.consultarDetalleAtencionPropia(otroMedico.getIdUsuario(), idConsultaAntigua)).getStatusCode());
+    }
+
     private Long paciente(String sufijo) {
         Long id = jdbc.queryForObject("insert into usuario(correo,estado,fecha_creacion,cedula,nombre,apellido,fecha_nacimiento) "
             + "values (?, 'ACTIVO', CURRENT_TIMESTAMP, ?, 'Ana', ?, '1990-01-01') returning id_usuario",

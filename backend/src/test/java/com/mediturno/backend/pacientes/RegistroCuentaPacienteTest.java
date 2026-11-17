@@ -51,7 +51,7 @@ class RegistroCuentaPacienteTest {
         pacientes = mock(PacienteRepository.class);
         usuarios = mock(UsuarioRepository.class);
         proveedor = mock(ProveedorIdentidad.class);
-        servicio = new PacienteService(pacientes, usuarios, new AuthService(usuarios, proveedor, Clock.systemDefaultZone()), mock(AdministradorRepository.class), Clock.systemDefaultZone());
+        servicio = new PacienteService(pacientes, usuarios, new AuthService(usuarios, proveedor, Clock.systemDefaultZone()), mock(AdministradorRepository.class), Clock.systemDefaultZone(), mock(com.mediturno.backend.usuarios.PerfilService.class));
 
         delPadron = new Paciente();
         delPadron.setIdUsuario(7L);

@@ -82,6 +82,11 @@ public class ConsultaController {
         return consultaService.consultarPacientesPorTurno(usuarioActual.obtenerIdMedicoAutenticado(), idOcurrenciaTurno);
     }
 
+    @GetMapping("/consultas/mias/{idConsulta}")
+    public ConsultaResponseDTO consultarDetalleAtencionPropia(@PathVariable Long idConsulta) {
+        return consultaService.consultarDetalleAtencionPropia(usuarioActual.obtenerIdMedicoAutenticado(), idConsulta);
+    }
+
     @GetMapping("/consultas/mias")
     public List<ConsultaResponseDTO> consultarHistorialAtencionesPropias(CriteriosBusquedaDTO criterios) {
         return consultaService.consultarHistorialAtencionesPropias(usuarioActual.obtenerIdMedicoAutenticado(), criterios);
