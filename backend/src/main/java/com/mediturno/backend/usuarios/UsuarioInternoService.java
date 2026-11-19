@@ -82,12 +82,13 @@ public class UsuarioInternoService {
     private final TurnoSemanalRepository turnoSemanalRepository;
     private final AuthService authService;
     private final EmailService emailService;
+    private final EnvioCredencialesService envioCredenciales;
     private final Clock reloj;
     private final PerfilService perfilService;
 
     public UsuarioInternoService(UsuarioRepository usuarioRepository, EspecialidadRepository especialidadRepository,
             MedicoRepository medicoRepository, AdministradorRepository administradorRepository,
-            TurnoSemanalRepository turnoSemanalRepository, AuthService authService, EmailService emailService, Clock reloj, PerfilService perfilService) {
+            TurnoSemanalRepository turnoSemanalRepository, AuthService authService, EmailService emailService, EnvioCredencialesService envioCredenciales, Clock reloj, PerfilService perfilService) {
         this.usuarioRepository = usuarioRepository;
         this.especialidadRepository = especialidadRepository;
         this.medicoRepository = medicoRepository;
@@ -95,6 +96,7 @@ public class UsuarioInternoService {
         this.turnoSemanalRepository = turnoSemanalRepository;
         this.authService = authService;
         this.emailService = emailService;
+        this.envioCredenciales = envioCredenciales;
         this.reloj = reloj;
         this.perfilService = perfilService;
     }
@@ -675,20 +677,12 @@ public class UsuarioInternoService {
 
     /**
      * Los correos salen recién cuando las cuentas quedaron confirmadas en la base: si salieran antes y la importación se
-     * deshiciera, las personas tendrían credenciales de cuentas que ya no existen. Un correo que falla no revierte nada y no
-     * frena a los demás: se deja en el log con la dirección para reenviarlo a mano.
+     * deshiciera, las personas tendrían credenciales de cuentas que ya no existen. Salen en un hilo aparte (ver
+     * {@link EnvioCredencialesService}): un correo que falla no revierte nada ni frena a los demás.
      */
     private void enviarCredencialesDespuesDeConfirmar(List<Usuario> nuevos, List<String> contrasenas) {
-        Runnable envio = () -> {
-            for (int i = 0; i < nuevos.size(); i++) {
-                String correo = nuevos.get(i).getCorreo();
-                try {
-                    emailService.enviarCredencialesTemporales(correo, contrasenas.get(i));
-                } catch (RuntimeException e) {
-                    log.error("La cuenta de {} se creó, pero no se pudo enviar el correo con las credenciales", correo, e);
-                }
-            }
-        };
+        List<String> correos = nuevos.stream().map(Usuario::getCorreo).toList();
+        Runnable envio = () -> envioCredenciales.enviar(correos, contrasenas);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
