@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -129,6 +130,7 @@ public class NotificacionService {
      * correo por reserva. El correo se manda fuera de la transacción: si falla, esa notificación queda FALLIDA y las demás
      * siguen. También se manda un aviso push (de mejor esfuerzo).
      */
+    @Async // en un hilo aparte: con muchas reservas son muchos correos y la petición de suspensión no debe esperarlos (el proxy corta a los 60 s)
     public void notificarSuspensionTurno(Long idSuspensionTurno, List<Long> idsReservas) {
         Pendientes pendientes = transaccion.execute(estado -> registrarNotificaciones(idSuspensionTurno, idsReservas));
         if (pendientes == null) {

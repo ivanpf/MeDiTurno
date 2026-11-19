@@ -6,6 +6,11 @@ import java.time.LocalTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.task.SyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +40,17 @@ import com.mediturno.backend.usuarios.repository.MedicoRepository;
  */
 @SpringBootTest
 @Transactional
+@Import(PostgresIntegracionTest.EjecucionSincrona.class)
 public abstract class PostgresIntegracionTest extends BasePostgresEmbebida {
+
+    /** Los métodos {@code @Async} (avisos) corren en el mismo hilo: así ven los datos de la transacción de la prueba y no hay esperas. */
+    @TestConfiguration
+    static class EjecucionSincrona {
+        @Bean
+        TaskExecutor taskExecutor() {
+            return new SyncTaskExecutor();
+        }
+    }
 
     @DynamicPropertySource
     static void baseDeDatos(DynamicPropertyRegistry registro) {
