@@ -2,13 +2,13 @@
 
 Sistema online de reserva de órdenes de consulta para una institución de asistencia médica. Lo usan cuatro perfiles: paciente, funcionario, médico y administrador.
 
-Este repositorio contiene la **base del proyecto**: la estructura del backend y del frontend ya está creada, y los casos de uso se van implementando uno por uno. Para entender cómo está organizado el código y cómo se desarrolla, ver [`CLAUDE.md`](CLAUDE.md). Para el flujo de trabajo con Git, ver [`GUIA_TRABAJO_EQUIPO.md`](GUIA_TRABAJO_EQUIPO.md).
+Este repositorio contiene el backend, la web y la app móvil del paciente. Los casos de uso CU-1 a CU-47 están implementados; CU-3 y CU-4 (cambio y recuperación de contraseña) se resuelven directamente con Firebase desde el frontend y la app móvil. Para entender cómo está organizado el código y cómo se desarrolla, ver [`CLAUDE.md`](CLAUDE.md). Para el flujo de trabajo con Git, ver [`GUIA_TRABAJO_EQUIPO.md`](GUIA_TRABAJO_EQUIPO.md).
 
 | Parte | Tecnología |
 |---|---|
 | `backend/` | Spring Boot 4 · Java 17 · Maven · PostgreSQL |
 | `frontend/` | React 19 · Vite · React Router |
-| `mobile/` | Aplicación móvil del paciente (todavía sin estructura base) |
+| `mobile/` | Aplicación móvil del paciente · React Native · Expo (Expo Router) · Firebase (ver [`mobile/README.md`](mobile/README.md)) |
 | `compose.yml` | Levanta PostgreSQL, backend y frontend con Podman |
 
 ## Requisitos
@@ -18,7 +18,7 @@ Este repositorio contiene la **base del proyecto**: la estructura del backend y 
 | Git | cualquiera reciente | clonar y subir cambios |
 | Podman | versión reciente (con `podman compose`) | levantar el proyecto en contenedores y la base de datos |
 | JDK | 17 o superior | solo para desarrollar el backend sin contenedores |
-| Node.js y npm | Node 20 o superior | solo para desarrollar el frontend sin contenedores |
+| Node.js y npm | Node 20.19 o superior (lo exige Vite 8) | solo para desarrollar el frontend sin contenedores, y la app móvil |
 
 - **Windows:** instalar **Podman Desktop** y crear/iniciar la máquina de Podman desde la aplicación (o con `podman machine init` y `podman machine start`).
 - **Fedora:** Podman ya funciona sin permisos de administrador (rootless).
@@ -68,9 +68,9 @@ La primera vez tarda varios minutos (descarga imágenes y compila el backend y e
 | PostgreSQL | `localhost:5432` | (para clientes de base de datos) |
 | Correos de desarrollo (Mailpit) | http://localhost:8025 | los correos que manda el backend (por ejemplo, los avisos de suspensión de un turno) |
 
-Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). El alta de pacientes (CU-31) y el alta de usuarios internos (CU-34) ya tienen pantalla; las demás opciones muestran una pantalla "pendiente de implementar".
+Para **iniciar sesión** hay que usar uno de los usuarios de prueba (por ejemplo `admin@mediturno.com` / `admin123`; lista en *Autenticación (Firebase)* de [`CLAUDE.md`](CLAUDE.md)). El menú de cada rol muestra solo sus pantallas. Con los datos de prueba (se cargan solos) hay turnos, reservas, historia clínica y cartelera para recorrer todos los casos de uso.
 
-Los endpoints de los casos de uso que todavía no se implementaron responden `501 Funcionalidad pendiente de implementar`. Es lo esperado.
+Solo los endpoints heredados de CU-3 y CU-4 (`POST /api/auth/contrasena` y `/api/auth/recuperacion/**`) responden `501 Funcionalidad pendiente de implementar`. Es lo esperado: ninguna pantalla los llama, porque ambos casos de uso se hacen directamente con Firebase.
 
 ### Comandos útiles
 
@@ -132,6 +132,7 @@ cd frontend && npm run build     # compilación del frontend
 ```
 backend/src/main/java/com/mediturno/backend/   código del backend, por funcionalidad
 frontend/src/                                  código del frontend
+mobile/                                        app móvil del paciente (Expo; ver mobile/README.md)
 compose.yml                                    servicios de Podman
 .env.example                                   variables de entorno de ejemplo
 CLAUDE.md                                      guía de desarrollo (arquitectura, convenciones, recetas)
@@ -146,7 +147,7 @@ Cada paquete tiene su servicio (con los métodos del Documento de diseño), su c
 |---|---|---|
 | `auth` | `AuthService` | CU-1, CU-2, CU-3, CU-4 |
 | `pacientes` | `PacienteService` | CU-5, CU-7, CU-31, CU-32, CU-33, CU-44 |
-| `usuarios` | `UsuarioInternoService` | CU-5, CU-34, CU-35, CU-36, CU-45, CU-46 |
+| `usuarios` | `UsuarioInternoService`, `PerfilService`, `MedicoService` | CU-5, CU-34, CU-35, CU-36, CU-45, CU-46 y la lista de médicos |
 | `especialidades` | `EspecialidadService` | CU-28, CU-29, CU-30, CU-43 |
 | `consultorios` | `ConsultorioService` | CU-37, CU-38, CU-39, CU-47 |
 | `turnos` | `TurnoSemanalService` | CU-12, CU-13, CU-14, CU-20 y las fechas disponibles de CU-8 |
@@ -158,13 +159,17 @@ Cada paquete tiene su servicio (con los métodos del Documento de diseño), su c
 | `notificaciones` | `NotificacionService`, `EmailService`, `PushNotificationService` | avisos por correo, push y en la aplicación |
 | `estadisticas` | `EstadisticaService` | CU-40, CU-41, CU-42 |
 | `documentos` | `DocumentosService` | PDF de la orden (CU-16) |
-| `common` | | CORS, formato de errores, usuario actual, DTOs compartidos y `/api/health` |
+| `common` | | CORS, reloj de la aplicación, formato de errores, seguridad (filtro de sesión y roles), búsqueda y carga de CSV, tareas programadas, DTOs compartidos y `/api/health` |
 
 ### Frontend
 
 Cada caso de uso tiene su pantalla (`features/<área>/...Page.jsx`) y su opción en el menú lateral del rol. Las pantallas y el menú se definen en `frontend/src/routes.jsx`.
 
 Donde el Documento de diseño une casos de uso en una sola pantalla (CU-13 con CU-20, CU-15 con CU-16) hay una sola opción. CU-9 y CU-10 también comparten pantalla ("Mis reservas").
+
+### App móvil
+
+`mobile/` es la app del paciente (Android), hecha con React Native y Expo. Cubre inicio de sesión, registro, recuperación de acceso, cartelera, perfil, cambio de contraseña, reservar consulta (CU-8), mis reservas (CU-9 y CU-10) e historia clínica (CU-11), y recibe avisos push. Usa el mismo backend y los mismos usuarios de prueba (por ejemplo `paciente@mediturno.com`). No funciona en Expo Go: hace falta un development build. Cómo compilarla y ejecutarla: [`mobile/README.md`](mobile/README.md).
 
 ## Variables de entorno
 
@@ -228,7 +233,7 @@ Alguien editó una migración que ya se había ejecutado en tu base local. Si so
 
 **El backend responde `501`**
 
-No es un error: el caso de uso todavía no está implementado.
+No es un error: solo pasa con los endpoints heredados de CU-3 y CU-4, que la web y la app móvil no usan (cambian y recuperan la contraseña directamente con Firebase).
 
 **En Linux, `./mvnw: Permission denied`**
 
