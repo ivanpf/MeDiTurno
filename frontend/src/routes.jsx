@@ -44,6 +44,7 @@ const CambiarContrasenaPage = lazy(() => import('./features/cuenta/CambiarContra
 // Fuente única de las pantallas autenticadas: de acá salen el menú lateral y las rutas.
 //   roles:  quiénes ven la pantalla      grupo: título que agrupa ítems del menú (opcional)
 //   cu:     caso(s) de uso que cubre     Componente: la pantalla
+//   soloPorEnlace: la ruta existe pero no sale en el menú, porque necesita datos de otra pantalla (se abre desde un botón)
 // Para agregar una pantalla: crear el componente en su carpeta de `features/` y sumar una línea acá.
 // Las pantallas comunes a todos los perfiles van al final, así la primera de cada rol es su pantalla de inicio.
 export const RUTAS = [
@@ -58,9 +59,9 @@ export const RUTAS = [
   { roles: [ROLES.FUNCIONARIO], path: '/funcionario/anuncios/publicar', etiqueta: 'Publicar anuncio', cu: 'CU-17', grupo: 'Gestión de cartelera', Componente: PublicarAnuncioPage },
   { roles: [ROLES.FUNCIONARIO], path: '/funcionario/anuncios/eliminar', etiqueta: 'Eliminar anuncios', cu: 'CU-18', grupo: 'Gestión de cartelera', Componente: EliminarAnuncioPage },
   { roles: [ROLES.MEDICO], path: '/medico/pacientes', etiqueta: 'Mis pacientes', cu: 'CU-21', Componente: PacientesPorTurnoPage },
-  { roles: [ROLES.MEDICO], path: '/medico/historia-clinica', etiqueta: 'Historia clínica', cu: 'CU-22', Componente: HistoriaClinicaAtencionPage },
-  { roles: [ROLES.MEDICO], path: '/medico/consulta', etiqueta: 'Registrar consulta', cu: 'CU-23', Componente: RegistrarConsultaPage },
-  { roles: [ROLES.MEDICO], path: '/medico/pase', etiqueta: 'Emitir pase', cu: 'CU-24 / CU-25', Componente: EmitirPasePage },
+  { roles: [ROLES.MEDICO], path: '/medico/historia-clinica', soloPorEnlace: true, etiqueta: 'Historia clínica', cu: 'CU-22', Componente: HistoriaClinicaAtencionPage },
+  { roles: [ROLES.MEDICO], path: '/medico/consulta', soloPorEnlace: true, etiqueta: 'Registrar consulta', cu: 'CU-23', Componente: RegistrarConsultaPage },
+  { roles: [ROLES.MEDICO], path: '/medico/pase', soloPorEnlace: true, etiqueta: 'Emitir pase', cu: 'CU-24 / CU-25', Componente: EmitirPasePage },
   { roles: [ROLES.MEDICO], path: '/medico/atenciones', etiqueta: 'Historial de atenciones', cu: 'CU-26', Componente: HistorialAtencionesPage },
   { roles: [ROLES.MEDICO], path: '/medico/pases', etiqueta: 'Pases emitidos', cu: 'CU-27', Componente: PasesEmitidosPage },
   { roles: [ROLES.ADMIN], path: '/admin/especialidades', etiqueta: 'Alta', cu: 'CU-28', grupo: 'Especialidades', Componente: AltaEspecialidadPage },

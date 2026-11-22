@@ -26,7 +26,7 @@ export default function Layout() {
 
   if (!rol) return <Navigate to="/login" replace />
 
-  const menu = RUTAS.filter((r) => r.roles.includes(rol))
+  const menu = RUTAS.filter((r) => r.roles.includes(rol) && !r.soloPorEnlace)
   const grupoActual = menu.find((r) => r.path === pathname)?.grupo
 
   // Agrupa los ítems consecutivos con el mismo grupo; los ítems sin grupo quedan sueltos.
