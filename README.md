@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/src/assets/logo.png" alt="MeDiTurno" width="160">
+</p>
+
 # MeDiTurno
 
 Sistema online de reserva de órdenes de consulta para una institución de asistencia médica. Lo usan cuatro perfiles: paciente, funcionario, médico y administrador.
