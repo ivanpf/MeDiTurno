@@ -10,7 +10,9 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.mediturno.backend.ordenes.model.Orden;
@@ -59,8 +61,12 @@ public class DocumentosService {
             float x = 60;
             float y = pagina.getMediaBox().getHeight() - 80;
             try (PDPageContentStream contenido = new PDPageContentStream(documento, pagina)) {
-                escribir(contenido, negrita, 22, x, y, "MeDiTurno");
-                y -= 26;
+                PDImageXObject logo = cargarLogo(documento);
+                float alto = 60;
+                float ancho = alto * logo.getWidth() / logo.getHeight();
+                contenido.drawImage(logo, x, y - alto + 20, ancho, alto);
+                escribir(contenido, negrita, 22, x + ancho + 14, y - 12, "MeDiTurno");
+                y -= alto + 6;
                 escribir(contenido, normal, 14, x, y, "Orden de consulta");
                 y -= 40;
                 for (String[] linea : lineas) {
@@ -75,6 +81,12 @@ public class DocumentosService {
             return salida.toByteArray();
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo generar el PDF de la orden " + orden.getNumeroOrden(), e);
+        }
+    }
+
+    private static PDImageXObject cargarLogo(PDDocument documento) throws IOException {
+        try (var entrada = new ClassPathResource("imagenes/logo.png").getInputStream()) {
+            return PDImageXObject.createFromByteArray(documento, entrada.readAllBytes(), "logo");
         }
     }
 
