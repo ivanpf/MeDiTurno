@@ -39,8 +39,8 @@ export default function EmitirPasePage() {
   if (!consulta?.idConsulta) {
     return <section className="panel">
       <h1>Emitir pase</h1>
-      <p className="pendiente">Registre primero la consulta desde «Mis pacientes». Al finalizar, seleccione «Emitir pase a otra especialidad».</p>
-      <Link className="enlace-volver" to="/medico/pacientes">Ir a Mis pacientes</Link>
+      <p className="pendiente">Elija una atención desde «Historial de atenciones» (o registre una consulta desde «Mis pacientes») y seleccione «Emitir pase».</p>
+      <Link className="enlace-volver" to="/medico/atenciones">Ir al historial de atenciones</Link>
     </section>
   }
 

@@ -1,5 +1,6 @@
 /* oxlint-disable react/set-state-in-effect -- sincroniza carga, errores y selección con la consulta al servidor */
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
 import { comoError } from '../../utils/errores'
 import { fecha } from '../../utils/formatos'
@@ -7,6 +8,7 @@ import estilos from './HistorialAtencionesPage.module.css'
 
 const VACIOS = { fechaDesde: '', fechaHasta: '', texto: '', codigoEspecialidad: '', descendente: 'true' }
 export default function HistorialAtencionesPage() {
+  const navegar = useNavigate()
   const [filtros, setFiltros] = useState(VACIOS)
   const [aplicados, setAplicados] = useState(VACIOS)
   const [especialidades, setEspecialidades] = useState([])
@@ -60,6 +62,7 @@ export default function HistorialAtencionesPage() {
     } catch (err) { if (actual === solicitud.current) setError(comoError(err, 'No fue posible abrir la atención.')) }
     finally { if (actual === solicitud.current) setAbriendo(false) }
   }
+  const emitirPase = (a) => navegar('/medico/pase', { state: { consulta: a } })
   return <section className="panel">
     <h1>Historial de atenciones</h1><p>Consulte las atenciones que usted registró en MeDiTurno.</p>
     <form className="listado-filtros" onSubmit={buscar}>
@@ -77,14 +80,14 @@ export default function HistorialAtencionesPage() {
     {!cargando && !error && <p role="status">{lista.length ? `${lista.length} atenciones encontradas.` : 'No se encontraron atenciones para los criterios indicados.'}</p>}
     {!cargando && lista.length > 0 && <div className="tabla-scroll"><table className="tabla"><caption>Atenciones propias</caption>
       <thead><tr><th>Paciente</th><th>Fecha</th><th>Especialidad</th><th>Estado</th><th>Acciones</th></tr></thead>
-      <tbody>{lista.map((a) => <tr key={a.idConsulta}><td>{a.nombrePaciente}</td><td>{fecha(a.fecha)} · {a.fecha.slice(11, 16)}</td><td>{a.especialidad}</td><td>Registrada</td><td><button disabled={abriendo} onClick={() => abrir(a.idConsulta)}>Ver detalle</button></td></tr>)}</tbody>
+      <tbody>{lista.map((a) => <tr key={a.idConsulta}><td>{a.nombrePaciente}</td><td>{fecha(a.fecha)} · {a.fecha.slice(11, 16)}</td><td>{a.especialidad}</td><td>Registrada</td><td><div className="celda-botones"><button disabled={abriendo} onClick={() => abrir(a.idConsulta)}>Ver detalle</button><button onClick={() => emitirPase(a)}>Emitir pase</button></div></td></tr>)}</tbody>
     </table></div>}
     {abriendo && <p role="status">Cargando detalle…</p>}
     {detalle && <article className="detalle-panel detalle-ancla" ref={ancla} aria-label="Detalle de la atención">
       <h2>Atención de {detalle.nombrePaciente}</h2>
       <dl className="detalle-datos"><div><dt>Fecha</dt><dd>{fecha(detalle.fecha)} · {detalle.fecha.slice(11, 16)}</dd></div><div><dt>Especialidad</dt><dd>{detalle.especialidad}</dd></div><div><dt>Estado</dt><dd>Registrada</dd></div><div><dt>Orden</dt><dd>#{detalle.numeroOrden}</dd></div></dl>
       {[['Motivo de consulta', detalle.motivo], ['Observaciones', detalle.observaciones], ['Indicaciones', detalle.indicaciones]].map(([titulo, texto]) => <div key={titulo}><h3>{titulo}</h3><p className={estilos.texto}>{texto || 'Sin información registrada.'}</p></div>)}
-      <button onClick={() => setDetalle(null)}>Cerrar detalle</button>
+      <div className="celda-botones"><button className="principal" onClick={() => emitirPase(detalle)}>Emitir pase</button><button onClick={() => setDetalle(null)}>Cerrar detalle</button></div>
     </article>}
   </section>
 }
