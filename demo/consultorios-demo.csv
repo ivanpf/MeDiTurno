@@ -1,0 +1,11 @@
+código,nombre,ubicación,descripción,estado
+DEMO01,Demo Consultorio 01,Demo - Torre B planta baja,Consultorio de la demo con camilla y escritorio,ACTIVO
+DEMO02,Demo Consultorio 02,Demo - Torre B planta baja,Consultorio de la demo con camilla y escritorio,ACTIVO
+DEMO03,Demo Consultorio 03,Demo - Torre B planta baja,Consultorio de la demo con electrocardiógrafo,ACTIVO
+DEMO04,Demo Consultorio 04,Demo - Torre B primer piso,Consultorio de la demo con camilla y escritorio,ACTIVO
+DEMO05,Demo Consultorio 05,Demo - Torre B primer piso,Consultorio de la demo con camilla y escritorio,ACTIVO
+DEMO06,Demo Consultorio 06,Demo - Torre B primer piso,Consultorio de la demo para pediatría,ACTIVO
+DEMO07,Demo Consultorio 07,Demo - Torre B segundo piso,Consultorio de la demo con camilla y escritorio,ACTIVO
+DEMO08,Demo Consultorio 08,Demo - Torre B segundo piso,Consultorio de la demo con camilla y escritorio,ACTIVO
+DEMO09,Demo Consultorio 09,Demo - Torre B segundo piso,Consultorio de la demo para procedimientos menores,ACTIVO
+DEMO10,Demo Consultorio 10,Demo - Torre B segundo piso,Consultorio de la demo de reserva,INACTIVO

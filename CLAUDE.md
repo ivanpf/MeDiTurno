@@ -5,6 +5,10 @@ Sistema online de reserva de órdenes de consulta para una institución de asist
 Monorepo: `backend/` (Spring Boot 4.1, Java 17, Maven, PostgreSQL 16), `frontend/` (React 19, Vite 8, React Router 7) y `mobile/` (sin estructura base todavía).
 Cómo levantar el proyecto: `README.md`. Flujo con Git y Podman: `GUIA_TRABAJO_EQUIPO.md`.
 
+## Rama `demo`
+
+Esta rama sirve para preparar y hacer la demo. Si le piden «preparar una demo para tal fecha y hora», siga `demo/INSTRUCCIONES.md` (local o deployada, limpiar Firebase con confirmación, cargar la base en el momento) y el orden de `demo/PASOS.md`. No ejecute `limpiar-firebase.mjs --borrar` sin confirmación ni haga commits: los hace la persona.
+
 ## Estado actual
 
 Es la **base del proyecto**: la estructura está creada y **están implementados CU-1, CU-2, CU-5, CU-6, CU-7, CU-8, CU-9, CU-10, CU-11, CU-12, CU-13, CU-14, CU-15, CU-16, CU-17, CU-18, CU-19, CU-20, CU-21, CU-22, CU-23, CU-24, CU-25, CU-26, CU-27, CU-28, CU-29, CU-30, CU-31, CU-32, CU-33, CU-34, CU-35, CU-36, CU-37, CU-38, CU-39, CU-40, CU-41, CU-42, CU-43, CU-44, CU-45, CU-46 y CU-47**. Los demás casos pendientes responden `501`.
