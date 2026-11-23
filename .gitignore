@@ -7,6 +7,12 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 
+# ---------- Pruebas de punta a punta (Playwright) ----------
+tests/e2e/node_modules/
+tests/e2e/reporte/
+tests/e2e/resultados/
+tests/e2e/sesiones/.guardadas/
+
 # ---------- Variables de entorno / secretos ----------
 .env
 *.env.local
