@@ -40,6 +40,8 @@ export function useCambiarContrasena() {
     setModificada(false);
   };
 
+  const limpiarError = () => setError(null);
+
   const guardar = async () => {
     setError(null);
     setModificada(false);
@@ -67,5 +69,5 @@ export function useCambiarContrasena() {
     }
   };
 
-  return { datos, error, modificada, cargando, cambiarCampo, guardar, limpiar };
+  return { datos, error, modificada, cargando, cambiarCampo, guardar, limpiar, limpiarError };
 }

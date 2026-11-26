@@ -32,7 +32,7 @@ const estilos = StyleSheet.create({
 });
 
 export default function CambiarContrasenaScreen() {
-  const { datos, error, modificada, cargando, cambiarCampo, guardar, limpiar } = useCambiarContrasena();
+  const { datos, error, modificada, cargando, cambiarCampo, guardar, limpiar, limpiarError } = useCambiarContrasena();
 
   return (
     <ScrollView style={estilos.contenedor} contentContainerStyle={estilos.contenido}>
@@ -47,7 +47,7 @@ export default function CambiarContrasenaScreen() {
             <Text style={estilos.exitoTexto}>La contraseña fue modificada correctamente.</Text>
           </View>
         )}
-        {error && <ErrorBanner mensaje={error.mensaje} detalles={error.detalles} onDismiss={() => {}} />}
+        {error && <ErrorBanner mensaje={error.mensaje} detalles={error.detalles} onDismiss={limpiarError} />}
 
         <Input
           label="Contraseña actual"
