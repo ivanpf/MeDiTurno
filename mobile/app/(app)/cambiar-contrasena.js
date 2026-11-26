@@ -3,11 +3,9 @@
 // (reautenticación con la contraseña actual + updatePassword), igual que en la web.
 // Al terminar, la sesión sigue abierta: no hace falta volver a ingresar.
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
-import { auth } from '../../shared/src/auth/firebase';
-import { validarCambioContrasena } from '../../shared/src/utils/validation';
+import { useCambiarContrasena } from '../../src/features/cuenta/useCambiarContrasena';
 import { ErrorBanner } from '../../shared/src/components/ErrorBanner';
 import { Input } from '../../shared/src/components/Input';
 import { Button } from '../../shared/src/components/Button';
@@ -33,64 +31,8 @@ const estilos = StyleSheet.create({
   mitad: { flex: 1 },
 });
 
-const mensajeDeError = (codigo) => {
-  switch (codigo) {
-    case 'auth/invalid-credential':
-    case 'auth/wrong-password':
-      return 'La contraseña actual no es correcta.';
-    case 'auth/weak-password':
-      return `La nueva contraseña debe tener al menos ${MINIMO_CONTRASENA} caracteres.`;
-    case 'auth/requires-recent-login':
-      return 'Por seguridad, cierre sesión e inicie sesión nuevamente antes de cambiar la contraseña.';
-    case 'auth/too-many-requests':
-      return 'Se realizaron demasiados intentos. Espere un momento e inténtelo nuevamente.';
-    case 'auth/network-request-failed':
-      return 'No se pudo conectar con el servicio de autenticación. Verifique su conexión e inténtelo nuevamente.';
-    default:
-      return 'No fue posible cambiar la contraseña. Intente nuevamente.';
-  }
-};
-
 export default function CambiarContrasenaScreen() {
-  const [datos, setDatos] = useState({ actual: '', nueva: '', repetirNueva: '' });
-  const [error, setError] = useState(null); // { mensaje, detalles }
-  const [modificada, setModificada] = useState(false);
-  const [cargando, setCargando] = useState(false);
-
-  const cambiarCampo = (campo) => (valor) => setDatos({ ...datos, [campo]: valor });
-
-  const limpiar = () => {
-    setDatos({ actual: '', nueva: '', repetirNueva: '' });
-    setError(null);
-    setModificada(false);
-  };
-
-  const guardar = async () => {
-    setError(null);
-    setModificada(false);
-    const { valido, errores } = validarCambioContrasena(datos);
-    if (!valido) {
-      setError({ mensaje: errores[0], detalles: [] });
-      return;
-    }
-    const usuario = auth.currentUser;
-    if (!usuario?.email) {
-      setError({ mensaje: 'Su sesión venció. Inicie sesión nuevamente para cambiar la contraseña.', detalles: [] });
-      return;
-    }
-    setCargando(true);
-    try {
-      const credencial = EmailAuthProvider.credential(usuario.email, datos.actual);
-      await reauthenticateWithCredential(usuario, credencial);
-      await updatePassword(usuario, datos.nueva);
-      setDatos({ actual: '', nueva: '', repetirNueva: '' });
-      setModificada(true);
-    } catch (err) {
-      setError({ mensaje: mensajeDeError(err?.code), detalles: [] });
-    } finally {
-      setCargando(false);
-    }
-  };
+  const { datos, error, modificada, cargando, cambiarCampo, guardar, limpiar } = useCambiarContrasena();
 
   return (
     <ScrollView style={estilos.contenedor} contentContainerStyle={estilos.contenido}>
@@ -105,7 +47,7 @@ export default function CambiarContrasenaScreen() {
             <Text style={estilos.exitoTexto}>La contraseña fue modificada correctamente.</Text>
           </View>
         )}
-        {error && <ErrorBanner mensaje={error.mensaje} detalles={error.detalles} onDismiss={() => setError(null)} />}
+        {error && <ErrorBanner mensaje={error.mensaje} detalles={error.detalles} onDismiss={() => {}} />}
 
         <Input
           label="Contraseña actual"

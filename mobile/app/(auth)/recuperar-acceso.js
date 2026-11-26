@@ -4,15 +4,11 @@
  * la app solo pide el correo y muestra la confirmación (igual que la web).
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../../shared/src/auth/firebase';
+import { useRecuperarAcceso, MENSAJE_CONFIRMACION } from '../../src/features/auth/useRecuperarAcceso';
 import { Button, Input, Card, ErrorBanner, LoadingOverlay } from '../../shared/src/components';
-import { validarRecuperacion } from '../../shared/src/utils/validation';
-
-const MENSAJE_CONFIRMACION = 'Si existe una cuenta asociada a esa dirección, recibirá un correo con instrucciones para recuperar el acceso.';
 
 const estilos = StyleSheet.create({
   contenedor: {
@@ -65,50 +61,11 @@ const estilos = StyleSheet.create({
   },
 });
 
-const mensajeDeError = (codigo) => {
-  switch (codigo) {
-    case 'auth/invalid-email':
-      return 'Ingrese una dirección de correo electrónico válida.';
-    case 'auth/too-many-requests':
-      return 'Se realizaron demasiadas solicitudes. Espere un momento e inténtelo nuevamente.';
-    case 'auth/network-request-failed':
-      return 'No se pudo conectar con Firebase. Verifique su conexión e inténtelo nuevamente.';
-    default:
-      return 'No fue posible enviar las instrucciones. Intente nuevamente.';
-  }
-};
-
 export default function RecuperarAccesoScreen() {
   const router = useRouter();
-  const [correo, setCorreo] = useState('');
-  const [enviada, setEnviada] = useState(false);
-  const [error, setError] = useState(null);
-  const [cargando, setCargando] = useState(false);
+  const { correo, setCorreo, enviada, error, cargando, solicitar, reiniciar } = useRecuperarAcceso();
 
   const irLogin = () => router.replace('/(auth)/login');
-
-  const solicitar = async () => {
-    const { valido, errores } = validarRecuperacion(correo);
-    if (!valido) {
-      setError(new Error(errores[0]));
-      return;
-    }
-    setCargando(true);
-    setError(null);
-    try {
-      await sendPasswordResetEmail(auth, correo.trim());
-      setEnviada(true);
-    } catch (err) {
-      if (err?.code === 'auth/user-not-found') {
-        // Por seguridad, no revelamos si el correo existe.
-        setEnviada(true);
-      } else {
-        setError(new Error(mensajeDeError(err?.code)));
-      }
-    } finally {
-      setCargando(false);
-    }
-  };
 
   // Paso 1: solicitar correo
   if (!enviada) {
@@ -178,7 +135,7 @@ export default function RecuperarAccesoScreen() {
             Volver al inicio de sesión
           </Button>
 
-          <TouchableOpacity style={estilos.enlaceVolver} onPress={() => setEnviada(false)}>
+          <TouchableOpacity style={estilos.enlaceVolver} onPress={reiniciar}>
             <Text style={{ color: '#1d4f91', textDecorationLine: 'underline' }}>
               Solicitar otro enlace
             </Text>
