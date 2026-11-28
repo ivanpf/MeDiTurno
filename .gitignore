@@ -29,3 +29,7 @@ backend.zip
 # Clave de servicio de Firebase (nunca se sube)
 secrets/*
 !secrets/.gitkeep
+
+# ---------- Postman (workspace local) ----------
+.postman/
+postman/globals/

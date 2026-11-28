@@ -1,0 +1,26 @@
+$kind: http-request
+url: https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{apiKey}}
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{correo}}",
+      "password": "{{clave}}",
+      "returnSecureToken": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Firebase responde 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const datos = pm.response.json();
+      pm.environment.set("token", datos.idToken);
+      pm.test("Se guardo el token", function () {
+          pm.expect(datos.idToken).to.be.a("string");
+      });
+    language: text/javascript
+order: 1000

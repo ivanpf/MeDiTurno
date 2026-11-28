@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/reservas/mias"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Sin token responde 401", function () {
+          pm.response.to.have.status(401);
+      });
+      const cuerpo = pm.response.json();
+      pm.test("El error tiene el formato estandar", function () {
+          pm.expect(cuerpo).to.have.property("estado");
+          pm.expect(cuerpo).to.have.property("mensaje");
+          pm.expect(cuerpo).to.have.property("detalles");
+          pm.expect(cuerpo).to.have.property("fecha");
+      });
+    language: text/javascript
+order: 1000

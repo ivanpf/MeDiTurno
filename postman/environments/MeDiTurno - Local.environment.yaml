@@ -1,0 +1,23 @@
+name: MeDiTurno - Local
+values:
+  - key: baseUrl
+    value: http://localhost:8080/api
+    enabled: true
+  - key: apiKey
+    value: ""
+    enabled: true
+  - key: correo
+    value: ""
+    enabled: true
+  - key: clave
+    value: ""
+    enabled: true
+  - key: token
+    value: ""
+    enabled: true
+  - key: idReserva
+    value: ""
+    enabled: true
+  - key: numeroOrden
+    value: ""
+    enabled: true

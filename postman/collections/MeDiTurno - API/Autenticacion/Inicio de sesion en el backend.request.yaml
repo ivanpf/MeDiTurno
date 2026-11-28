@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Login responde 200", function () {
+          pm.response.to.have.status(200);
+      });
+      const datos = pm.response.json();
+      pm.test("La respuesta trae rol", function () {
+          pm.expect(datos).to.have.property("rol");
+      });
+    language: text/javascript
+order: 3000

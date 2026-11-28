@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/pacientes/me/perfil"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Perfil responde 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Si hay error, tiene el formato estandar", function () {
+          if (pm.response.code >= 400) {
+              const cuerpo = pm.response.json();
+              pm.expect(cuerpo).to.have.property("estado");
+              pm.expect(cuerpo).to.have.property("mensaje");
+              pm.expect(cuerpo).to.have.property("detalles");
+              pm.expect(cuerpo).to.have.property("fecha");
+          }
+      });
+    language: text/javascript
+order: 1000
