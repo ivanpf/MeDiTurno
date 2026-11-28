@@ -30,7 +30,10 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test:cu8": "node --test tests/reservaConsulta.test.cjs",
-    "test:cu11": "node --test tests/historiaClinica.test.cjs"
+    "test:cu11": "node --test tests/historiaClinica.test.cjs",
+    "test:cu3": "node --test tests/cambiarContrasena.test.cjs",
+    "test:cu4": "node --test tests/recuperarAcceso.test.cjs",
+    "test:auth": "node --test tests/cambiarContrasena.test.cjs tests/recuperarAcceso.test.cjs"
   },
   "private": true,
   "devDependencies": {
